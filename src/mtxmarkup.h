@@ -21,30 +21,23 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef MTX_H
-#define MTX_H
+#ifndef MTX_MARKUP_H
+#define MTX_MARKUP_H
 
 #include <glib.h>
+#include "mtxcmm.h"
 
-G_BEGIN_DECLS
+#ifdef __cplusplus
+    extern "C" {
+#endif
 
-typedef enum _MtxCmmWordType
-{
-    MTX_CMM_WORD_UNKNOWN = 0,     /* any word not of the following types */
-    MTX_CMM_WORD_URI,             /* http:// ... */
-    MTX_CMM_WORD_URI_FLANKED,     /* [<(]http://[)>] ... */
-    MTX_CMM_WORD_ABS_PATH,        /* reasonably long /pathname */
-    MTX_CMM_WORD_FILE_DIFF,       /* ".diff" ".patch" file name */
-    MTX_CMM_WORD_BUGZILLA,        /* #asciiWord */
-    MTX_CMM_WORD_FUNCNAME,        /* ident"()" */
-    MTX_CMM_WORD_EMAIL,           /* @email address */
-    MTX_CMM_WORD_UIDENT,          /* uppercase identifier with "_" */
-} MtxCmmWordType;
+gboolean
+mtx_markup_parse (GString *markup,
+                  const glong len,
+                  MtxCmmPageMeta *meta);
 
-MtxCmmWordType mtx_word_type (const gchar *, gint *, gint *);
-gchar *mtx_str_slugify (const gchar *, const gchar sep);
-void mtx_str_delete_unipua_em_strong (gchar *);
+#ifdef __cplusplus
+    }  /* extern "C" { */
+#endif
 
-G_END_DECLS
-
-#endif /* MTX_H */
+#endif /* MTX_MARKUP_H */

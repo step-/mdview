@@ -1,0 +1,1 @@
+option('gtk', type : 'combo', choices : ['2', '3'], value : '3', description: 'Set the GTK version to build with')

@@ -1,0 +1,109 @@
+<mtx>
+  <renderer>
+    <skip_toc>1</skip_toc>
+  </renderer>
+  <viewer>
+    <track_page>0</track_page>
+  </viewer>
+</mtx>
+**USAGE** HBRK
+`    mdview [OPTIONS] HOMEPATH [HOMEPAGE [TITLE]]` HBRK
+<br> HBRK
+Press `[F1]` in the GUI viewer to open the Welcome Page and get more help. HBRK
+`HOMEPATH` is the file or directory to open. `HOMEPAGE` is the file to open if HBRK
+`HOMEPATH` is a directory. If `HOMEPAGE` is empty, DEFAULT_INDEX is used instead. HBRK
+If `TITLE` is empty, DEFAULT_WINDOW_TITLE is used for the window title. HBRK
+In Markdown, relative paths are based on the directory of the currently viewed HBRK
+file. If this fails, the directory of the `HOMEPAGE` file is used. HBRK
+<br> HBRK
+**OUTPUT FORMATS** HBRK
+If an output format is not specified the file is opened in the GUI viewer. HBRK
+Some formats can be tweaked (see section OUTPUT MODIFIERS). HBRK
+<br> HBRK
+ `--ansi             `Text with ANSI escape codes. HBRK
+ `--html             `HTML fragment. HBRK
+ `--text             `Plain text. HBRK
+ `--tty              `Text with vt100 codes. HBRK
+#ifdef OPT_PANGO
+ `--pango            `Raw Pango markup (debug). HBRK
+#endif
+#ifdef OPT_MARKUP
+<br> HBRK
+**INPUT MODIFIERS** HBRK
+ `--markup=FILE      `Skip the parser and load Pango markup from FILE (debug). HBRK
+#endif
+<br> HBRK
+**OUTPUT MODIFIERS** HBRK
+#ifndef COMMONMARK_FENCED_CODEBLOCK_LINE_ENDING
+ `--cm-block-end     `Add an empty line at code block end. HBRK
+#endif
+ `--html-base=[PATH] `Use `PATH` instead of `HOMEPATH` for the `<base>` tag. An HBRK
+ `                   `empty `PATH` leaves out the `<base>` tag and javascript. HBRK
+ `--html-css=N       `Embed CSS style sheet N, N in 0..2 (default 2 for the HTML HBRK
+ `                   `preview in the Viewer, 0 otherwise). Implies `--html-full`. HBRK
+ `--html-full        `Generate a full HTML document, with a `<base>` tag that sets HBRK
+ `                   `relative links to `HOMEPATH`, and javascript to assist HBRK
+ `                   `internal link navigation. See also the `--html-base` option. HBRK
+ `--html5            `Output HTML5 rather than XHTML. HBRK
+ `--output=FILE      `Redirect output to file `FILE`. HBRK
+ `--soft-break       `Instead of joining lines with a space, start a new line at HBRK
+ `                   `each soft break (line ending inside a Markdown paragraph). HBRK
+ `                   `Soft breaks can inhibit some smart text replacements. HBRK
+ `--soft-break-br    `Append a hard break after a soft break in HTML output. HBRK
+ `--unsafe-html      `Include raw HTML in all output formats. HBRK
+<br> HBRK
+**EXTENSIONS** HBRK
+ `--auto-lang        `If a link targets "File.ext", and "File`.$LANG`.ext" exists, HBRK
+ `                   `open the latter. This feature allows automatic linking to HBRK
+ `                   `translations and is only available for the Viewer. HBRK
+ `--no-auto-code     `Disable rendering certain plain words as code spans. HBRK
+ `--no-extensions    `Disable all extensions. HBRK
+ `--no-heading-link  `Do not add heading anchors. This feature is only available HBRK
+ `                   `for the Viewer and HTML output. HBRK
+ `--no-permlink      `Disable permissive auto-links (linkifying unmarked links). HBRK
+ `--no-shebang       `Disable file shebang detection. HBRK
+ `--no-smart         `Disable smart text replacements. HBRK
+ `--no-strikethrough `Disable support for striking text. HBRK
+ `--no-table         `Disable support for Markdown tables. HBRK
+ `--toc-level=LEVEL  `Replace the Table of Contents for the first occurrence of HBRK
+ `                   `"`<!--[toc]-->`" in the document. If the pattern is not HBRK
+ `                   `found place the ToC at the top. This feature needs heading HBRK
+ `                   `link anchors, and either the Viewer or HTML output. HBRK
+<br> HBRK
+**MISCELLANEOUS** HBRK
+ `--dump-css=N       `Output CSS style-sheet N and exit. HBRK
+#ifdef OPT_EXIT_TEST
+ `--exit-test        `Exit the viewer immediately after entering GTK main loop. HBRK
+#endif
+ `--version          `Print version and license information and exit. HBRK
+<br> HBRK
+**ENVIRONMENT** HBRK
+Program options can also be set using the environment variable `MDVIEW_OPTIONS`. HBRK
+A command-line option will override any option with the same name set through HBRK
+this variable. However, if `MDVIEW_OPTIONS` specifies `HOMEPATH`, `HOMEPAGE`, or HBRK
+`TITLE`, these values will take precedence over their command-line counterparts. HBRK
+ ` `
+
+#ifdef OPT_PANGO
+
+**DEPRECATED** HBRK
+These options will go away. HBRK
+<br> HBRK
+ `--no-ext           `Combine `--no-auto-code`, `--no-permlink`, `--no-shebang` HBRK
+ `                   `and `--no-table`. HBRK
+<br> HBRK
+**UNDOCUMENTED** HBRK
+Read the source code. HBRK
+<br> HBRK
+ `--emask=EMASK      ` HBRK
+ `--tmask=TMASK      ` HBRK
+ `--soft-breaks      ` HBRK
+<br> HBRK
+ ` `
+/*
+Smart text works better without soft breaks because the absence of line
+breaks allows pairing quotes across the whole paragraph. Instead, with
+soft breaks enabled, quotes can only be paired together if they sit
+in the same line.
+*/
+#endif

@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="">
+    <file>app.svg</file>
+    <file>preview.svg</file>
     <file>welcome.md</file>
+    <file>usage.md</file>
+    <file>mtx1.css</file>
+    <file>mtx2.css</file>
   </gresource>
 </gresources>

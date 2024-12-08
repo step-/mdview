@@ -1,14 +1,20 @@
+<mtx>
+  <viewer>
+    <track_page>0</track_page>
+  </viewer>
+</mtx>
 ## Welcome to MDVIEW MTX
 
-This page is shown when you activate an empty text search or pressed `[F1]`.
+- Press `[F1]` or start a blank text search to display this page in the future.
+- [Learn markdown] in 60 seconds!
+- Full [online manual].
 
-**MDVIEW MTX** is an [open source] graphical [CommonMark] viewer, and a
-CLI converter. The [MDVIEW MTX project page] is where development takes
-place, and where you can [report an issue] and contribute to the project.
+**MDVIEW MTX** is an [open source] graphical Markdown viewer and converter.
+Development occurs on the [MDVIEW MTX project page], where users can [report
+issues] and contribute to the project. Below is a brief help guide for the
+program.
 
-[Learn markdown] in 60 seconds.
-
-### Condensed help
+&nbsp;
 
 The **home page directory** is the directory in which the home page is located.
 The home page is the initial file that the viewer displays. Clicking the home
@@ -42,57 +48,70 @@ should enter `\"term\"`.
 
 ### Keyboard shortcuts
 
-Shortcuts are likely the fastest way to navigate inside the page and through
-search results.
+Using keyboard shortcuts provides fast navigation inside the page and through
+search results. In addition to the Arrow, Page, Home and End keys and their
+Shift/Control/Alt variants, the following special shortcuts enhance navigation.
 
 Symbols: `               ` `A`=`[Alt]` `C`=`[Control]` `S`=`[Shift]`  
 
-Shortcut   | Action        | Description
------------| --------------|----------------------------------------------------
-`[A-s]`    | Focus search  | Set focus on the search field to enter terms
-`[Enter]`¹ | Search all    | Activate search through all documents
-`[Tab]`¹   | Focus out     | Move focus out of the search field
- <br>      | <br>          | <br>
-`[C-f]`    | Find start    | Activate search in the page
-`[C-f]`    | Find forward  | Find next match in the page
-`[C-b]`    | Find backward | Find previous match in the page
- <br>      | <br>          | <br>
-`[A-b]`    | Go back       | Show previous page in navigation trail
-`[A-f]`    | Go forward    | Show next page in navigation trail
-`[A-h]`    | Go home       | Reload home page
- <br>      | <br>          | <br>
-`[S-C-b]`  | Link back     | Find previous link in the page
-`[S-C-f]`  | Link forward  | Find the next link in the page
-`[Enter]`² | Follow link   | Open link at cursor location
- <br>      | <br>          | <br>
-`[C-e]`    | Edit          | Open the current file in the default text editor
+Shortcut   | Description
+-----------|----------------------------------------------------
+`[A-s]`    | Set focus on the search field to enter terms
+`[Enter]`¹ | Activate searching in the home page's folder
+`[Tab]`¹   | Move focus out of the search field
+ <br>      | <br>
+`[C-f]`    | Activate search in the page
+`[C-f]`    | Find the next match in the page
+`[C-b]`    | Find the previous match in the page
+ <br>      | <br>
+`[A-b]`    | Navigate back to the previous page
+`[A-f]`    | Navigate forward to the next page
+`[A-h]`    | Reload the home page
+ <br>      | <br>
+`[S-C-b]`  | Find the previous link in the page
+`[S-C-f]`  | Find the next link in the page
+`[Enter]`² | Open the link at the current cursor location
+ <br>      | <br>
+`[C-e]`    | Open the current page in the default text editor
+`[A-p]`³   | Preview the current page in the default browser
 
-[¹] Only when the search field is focused.  
-[²] At the text cursor position, and only when the text view area is focused.
-So, if you pressed `[A-s]` to enter the name of a link and then used `[C-f]`
-once or more until the link was reached, finally you pressed `[Enter]` to follow
-the link but nothing happened. Why? The reason for this is that input focus was
-still in the search field. To follow the link in this case, you need to press
-`[Tab]` first. This moves the focus away from the search field and allows you to
-activate the link with `[Enter]`.
+[¹] If the search field is focused.  
+[²] At the text cursor position if the text view area is focused.  
+> Don't be surprised if you use `[A-s]` `[C-f]` to find a certain link label,
+but nothing happens when you press `[Enter]` to follow the link. This occurs
+because the focus is still on the search field. To successfully follow the link,
+press `[Tab]` first to shift the focus away from the search field, allowing you
+to activate the link with `[Enter]`.  
 
-Continue to the [online manual].
+[³] Use command-line option `--html-css=N` to prettify the preview page.  
 
-## Links
+### Extensions
+
+Mdview features extensions that enhance its functionality.
+Run `mdview -h` to see the list of available extensions,
+and refer to the [Extensions online page].
+
+### Configuration
+
+Mdview does not have a configuration file. For advanced
+needs refer to the [Configuration online page].
+
+### Links
 
 * MDVIEW MTX project page <https://github.com/step-/mdview>
 * Online manual <https://github.com/step-/mdview/wiki>
-* Report an issue <https://github.com/step-/issues>
+* Reporting issues <https://github.com/step-/issues>
 * Learn markdown: <https://commonmark.org/help>
-* CommonMark: <https://commonmark.org>
+* Mdview supports CommonMark: <https://commonmark.org>
 * Markdown on Wikipedia: <https://wikipedia.org/wiki/Markdown>
 * Open source on Wikipedia <https://en.wikipedia.org/wiki/Open_source>
 
 [MDVIEW MTX project page]: <https://github.com/step-/mdview>
 [online manual]: <https://github.com/step-/mdview/wiki>
-[report an issue]: <https://github.com/step-/issues>
+[report issues]: <https://github.com/step-/issues>
 [Learn markdown]: <https://commonmark.org/help>
 [CommonMark]: <https://commonmark.org>
-[markdown]: <https://en.wikipedia.org/wiki/Markdown>
 [open source]: <https://en.wikipedia.org/wiki/Open_source>
-
+[fontconfig]: <https://en.wikipedia.org/wiki/Fontconfig>
+[Configuration online page]: <https://github.com/step-/mdview/wiki/Configuration>
+[Extensions online page]: <https://github.com/step-/mdview/wiki/Extensions>

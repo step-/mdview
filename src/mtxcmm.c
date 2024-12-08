@@ -45,20 +45,34 @@ Copyright (C) 2016, 2023 step
 #include "mtxcmmprivate.h"
 #include "mtxstylepango.h"
 #include "mtxdbg.h"
+#include "mtxmarkup.h"
+#include "mtxrender.h"
+#include "mtxcmm.decl.h"
+
+/* Used to skip printing with mtx_dbg_errout in internal MTX_CMM instances. */
+#define ZC_(L)         Z1_(self->priv->caller, (L))
 
 struct _MtxCmmPrivate
 {
     gboolean           escape;
     gboolean           escaping;         /* cached because frequently used */
-    gint               ctr_repl_eval;    /* mtx_cmm_string_release_protected */
-    MtxCmmParserUnitType seen_unit_types;  /* by mtx_cmm_render */
+    MtxCmmParserUnitType seen_unit_types;/* by mtx_cmm_render */
     gboolean           inside_table;     /* in <table> <a> selector */
+    MtxCmm             *caller;
+    MtxCmmPageMeta     meta;             /* set with mtx_markup_parse */
+    GString            *mkdin;           /* mtx_cmm_mtx's input markdown */
 
     /* With public getters and setters */
+    /* (see also seen_unit_types's getters mtx_cmm_got_*) */
     MtxCmmExtensions   extensions;
     MtxCmmTweaks       tweaks;
     MtxCmmOutput       output;
     MtxCmmTags         tags;            /* viewer sets, renderer gets */
+    guint              toc_level;       /* ToC depth cap */
+    gint               progress_fd;
+
+    /* Table of contents */
+    GPtrArray          *toc;            /* MtxCmmTocEntry */
 
     /* Parser queues. */
     GQueue             *unitq;          /* parsed markdown */
@@ -67,8 +81,7 @@ struct _MtxCmmPrivate
 
     /* Parser work-tables */
     GArray             *regex_table;    /* precompiled regex */
-    GPtrArray          *link_table;     /* URL/image and attributes */
-    GPtrArray          *code_table;     /* <code>, protect sundries */
+    GPtrArray          *code_table;     /* protected text, clear-text spans */
 };
 
 /**********************************************************************/
@@ -76,34 +89,40 @@ struct _MtxCmmPrivate
 
 /**********************************************************************/
 
-G_DEFINE_TYPE_WITH_CODE (MtxCmm, mtx_cmm, G_TYPE_OBJECT, G_ADD_PRIVATE (MtxCmm))
+typedef struct _MtxCmmPrivate MtxCmmPrivate;
+struct _MtxCmm
+{
+    GObject       parent_instance;
+    MtxCmmPrivate *priv;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE (MtxCmm, mtx_cmm, G_TYPE_OBJECT)
 
 /**********************************************************************/
 
 /*< private >**********************************************************/
 
-static void mtx_cmm_parser_clear_queues (MtxCmm *);
-static void mtx_cmm_parser_clear_regex_table_el (GRegex **e);
+#ifdef MTX_DEBUG
+static void mtx_dump_queue (gpointer instance,
+                            int fd,
+                            GQueue* queue,
+                            gboolean print_junk);
+#endif
 
 static void
 mtx_cmm_finalize (GObject *object)
 {
-    MtxCmm *self;
+    MtxCmm *self = MTX_CMM (object);
+    MtxCmmPrivate *priv = mtx_cmm_get_instance_private (self);
 
-    g_return_if_fail (MTX_IS_CMM (object));
-
-    self = MTX_CMM (object);
-
-    g_return_if_fail (self->priv != NULL);
-
-    /* all three with GDestroyNotify function */
-    g_array_free (self->priv->regex_table, TRUE);
-    g_ptr_array_free (self->priv->link_table,  TRUE);
-    g_ptr_array_free (self->priv->code_table,  TRUE);
+    /* all with GDestroyNotify function */
+    g_array_unref (priv->regex_table);
+    g_ptr_array_unref (priv->code_table);
+    g_ptr_array_unref (priv->toc);
 
     mtx_cmm_parser_clear_queues (self);
-    g_clear_pointer (&self->priv->unitq, g_queue_free);  /* NOLINT(bugprone-sizeof-expression) */
-    g_clear_pointer (&self->priv->junkq, g_queue_free);  /* NOLINT(bugprone-sizeof-expression) */
+    g_clear_pointer (&priv->unitq, g_queue_free);  /* NOLINT(bugprone-sizeof-expression) */
+    g_clear_pointer (&priv->junkq, g_queue_free);  /* NOLINT(bugprone-sizeof-expression) */
 
     G_OBJECT_CLASS (mtx_cmm_parent_class)->finalize (object);
 }
@@ -132,11 +151,14 @@ mtx_cmm_init (MtxCmm *self)
     self->priv->unitq = g_queue_new ();
     self->priv->junkq = g_queue_new ();
 
-    self->priv->regex_table = g_array_set_size(g_array_sized_new(FALSE, TRUE, sizeof (GRegex *), MTX_CMM_REGEX_LEN), MTX_CMM_REGEX_LEN);
-    g_array_set_clear_func (self->priv->regex_table, (GDestroyNotify) mtx_cmm_parser_clear_regex_table_el);
-
-    self->priv->link_table = g_ptr_array_new_with_free_func (g_free);
+    self->priv->regex_table =
+    g_array_set_size (g_array_sized_new (FALSE, TRUE, sizeof (GRegex *),
+                                         MTX_CMM_REGEX_LEN), MTX_CMM_REGEX_LEN);
+    g_array_set_clear_func (self->priv->regex_table,
+                            (GDestroyNotify) regex_table_el_destroy);
     self->priv->code_table = g_ptr_array_new_with_free_func (g_free);
+    self->priv->toc =
+    g_ptr_array_new_with_free_func ((GDestroyNotify) toc_entry_free);
 }
 
 /*< private >********************************************************/
@@ -146,12 +168,24 @@ mtx_cmm_init (MtxCmm *self)
 *********************************************************************/
 
 static void
-mtx_cmm_parser_clear_regex_table_el (GRegex **e)
+regex_table_el_destroy (GRegex **e)
 {
     if (*e)
     {
         g_regex_unref (*e);
         *e = NULL;
+    }
+}
+
+static void
+toc_entry_free (MtxCmmTocEntry *e)
+{
+    if (e)
+    {
+        g_free (e->dest);
+        g_free (e->text);
+        g_free (e->rendered);
+        g_free (e);
     }
 }
 
@@ -189,18 +223,6 @@ mtx_cmm_parser_unit_pop_head (MtxCmm *self)
 }
 
 /**
-mtx_cmm_parser_unit_free_arg:
-@argptr: address of a unit argument's character array.
-
-Free the argument.
-*/
-static void
-mtx_cmm_parser_unit_free_arg (gchar **argptr)
-{
-    g_free (*argptr);
-}
-
-/**
 mtx_cmm_parser_unit_consume:
 
 @unitptr: address of pointer to a %MtxCmmParserUnit.
@@ -230,7 +252,7 @@ mtx_cmm_parser_unit_free (MtxCmm *self,
     }
     if (unit->args)
     {
-        g_array_free (unit->args, TRUE);
+        g_ptr_array_free (unit->args, TRUE);
         unit->args = NULL;
     }
     if (unit == (MtxCmmParserUnit *) self->priv->unitq_head)
@@ -309,116 +331,121 @@ mtx_cmm_parser_unit_new (MtxCmm *self,
     head->flag = flag_mask;
     if (head->flag & MTX_CMM_PARSER_UNIT_FLAG_ARGS)
     {
-        head->args = g_array_new (TRUE, FALSE, sizeof (gchar *));
-        g_array_set_clear_func (head->args,
-                                (GDestroyNotify) mtx_cmm_parser_unit_free_arg);
+        head->args = g_ptr_array_new_with_free_func (g_free);
     }
+}
+
+/**
+mtx_cmm_new_internal:
+
+@output:
+@caller: the calling #MtxCmm instance
+
+Returns: the new instance.
+*/
+static MtxCmm *
+mtx_cmm_new_internal (MtxCmmOutput output,
+                      MtxCmm *caller)
+{
+    MtxCmm *self = g_object_new (MTX_TYPE_CMM, NULL);
+
+    self->priv->caller = caller;
+    mtx_dbg_errout (-1, "%p from caller %p\n", self, caller);
+    if (output != MTX_CMM_OUTPUT_UNKNOWN)
+    {
+        mtx_cmm_set_output (self, output);
+    }
+    return MTX_CMM (self);
 }
 
 /**
 mtx_cmm_new:
-
 Create a new %MTX_CMM instance.
+
+@output: #MtxCmmOutput output format. Pass `MTX_CMM_OUTPUT_UNKNOWN`
+here if you will call `mtx_cmm_set_output` after this function.
 
 Returns: the new instance.
 */
 MtxCmm *
-mtx_cmm_new (void)
+mtx_cmm_new (MtxCmmOutput output)
 {
-    MtxCmm *self = g_object_new (MTX_TYPE_CMM, NULL);
-    return MTX_CMM (self);
+    return mtx_cmm_new_internal (output, NULL);
 }
 
-static const gchar * const _tag_info[] = {
-    [MTX_TAG_DEST_LINK_URI_ID]   = "dest=Lu",
-    [MTX_TAG_DEST_LINK_TXT_LEN]  = "dest=Tl",
-    [MTX_TAG_DEST_IMAGE_PATH_ID] = "dest=Ip",
-    [MTX_TAG_BLOCKQUOTE_LEVEL]   = "blckqtLvl=",
-    [MTX_TAG_BLOCKQUOTE_OPEN]    = "blckqtOpn=",
-    [MTX_TAG_OL_UL_LEVEL]        = "olUlLvl=",
-    [MTX_TAG_LI_LEVEL]           = "liLvl=",
-    [MTX_TAG_LI_ORDINAL]         = "liOrd=",
-    [MTX_TAG_LI_BULLET_LEN]      = "liBLen=",
-    [MTX_TAG_LI_ID]              = "liId=",
+#define STR__LEN(S)               { S, sizeof S - 1 }
+struct _str__len
+{
+    gchar *str;
+    guint len;
 };
+static const struct _str__len _tag_info[] =
+{
+    [MTX_TAG_DEST_LINK_URI_ID]   = STR__LEN ("dest=Lu"),
+    [MTX_TAG_DEST_LINK_TXT_LEN]  = STR__LEN ("dest=Tl"),
+    [MTX_TAG_DEST_LINK_HEADING]  = STR__LEN ("dest=Hu"),
+    [MTX_TAG_DEST_IMAGE_PATH_ID] = STR__LEN ("dest=Ip"),
+    [MTX_TAG_BLOCKQUOTE_LEVEL]   = STR__LEN ("blckqtLvl="),
+    [MTX_TAG_BLOCKQUOTE_OPEN]    = STR__LEN ("blckqtOpn="),
+    [MTX_TAG_OL_UL_LEVEL]        = STR__LEN ("olUlLvl="),
+    [MTX_TAG_LI_LEVEL]           = STR__LEN ("liLvl="),
+    [MTX_TAG_LI_ORDINAL]         = STR__LEN ("liOrd="),
+    [MTX_TAG_LI_BULLET_LEN]      = STR__LEN ("liBLen="),
+    [MTX_TAG_LI_ID]              = STR__LEN ("liId="),
+};
+#define _tag_info_str(I)         _tag_info[(I)].str
 
 /**
-mtx_cmm_tag_get_info:
+mtx_cmm_get_tag_val:
 
 @tag: pango "font" tag
 @subject: MtxCmmTagInfo
-Return: `gint` @subject's value parsed from @tag
+Return: @subject's integer value if @tag's text matched otherwise -1.
 */
 gint
-mtx_cmm_tag_get_info (MtxCmm *self,
-                      const gchar *tag,
-                      const MtxCmmTagInfo subject)
+mtx_cmm_get_tag_val (MtxCmm *self __attribute__((unused)),
+                     const gchar *tag,
+                     const MtxCmmTagInfo subject)
 {
-    gchar *p = NULL;
     gint ret = -1;
+    gchar *p = strstr (tag, _tag_info[subject].str);
+    g_assert (tag != NULL);
+    g_assert (subject < MTX_TAG_INFO_LEN);
 
-    g_return_val_if_fail (self != NULL, -1);
-    g_return_val_if_fail (tag != NULL, -1);
-    g_return_val_if_fail (subject < MTX_TAG_INFO_LEN, -1);
-    p = strstr (tag, _tag_info[subject]);
     if (p)
     {
-        ret = atoi (p + strlen (_tag_info[subject]));
+        ret = atoi (p + _tag_info[subject].len);
     }
     return ret;
 }
 
-#if MTX_DEBUG > 1
-/* standout, standout end */
-#define _SO    "\033[7m"
-#define _SE    "\033[0m"
-#define _SObla "\033[7;30m"
-#define _SOred "\033[7;31m"
-#define _SOgre "\033[7;32m"
-#define _SOyel "\033[7;33;46m"
-#define _SOblu "\033[7;34m"
-#define _SOmag "\033[7;35m"
-#define _SOcya "\033[7;36m"
-#define _SOwhi "\033[7;37m"
+#ifdef MTX_DEBUG
 
+__attribute__((unused))
+static void _print_priv_table (const GPtrArray *);
 static void
-_print_priv_table (const GPtrArray *priv_table,
-                   const gchar *fmt,
-                   ...)
+_print_priv_table (const GPtrArray *priv_table)
 {
-    va_list args;
-    va_start (args, fmt);
-    gchar *msg = g_strdup_vprintf (fmt, args);
-    va_end (args);
-    g_printerr ("%s", msg);
-    g_free (msg);
-    if (priv_table->len == 0)
+    for (guint i = 0; i < priv_table->len; i++)
     {
-        g_printerr (_SO "EMPTY TABLE" _SE "\n");
-    }
-    else
-    {
-        for (guint i = 0; i < priv_table->len; i++)
-        {
-            gchar *p = g_ptr_array_index (priv_table, i);
-            g_printerr ("% 3d. \"%s\"\n", i, p);
-        }
+        gchar *p = g_strescape (g_ptr_array_index (priv_table, i), NULL);
+        g_printerr ("% 3d. \"%s\"\n", i, p);
+        g_free (p);
     }
 }
-
-#endif /* MTX_DEBUG > 1 */
+#endif /* MTX_DEBUG */
 
 /**
 mtx_cmm_make_code_ref:
 
 @id: id of an inline code segment stashed with `mtx_cmm_stash_code`.
-Return:
-dynamically-allocated string code_ref, which encodes @id
+Return: dynamically-allocated string code_ref encoding @id.
 */
 static inline gchar*
 mtx_cmm_make_code_ref (const guint id)
 {
-    return g_strdup_printf ("%s%dC;%s", sUNIPUA_CODE, id, sUNIPUA_CODE);
+    return g_strdup_printf (sUNIPUA_CODE "%d;" sUNIPUA_CODE, id);
+    /* The trailing sUNIPUA_CODE assists mtx_cmm_regex_word_split. */
 }
 
 /**
@@ -428,38 +455,35 @@ mtx_cmm_get_code_id:
 Return: -1   if @text isn't a valid code_ref otherwise return the code id
 */
 static inline gint
-mtx_cmm_get_code_id (
-    const gchar *ref)
+mtx_cmm_get_code_id (const gchar *ref)
 {
     gint id = -1;
-    if (strncmp (ref, sUNIPUA_CODE, sizeof (sUNIPUA_CODE) - 1) == 0)
+    if (memcmp (ref, sUNIPUA_CODE, sizeof (sUNIPUA_CODE) - 1) == 0)
     {
         id = atoi (ref + sizeof (sUNIPUA_CODE) - 1);
     }
-
     return id;
 }
 
 /**
 mtx_cmm_stash_code:
 @code: markdown code span or `code_ref`
-Return:
-stashed `code_id` - use `mtx_cmm_get_code` to retrieve the code text.
-Line endings are converted to space according to the CM spec.
-Identical @codes are stashed with the same id.
+Return: `code_id` - use `mtx_cmm_get_code` to retrieve the text.
+Identical @codes return the same `code_id`.
 */
 static inline guint
 mtx_cmm_stash_code (MtxCmm *self,
                     const gchar *code)
 {
+    /* guard against stashing already-stashed code */
     gint id = mtx_cmm_get_code_id (code);
+
     if (id < 0)
     {
-        gchar *p;
         for (guint i = 0; i < self->priv->code_table->len; i++)
         {
-            p = g_ptr_array_index (self->priv->code_table, i);
-            if (strcmp (code, p) == 0)
+            if (strcmp (code, g_ptr_array_index (self->priv->code_table, i))
+                == 0)
             {
                 id = i;
                 break;
@@ -467,69 +491,24 @@ mtx_cmm_stash_code (MtxCmm *self,
         }
         if (id < 0)
         {
-            p = g_strdup (code);
-            g_ptr_array_add (self->priv->code_table, p);
+            g_ptr_array_add (self->priv->code_table, g_strdup (code));
             id = self->priv->code_table->len - 1;
         }
     }
-
     return id;
 }
 
 /**
 mtx_cmm_get_code:
-@id: id of a code span previously stashed with `mtx_cmm_stash_code`.
-Return: code text containing unescaped grave accents. The instance owns the
-returned memory.
+@id: id of a text span previously stashed with `mtx_cmm_stash_code`.
+Return: stashed text. The instance owns the returned memory.
 */
-static gchar *
+static inline const gchar *
 mtx_cmm_get_code (MtxCmm *self,
                   const gint id)
 {
-    g_return_val_if_fail(id < (gint) self->priv->code_table->len, NULL);
+    g_assert (id < (gint) self->priv->code_table->len);
     return g_ptr_array_index (self->priv->code_table, id);
-}
-
-/**
-mtx_cmm_regex_code_ref:
-
-Return: a GRegex that matches the internal code_refs created by
-mtx_cmm_make_code_ref.
-*/
-static GRegex *
-mtx_cmm_regex_code_ref (MtxCmm *self)
-{
-    static GRegex **regex = NULL;
-
-    if (regex == NULL)
-    {
-        regex =
-         &g_array_index (self->priv->regex_table, GRegex *,
-                         MTX_CMM_REGEX_CODE_REF);
-    }
-    if (*regex == NULL)
-    {
-        *regex = g_regex_new (sUNIPUA_CODE "(\\d+)C;" sUNIPUA_CODE, 0, 0, NULL);
-    }
-    return *regex;
-}
-
-/**
-mtx_cmm_get_link_dest_id:
-
-@ref: a `link_dest_ref`
-
-Return: the link DEST id otherwise -1 if @ref is invalid.
-*/
-static inline gint
-mtx_cmm_get_link_dest_id (const gchar *ref)
-{
-    gint id = -1;
-    if (strncmp (ref, sUNIPUA_LINK, sizeof (sUNIPUA_LINK) - 1) == 0)
-    {
-        id = atoi (ref + sizeof (sUNIPUA_LINK) - 1);
-    }
-    return id;
 }
 
 /**
@@ -537,42 +516,22 @@ mtx_cmm_stash_link_dest:
 
 @dest: markdown link destination or `link_dest_ref`
 
-Return: stashed `link_dest_id`. Use %mtx_cmm_get_link_dest to retrieve the link
-destination.  Identical destinations are stashed with the same id.
+Return: `link_dest_id`. Use %mtx_cmm_get_link_dest to retrieve the link
+destination.  Identical destinations return the same id.
 
 This function also applies to markdown image path.
 */
-static gint
+static inline guint
 mtx_cmm_stash_link_dest (MtxCmm *self,
                          const gchar *dest)
 {
-    gint id = mtx_cmm_get_link_dest_id (dest);
-    if (id < 0)
-    {
-        gchar *p;
-        for (guint i = 0; i < self->priv->link_table->len; i++)
-        {
-            p = g_ptr_array_index (self->priv->link_table, i);
-            if (strcmp (dest, p) == 0)
-            {
-                id = i;
-                break;
-            }
-        }
-        if (id < 0)
-        {
-            p = g_strdup (dest);
-            g_ptr_array_add (self->priv->link_table, p);
-            id = self->priv->link_table->len - 1;
-        }
-    }
-    return id;
+    return mtx_cmm_stash_code (self, dest);
 }
 
 /**
 mtx_cmm_get_link_dest:
 
-@id: link destination id in @self's link_table.
+@id: link destination id in self's tables.
 
 Return: pointer to link URI or image path strings owned by the instance.
 */
@@ -580,8 +539,7 @@ const gchar *
 mtx_cmm_get_link_dest (MtxCmm *self,
                        const gint id)
 {
-    g_return_val_if_fail (id < (gint) self->priv->link_table->len, NULL);
-    return (const gchar *) g_ptr_array_index(self->priv->link_table, id);
+    return mtx_cmm_get_code (self, id);
 }
 
 /**
@@ -591,19 +549,19 @@ static void
 mtx_cmm_mtx_reset (MtxCmm *self)
 {
     gsize i, sz;
-    gchar **a;
+    gpointer *a;
 
-    a = (gchar **) g_ptr_array_steal (self->priv->link_table, &sz);
+    a = g_ptr_array_steal (self->priv->code_table, &sz);
     for (i = 0; i < sz; i++)
     {
         g_free (a[i]);
     }
     g_free (a);
 
-    a = (gchar **) g_ptr_array_steal (self->priv->code_table, &sz);
+    a = g_ptr_array_steal (self->priv->toc, &sz);
     for (i = 0; i < sz; i++)
     {
-        g_free (a[i]);
+        toc_entry_free (a[i]);
     }
     g_free (a);
 
@@ -612,22 +570,21 @@ mtx_cmm_mtx_reset (MtxCmm *self)
     g_queue_free (self->priv->junkq);
     self->priv->unitq = g_queue_new ();
     self->priv->junkq = g_queue_new ();
+    self->priv->seen_unit_types = 0;
 }
 
 /**
 mtx_cmm_protect:
-Stash text in @self->priv->code_table and return the corresponding `code_ref`.
+Save text in @self->priv->code_table returning an encoded `code_ref` string.
 
-@self:  the %MtxCmm instance.
-@text:  the text to stash and protect.
+@self: the %MtxCmm instance.
+@text: string to save.
 
-Return: a `code_ref` string that can be used to replace @text in its original
-location. The caller owns the memory.  Return NULL on error.
+Return: a `code_ref` string that can replace @text in its original location
+without forming valid markdown syntax with surrounding text.
+The caller owns the returned memory.  Return NULL on error.
 
-This function is used to encode text in opaque strings, hence preventing the
-text from entangling with other text in subsequent parsing and rendering stages.
-Use %mtx_cmm_string_release_protected to see the content of a a string containing
-protected segments.
+Pass the `code_ref` to %mtx_cmm_string_release_protected to get @text back.
 */
 static inline gchar *
 mtx_cmm_protect (MtxCmm *self,
@@ -638,69 +595,108 @@ mtx_cmm_protect (MtxCmm *self,
 }
 
 /**
-mtx_replace_code_ref_cb:
-Callback to replace a code_ref match with the referenced text.
-*/
-static gboolean
-mtx_release_code_ref_cb (const GMatchInfo *match_info,
-                         GString *buf,
-                         gpointer data)
-{
-    MtxCmm *self = data;
-    gchar *match = g_match_info_fetch (match_info, 1);
-    gint id = atoi (match);
-    gchar *code = mtx_cmm_get_code (self, id);
-    g_string_append (buf, code);
-    g_free (match);
-    self->priv->ctr_repl_eval++;
+mtx_strstr_code:
+Unroll strstr (str, sUNIPUA_CODE).
 
-    return FALSE;
+@str: C string search target.
+
+Return: pointer to first instance of sUNIPUA_CODE in @str.
+*/
+static inline gchar *
+mtx_strstr_code (const gchar *str)
+{
+    const gchar *p = str;
+    do
+    {
+        p = strchr (p, cUNIPUA0);
+        if (p)
+        {
+            if (p[1] == cUNIPUA1 && p[2] == cUNIPUA_CODE)
+            {
+                return (gchar *) p;
+            }
+            ++p;
+        }
+    } while (p);
+    return NULL;
 }
 
 /**
 mtx_cmm_string_release_protected:
-Replace all code_refs in @str with the text they reference.
-@str: GString
+Recursively replace all code_refs in @str with the text they reference.
 
-Returns: the number of matches or -1 on error.
+@str: GString replacement target.
+@p: pointer to sUNIPUA_CODE starting position in @str. NULLABLE.
+
+Returns: the number of replacements.
 */
 static gint
 mtx_cmm_string_release_protected (MtxCmm *self,
-                                  GString *str)
+                                  GString *str,
+                                  gchar *p)
 {
-    GRegex *regex = mtx_cmm_regex_code_ref (self);
-    GError *err = NULL;
+    GSList *idp = NULL;
+    guint ctr = 0;
+    gchar *q;
 
-    self->priv->ctr_repl_eval = 0; /* NON-RE-ENTRANT */
-    g_autofree gchar *temp =
-    g_regex_replace_eval (regex, str->str, -1, 0, 0,
-                          mtx_release_code_ref_cb, self, &err);
-    if (err != NULL)
+    /* Get pointers to < sUNIPUA_CODE <id> ";" sUNIPUA_CODE > */
+    q = str->str;
+    if (p == NULL)
     {
-        g_printerr ("%s: %s\n", __FUNCTION__, err->message);
-        g_error_free (err);
-        return -1;
+        p = mtx_strstr_code (str->str);
     }
-    g_string_assign (str, temp);
-    return self->priv->ctr_repl_eval;
+    while (p != NULL)
+    {
+        idp = g_slist_prepend (idp, p);
+        p = mtx_strstr_code (strchr (p, ';') + sizeof sUNIPUA_CODE);
+    }
+    if (idp != NULL)
+    {
+        GString *ret = g_string_new ("");
+        gpointer idp0 = idp = g_slist_reverse (idp);
+
+        do
+        {
+            g_string_append_len (ret, q, (gchar *) idp->data - q);
+            const guint id = atoi (idp->data + sizeof sUNIPUA_CODE - 1);
+            const gchar *code = mtx_cmm_get_code (self, id);
+            if ((q = mtx_strstr_code (code)) != NULL)
+            {
+                g_string_append_len (ret, code, q - code);
+                GString *rec = g_string_new (q);
+                ctr += mtx_cmm_string_release_protected (self, rec, rec->str);
+                g_string_append (ret, rec->str);
+                g_string_free (rec, TRUE);
+            }
+            else
+            {
+                g_string_append (ret, code);
+            }
+            ++ctr;
+            q = strchr (idp->data, ';') + sizeof sUNIPUA_CODE;
+            idp = idp->next;
+        } while (idp != NULL);
+
+        g_string_append (ret, q);
+        g_slist_free (idp0);
+        g_string_assign (str, ret->str);
+        g_string_free (ret, TRUE);
+    }
+    return ctr;
 }
 
 /**
 mtx_strstrip_pango_markup:
 
 Returns: TRUE and sets *@retptr to a newly-allocated buffer of plain text,
-otherwise it returns FALSE for error.
+otherwise it returns FALSE on error.
 */
 inline static gboolean
 mtx_strstrip_pango_markup (const gchar *string,
                         gchar **retptr)
 {
-    PangoAttrList *attrs;
     gboolean ret =
-    pango_parse_markup (string, -1, 0, &attrs, retptr, NULL, NULL);
-    {
-        pango_attr_list_unref (attrs); /* don't care */
-    }
+    pango_parse_markup (string, -1, 0, NULL, retptr, NULL, NULL);
     return ret;
 }
 
@@ -733,30 +729,17 @@ mtx_strstrip_pango_spans_fast (gchar *string)
 }
 
 /**
-mtx_cmm_string_release_protected_unmarked:
-Recursively release all code_refs in @str then strip off Pango <span> markup
-leaving only clear UTF-8 text, possibly containing UNIPUA codepoints, as the
-result.
+mtx_cmm_string_release_unmarked:
+Call mtx_cmm_string_release_protected then strip off Pango <span> markup
+leaving only clear UTF-8 text, possibly containing UNIPUA codepoints.
 
 @str: GString
-
-Returns: the number of matches or -1 on error. In either case @str->str
-may have changed.
 */
-static gint
-mtx_cmm_string_release_protected_unmarked (MtxCmm *self,
-                                           GString *str)
+static void
+mtx_cmm_string_release_unmarked (MtxCmm *self,
+                                 GString *str)
 {
-    gint ret, ctr = 0;
-
-    do {
-        ret = mtx_cmm_string_release_protected (self, str);
-        if (ret > 0)
-        {
-            ctr += ret;
-        }
-    } while (ret > 0);
-    if (ctr > 0)
+    if (mtx_cmm_string_release_protected (self, str, NULL) > 0)
     {
 #if 0
         gchar *clear_text;
@@ -764,12 +747,11 @@ mtx_cmm_string_release_protected_unmarked (MtxCmm *self,
         g_string_assign (str, clear_text);
         g_free (clear_text);
 #else
-        /* not very robust but much faster; let's see it in practice... */
+        /* limited, not robust but faster; let's see it in practice... */
         mtx_strstrip_pango_spans_fast (str->str);
         str->len = strlen (str->str);
 #endif
     }
-    return ret < 0 ? -1 : ctr;
 }
 
 /**
@@ -777,63 +759,64 @@ mtx_cmm_linkbuilder_pango:
 
 @text: can be NULL.
 @dest: can be NULL, forwarded as font span.
-@title: can be NULL.
+@title: can be NULL, ignored.
 @link_dest_id: can be -1.
 @dest: the uri-encoded link followed by '\n' followed by the verbatim link.
+*/
+/*
+Here and in mtx_cmm_imagebuilder_pango(), We need to pass extra data directly
+to the application that will render the link in the MTX TextView. Our data will
+piggyback the Pango markup "font" attribute. The TextView will receive the font
+string as a GtkTextTag, decode it to get the font attribute (string), decode the
+attribute and call mtx_cmm_get_link_dest() et al. to obtain the link DEST.
+
+The font attribute string looks like this:
+  font="@dest=<type><id>[dest=<type><value>...]",   with
+  <type> "Lu"(URI), "Ip"(image path); <id> int(link table index aka id)
+The optional <type><value> continuation is used to add the length
+of the link text ("Lu"). For example, markdown [texty](link) yields
+  font="@dest=Lu1dest=Tl5"   assuming it's the first link in the document.
+It is also used to mark a link as a heading link ("dest=Hu1").
+
+The "@..." syntax is called font VARIATIONS, Pango supports it since version
+??. VARIATIONS is a comma-separated list of font variation specifications of
+the form @axis=value (the = sign is optional). It's the last part of the font
+description{1}. Is it safe to piggyback it? I tested <span>s using `pango-view
+--markup -t`, e.g. font="Serif Bold Italic 44 @x=1,y=3,z=4", and played with
+"Serif", "Bold", "Italic", "44". It has always worked.
+
+CAVEAT: the added font property shadows other font properties set by outer
+spans. I suspect this is inherent in the GtkTextBuffer implementation: no
+font style inheritance of the kind we can enjoy with CSS.
+
+{1} https://docs.gtk.org/Pango/type_func.FontDescription.from_string.html
+{2} https://gitlab.gnome.org/GNOME/pango/-/blob/main/pango/fonts.c#L1252
+    is the "[src]" link in {1}
 */
 static gchar *
 mtx_cmm_linkbuilder_pango (MtxCmm *self,
                            const gchar *text,
                            const gchar *dest,
-                           const gchar *title,
+                           const gchar *title __attribute__((unused)),
                            const gint link_dest_id)
 {
-    /*
-    Here and in mtx_cmm_imagebuilder_pango(), We need to pass extra data
-    directly to the application that will render the link in the MTX TextView.
-    Our data will piggyback the Pango markup "font" attribute. The TextView will
-    receive the font string as a GtkTextTag, decode it to get the font attribute
-    (string), decode the attribute and call mtx_cmm_get_link_dest() et al. to
-    obtain the link DEST.
-
-    The font attribute string looks like this:
-      font="@dest=<type><id>[<type><value>...]",   with
-      <type> "Lu"(URI), "Ip"(image path); <id> int(link table index aka id)
-    The optional <type><value> continuation is only used for "Lu" to add
-    the length of the link text. For example, markdown [texty](link) yields
-      font="@dest=Lu1dest=Tl5"   assuming it's the first link in the document.
-
-    The "@..." syntax is called font VARIATIONS, Pango supports it since version
-    ??. VARIATIONS is a comma-separated list of font variation specifications
-    of the form @axis=value (the = sign is optional). It's the last part of the
-    font description{1}.  Is it safe to piggyback it? I tested <span>s using
-    `pango-view --markup -t`, e.g.  font="Serif Bold Italic 44 @x=1,y=3,z=4",
-    and played with "Serif", "Bold", "Italic", "44". It has always worked.
-
-    CAVEAT: the added font property shadows other font properties set by outer
-    spans. I suspect this is inherent in the GtkTextBuffer implementation: no
-    font style inheritance of the kind we can enjoy with CSS.
-
-    {1} https://docs.gtk.org/Pango/type_func.FontDescription.from_string.html
-    {2} https://gitlab.gnome.org/GNOME/pango/-/blob/main/pango/fonts.c#L1252
-        is the "[src]" link in {1}
-    */
-    gchar *ret = NULL, *esc_title = NULL;
+    gchar *ret = NULL;
     gchar *style = MTX_STYLE_PANGO_URL;
     GString *markup = NULL;
     guint llen;
     gchar *plain_text = NULL, *merge_img = NULL;
+    gchar is_heading_info[16] = "";
 
     /*
-    The viewer app will retrieve the link URI from the link_table,
-    and get: dest format: <uri-encoded>\n<verbatim>.
-    Incoming 'text' is markdown link text, which can include pango markup now
-    but will turn into plain text in the GtkTextBuffer. Therefore, on purpose,
-    'llen' is the length of the link text after stripping markup, as it will
-    appear to the viewer app.
-    Said markup could include a markdown image (see examples/text-links-patch.md
-    as to why).  If so, we need to merge the font description of the image into
-    the font description of the link.
+    The viewer app will get the link destination with mtx_cmm_get_link_dest
+    in the following format: <uri-encoded>\n<verbatim>.
+    Incoming 'text' is markdown link text, which could include Pango markup
+    that will turn into plain text once rendered as MtxTextView. Therefore,
+    on purpose, 'llen' is the length of the link text as it will appear to
+    the viewer app, after stripping Pango markup. Moreover, the markup
+    could include a markdown image (see examples/text-links-patch.md as
+    to why). If so, we need to merge the font description of the image
+    into the font description of the link.
     */
     /*
     TODO: Support more than one image in link text. For now it's just 0 or 1.
@@ -847,12 +830,20 @@ mtx_cmm_linkbuilder_pango (MtxCmm *self,
         mtx_dbg_errout (-1, "(%s)", text);
         /* Text could be encoded; we must decode to tell. */
         markup = g_string_new (text);
-        repl_ctr = mtx_cmm_string_release_protected (self, markup);
+        repl_ctr = mtx_cmm_string_release_protected (self, markup, NULL);
         /* repl_ctr > 0 => text was encoded */
         mtx_dbg_errseq (-1, " ==> markup(%s)", markup->str);
 
         (void) mtx_strstrip_pango_markup (markup->str, &plain_text);
+        mtx_str_delete_unipua_em_strong (plain_text);
         mtx_dbg_errseq (-1, " ==> plain_text(%s)", plain_text);
+
+        if (strcmp (text, MTX_INSERT_HEADING_LINK_TEXT) == 0)
+        {
+            snprintf (is_heading_info, sizeof is_heading_info - 1, "%s1",
+                      _tag_info_str (MTX_TAG_DEST_LINK_HEADING));
+            style = MTX_STYLE_PANGO_URL_HEADING;
+        }
 
         /*
         If text encoded (repl_ctr > 0) a markdown image (id >= 0),
@@ -860,13 +851,13 @@ mtx_cmm_linkbuilder_pango (MtxCmm *self,
         */
         if (repl_ctr > 0)
         {
-            id = mtx_cmm_tag_get_info (self, markup->str,
-                                       MTX_TAG_DEST_IMAGE_PATH_ID);
+            id = mtx_cmm_get_tag_val (self, markup->str,
+                                      MTX_TAG_DEST_IMAGE_PATH_ID);
             if (id >= 0)
             {
                 merge_img =
                 g_strdup_printf ("@%s%d",
-                                 _tag_info[MTX_TAG_DEST_IMAGE_PATH_ID], id);
+                                 _tag_info_str(MTX_TAG_DEST_IMAGE_PATH_ID), id);
                 mtx_dbg_errseq (-1, " ==> merge_img(%s)", merge_img);
                 p = g_strdup_printf ("font=\"%s\"", merge_img);
                 g_string_replace (markup, p, "", 1);
@@ -877,41 +868,47 @@ mtx_cmm_linkbuilder_pango (MtxCmm *self,
         g_string_assign (markup, p = mtx_cmm_protect (self, markup->str));
         g_free (p);
         mtx_dbg_errseq (-1, " ==> protected_markup(%s)", markup->str);
+        llen =
+        plain_text != NULL ? (gsize) g_utf8_strlen (plain_text,
+                                                    -1) : markup->len;
     }
     else
     {
         markup = g_string_new ("⯅⯅");
+        llen = 2;
     }
-    llen =
-    plain_text != NULL ? (gsize) g_utf8_strlen (plain_text, -1) : markup->len;
     g_free (plain_text);
     mtx_dbg_errseq (-1, " [ markup %s ]", markup->str);
     mtx_dbg_errseq (-1, " [ llen %d ]\n", llen);
 
+#if 0
+    /* Web browsers only use the title attribute for tooltips/accessibility,
+    never for regular inline display. #MtxTextView doesn't support tooltips. */
     if (title)
     {
-        esc_title = g_markup_printf_escaped (" (%s)", title);
+        gchar *esc_title = g_markup_printf_escaped ("%s", title);
     }
+#endif
     if (dest && link_dest_id >= 0)
     {
         ret =
-        g_strdup_printf ("<span font=\"%s@%s%d%s%d%s\" %s>" "%s</span>%s",
+        g_strdup_printf ("<span font=\"%s@%s%d%s%d%s%s\" %s>" "%s</span>",
                          self->priv->inside_table ? "monospace " : "",
-                         _tag_info[MTX_TAG_DEST_LINK_URI_ID], link_dest_id,
-                         _tag_info[MTX_TAG_DEST_LINK_TXT_LEN], llen,
-                          merge_img != NULL ? merge_img : "",
-                          style, markup->str, esc_title ? esc_title : "");
+                         _tag_info_str (MTX_TAG_DEST_LINK_URI_ID), link_dest_id,
+                         _tag_info_str (MTX_TAG_DEST_LINK_TXT_LEN), llen,
+                         is_heading_info,
+                         merge_img != NULL ? merge_img : "",
+                         style, markup->str);
     }
     else  /* link w/o dest, e.g. [text]() is valid CommonMark. */
     {
         ret =
-        g_strdup_printf ("<span %s%s>%s</span>%s",
+        g_strdup_printf ("<span %s%s>%s</span>",
                          self->priv->inside_table ? "font=\"monospace\"" : "",
-                         style, markup->str, esc_title ? esc_title : "");
+                         style, markup->str);
     }
     g_string_free (markup, TRUE);
     g_free (merge_img);
-    g_free (esc_title);
     return ret;
 }
 
@@ -952,6 +949,37 @@ mtx_cmm_linkbuilder_html (MtxCmm *self __attribute__((unused)),
     }
     g_free (esc_title);
     return ret;
+}
+
+/**
+mtx_cmm_linkbuilder_bare:
+Format just the URI-encoded link destionation. For use by BARE_INLINES.
+This function is very specific to mtx_insert_heading_link_cb. I don't
+expect it to work well for other callers.
+
+@text: can be NULL.
+@dest: URI.
+@title: can be NULL, ignored.
+@link_dest_id: ignored.
+@dest: the uri-encoded link followed by '\n' followed by the verbatim link.
+*/
+static gchar *
+mtx_cmm_linkbuilder_bare (MtxCmm *self __attribute__((unused)),
+                          const gchar *text,
+                          const gchar *dest,
+                          const gchar *title __attribute__((unused)),
+                          const gint link_dest_id __attribute__((unused)))
+{
+    /* dest format: <uri-encoded>\n<verbatim> */
+    g_assert (!*dest || strchr (dest, '\n'));
+    if (dest[0] != '#' && text)
+    {
+        return strdup (text);
+    }
+    else
+    {
+        return strndup (dest, strchr (dest, '\n') - dest); /* uri-encoded */
+    }
 }
 
 /**
@@ -1074,7 +1102,7 @@ mtx_cmm_imagebuilder_pango (MtxCmm *self __attribute__((unused)),
     ret =
     g_strdup_printf ("<span font=\"%s@%s%d\" %s>%s</span>%s",
                      self->priv->inside_table ? "monospace " : "",
-                     _tag_info[MTX_TAG_DEST_IMAGE_PATH_ID],
+                     _tag_info_str (MTX_TAG_DEST_IMAGE_PATH_ID),
                      link_dest_id, style, text ? text : alt, esc_title ?
                      esc_title : "");
     g_free (esc_title);
@@ -1214,9 +1242,8 @@ mtx_cmm_get_render_indent (MtxCmm *self)
 {
     g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
     g_return_val_if_fail (self->priv->output != MTX_CMM_OUTPUT_UNKNOWN, FALSE);
-    return (self->priv->output == MTX_CMM_OUTPUT_ANSI
-            || self->priv->output == MTX_CMM_OUTPUT_TEXT
-            || self->priv->output == MTX_CMM_OUTPUT_TTY);
+    return (self->priv->output & (MTX_CMM_OUTPUT_ANSI
+                                  | MTX_CMM_OUTPUT_TEXT | MTX_CMM_OUTPUT_TTY));
 }
 
 /**
@@ -1243,7 +1270,6 @@ mtx_cmm_set_escape (MtxCmm *self,
 
 /**
 mtx_cmm_get_extensions:
-
 */
 MtxCmmExtensions
 mtx_cmm_get_extensions (MtxCmm *self)
@@ -1265,8 +1291,41 @@ mtx_cmm_set_extensions (MtxCmm *self,
 }
 
 /**
-mtx_cmm_get_tweaks:
+mtx_cmm_set_progress_fd:
+*/
+gboolean
+mtx_cmm_set_progress_fd (MtxCmm *self,
+                         const gint fd)
+{
+    g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
+    self->priv->progress_fd = fd;
+    return TRUE;
+}
 
+/**
+mtx_cmm_get_toc_level:
+*/
+guint
+mtx_cmm_get_toc_level (MtxCmm *self)
+{
+    g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
+    return self->priv->toc_level;
+}
+
+/**
+mtx_cmm_set_toc_level:
+*/
+gboolean
+mtx_cmm_set_toc_level (MtxCmm *self,
+                       const guint value)
+{
+    g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
+    self->priv->toc_level = value;
+    return TRUE;
+}
+
+/**
+mtx_cmm_get_tweaks:
 */
 MtxCmmTweaks
 mtx_cmm_get_tweaks (MtxCmm *self)
@@ -1275,13 +1334,50 @@ mtx_cmm_get_tweaks (MtxCmm *self)
     return self->priv->tweaks;
 }
 
+/**
+mtx_cmm_set_tweaks:
+
+Note that flipping the MTX_CMM_TWEAK_HTML5 bit will force recomputing
+the output tags, using code equivalent to the following:
+    if (mtx_cmm_get_output (instance) == MTX_CMM_OUTPUT_UNKNOWN)
+    {
+        mtx_cmm_set_output (instance, MTX_CMM_OUTPUT_HTML);
+    }
+    mtx_cmm_set_output (instance, mtx_cmm_get_output (instance));
+*/
 gboolean
 mtx_cmm_set_tweaks (MtxCmm *self,
                     const MtxCmmTweaks flags)
 {
     g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
+    gboolean update_output = !!(self->priv->tweaks & MTX_CMM_TWEAK_HTML5) !=
+    !!(flags & MTX_CMM_TWEAK_HTML5);
     self->priv->tweaks = flags;
+    if (update_output)
+    {
+        if (self->priv->output == MTX_CMM_OUTPUT_UNKNOWN)
+        {
+            self->priv->output = MTX_CMM_OUTPUT_HTML;
+        }
+        mtx_cmm_set_output (self, self->priv->output);
+    }
     return TRUE;
+}
+
+/**
+mtx_cmm_fetch_page_meta:
+Get current page meta data.
+
+Return: a copy of the current page meta data.
+The caller of this function owns the returned memory.
+*/
+static MtxCmmPageMeta *
+mtx_cmm_fetch_page_meta (MtxCmm *self)
+{
+    g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
+    MtxCmmPageMeta *ret = g_malloc (sizeof (MtxCmmPageMeta));
+    memcpy (ret, &self->priv->meta, sizeof (MtxCmmPageMeta));
+    return ret;
 }
 
 /**
@@ -1308,11 +1404,11 @@ mtx_cmm_set_output:
 gboolean
 mtx_cmm_set_output (MtxCmm *self,
                     MtxCmmOutput output)
-{ /* *INDENT*OFF* */
+{ /* *INDENT-OFF* */
     gboolean ret = TRUE;
     g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
 
-    /* MTX PangoMarkup */
+    /* MTX Pango Markup */
     if (output == MTX_CMM_OUTPUT_PANGO)
     {
         self->priv->tags.em_start = "<i>";
@@ -1366,8 +1462,68 @@ mtx_cmm_set_output (MtxCmm *self,
         self->priv->tags.th_end = " </span>";
         self->priv->tags.td_start = "│<span " MTX_STYLE_PANGO_TD "> ";
         self->priv->tags.td_end = " </span>";
+        self->priv->tags.toc_start =
+            "<span font=\"toc=1\">"sUNIPUA_PANGO_EMPTY_SPAN"</span>";
+        self->priv->tags.toc_end =
+            "<span font=\"toc=0\">"sUNIPUA_PANGO_EMPTY_SPAN"</span>";
         self->priv->tags.link_builder = mtx_cmm_linkbuilder_pango;
         self->priv->tags.image_builder = mtx_cmm_imagebuilder_pango;
+
+        /* assist mtx_insert_heading_link_cb */
+    }
+    else if (output == MTX_CMM_OUTPUT_BARE_INLINE)
+    {
+        self->priv->tags.em_start = "";
+        self->priv->tags.em_end = "";
+        self->priv->tags.strong_start = "";
+        self->priv->tags.strong_end = "";
+        self->priv->tags.code_span_start = "";
+        self->priv->tags.code_span_end = "";
+        self->priv->tags.codeblock_start = "";
+        self->priv->tags.codeblock_end = "";
+        self->priv->tags.strikethrough_start = "";
+        self->priv->tags.strikethrough_end = "";
+        self->priv->tags.h1_start = "";
+        self->priv->tags.h1_end = "";
+        self->priv->tags.h2_start = "";
+        self->priv->tags.h2_end = "";
+        self->priv->tags.h3_start = "";
+        self->priv->tags.h3_end = "";
+        self->priv->tags.h4_start = "";
+        self->priv->tags.h4_end = "";
+        self->priv->tags.h5_start = "";
+        self->priv->tags.h5_end = "";
+        self->priv->tags.h6_start = "";
+        self->priv->tags.h6_end = "";
+        self->priv->tags.blockquote_start = "";
+        self->priv->tags.blockquote_end =   "";
+        self->priv->tags.olist_start = "";
+        self->priv->tags.olist_end = "";
+        self->priv->tags.ulist_start = "";
+        self->priv->tags.ulist_end = "";
+        self->priv->tags.li_start[0] = "";
+        self->priv->tags.li_start[1] = "";
+        self->priv->tags.li_end = "";
+        self->priv->tags.rule = "";
+        self->priv->tags.para_start = "";
+        self->priv->tags.para_end = "";
+        self->priv->tags.br = "";
+        self->priv->tags.table_start = "";
+        self->priv->tags.table_end = "";
+        self->priv->tags.thead_start = "";
+        self->priv->tags.thead_end = "";
+        self->priv->tags.tbody_start = "";
+        self->priv->tags.tbody_end = "";
+        self->priv->tags.tr_start = "";
+        self->priv->tags.tr_end = "";
+        self->priv->tags.th_start = "";
+        self->priv->tags.th_end = "";
+        self->priv->tags.td_start = "";
+        self->priv->tags.td_end = "";
+        self->priv->tags.toc_start = "";
+        self->priv->tags.toc_end = "";
+        self->priv->tags.link_builder = mtx_cmm_linkbuilder_bare;
+        self->priv->tags.image_builder = mtx_cmm_imagebuilder_text;
 
         /* MTX XHTML */
     }
@@ -1405,12 +1561,12 @@ mtx_cmm_set_output (MtxCmm *self,
         self->priv->tags.li_start[0] = "<li>";    /* render_open_li_block */
         self->priv->tags.li_start[1] = "<li>";    /* render_open_li_block */
         self->priv->tags.li_end = "</li>\n";      /* render_close_li_block */
-        self->priv->tags.rule =                 /* render_open_hr_block */
-            "<hr";                              /* intentionally without '>' */
+        self->priv->tags.rule =
+            self->priv->tweaks & MTX_CMM_TWEAK_HTML5 ? "<hr>\n" : "<hr />\n";
         self->priv->tags.para_start = "<p>";    /* render_open_p_block */
         self->priv->tags.para_end = "</p>\n";   /* render_close_p_block */
-        self->priv->tags.br =                   /* render_text_hardbr */
-            "<br";                              /* intentionally without '>' */
+        self->priv->tags.br =
+            self->priv->tweaks & MTX_CMM_TWEAK_HTML5 ? "<br>\n" : "<br />\n";
         self->priv->tags.table_start = "<table>\n";
         self->priv->tags.table_end = "</table>\n";
         self->priv->tags.thead_start = "<thead>\n";
@@ -1423,6 +1579,8 @@ mtx_cmm_set_output (MtxCmm *self,
         self->priv->tags.th_end = "</th>\n";
         self->priv->tags.td_start = "<td%s>";
         self->priv->tags.td_end = "</td>\n";
+        self->priv->tags.toc_start = "</p><div class=\"mtx-toc\">\n";
+        self->priv->tags.toc_end = "</div><p>\n";
         self->priv->tags.link_builder = mtx_cmm_linkbuilder_html;
         self->priv->tags.image_builder = mtx_cmm_imagebuilder_html;
 
@@ -1477,6 +1635,8 @@ mtx_cmm_set_output (MtxCmm *self,
         self->priv->tags.th_end = " ";
         self->priv->tags.td_start = "│ ";
         self->priv->tags.td_end = " ";
+        self->priv->tags.toc_start = "";
+        self->priv->tags.toc_end = "";
         self->priv->tags.link_builder = mtx_cmm_linkbuilder_text;
         self->priv->tags.image_builder = mtx_cmm_imagebuilder_text;
 
@@ -1534,6 +1694,8 @@ mtx_cmm_set_output (MtxCmm *self,
         self->priv->tags.th_end = " ";
         self->priv->tags.td_start = "│ ";
         self->priv->tags.td_end = " ";
+        self->priv->tags.toc_start = "";
+        self->priv->tags.toc_end = "";
         self->priv->tags.link_builder = mtx_cmm_linkbuilder_ansi;
         self->priv->tags.image_builder = mtx_cmm_imagebuilder_ansi;
 
@@ -1588,6 +1750,8 @@ mtx_cmm_set_output (MtxCmm *self,
         self->priv->tags.th_end = " ";
         self->priv->tags.td_start = "│ ";
         self->priv->tags.td_end = " ";
+        self->priv->tags.toc_start = "";
+        self->priv->tags.toc_end = "";
         self->priv->tags.link_builder = mtx_cmm_linkbuilder_text;
         self->priv->tags.image_builder = mtx_cmm_imagebuilder_text;
     }
@@ -1603,11 +1767,51 @@ mtx_cmm_set_output (MtxCmm *self,
     if (ret)
         self->priv->output = output;
     return ret;
-} /* *INDENT*ON* */
+} /* *INDENT-ON* */
 
-#ifdef MTX_DEBUG
-static void mtx_dump_queue(gpointer instance, int fd, GQueue* queue, gboolean print_junk);
-#endif
+/**
+mtx_cmm_got_blockquote:
+Did `mtx_cmm_mtx` parse some markdown blockquotes?
+*/
+gboolean
+mtx_cmm_got_blockquote (MtxCmm *self)
+{
+    g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
+    return self->priv->seen_unit_types & MTX_CMM_PARSER_UNIT_BLOCK_QUOTE;
+}
+
+/**
+mtx_cmm_got_img:
+Did `mtx_cmm_mtx` parse some markdown images?
+*/
+gboolean
+mtx_cmm_got_img (MtxCmm *self)
+{
+    g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
+    return self->priv->seen_unit_types & MTX_CMM_PARSER_UNIT_SPAN_IMG;
+}
+
+/**
+mtx_cmm_got_li:
+Did `mtx_cmm_mtx` parse some markdown lists?
+*/
+gboolean
+mtx_cmm_got_li (MtxCmm *self)
+{
+    g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
+    return self->priv->seen_unit_types & MTX_CMM_PARSER_UNIT_BLOCK_LI;
+}
+
+/**
+mtx_cmm_got_link:
+Did `mtx_cmm_mtx` parse some markdown links?
+*/
+gboolean
+mtx_cmm_got_link (MtxCmm *self)
+{
+    g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
+    return self->priv->seen_unit_types & MTX_CMM_PARSER_UNIT_SPAN_A;
+}
 
 /**
 mtx_cmm_format_link:
@@ -1624,7 +1828,7 @@ mtx_cmm_format_link (MtxCmm *self,
                      const gchar *dest,
                      const gchar *title)
 {
-    guint id = -1;
+    gint id = -1;
     if (dest)
     {
         id = mtx_cmm_stash_link_dest (self, dest);
@@ -1662,17 +1866,13 @@ Return: GRegex* matcher for %%directives.
 static GRegex *
 mtx_cmm_regex_directives (MtxCmm *self)
 {
-    static GRegex **regex = NULL;
+    GRegex **regex = &g_array_index (self->priv->regex_table, GRegex *,
+                                     MTX_CMM_REGEX_DIRECTIVE);
 /*
 /
 (\R|^)%%(?|(nopot)[ \t]+(.*?)|(textdomain)[ \t]+(.*?))($|\R)
 /gm
 */
-    if (regex == NULL)
-    {
-        regex = &g_array_index (self->priv->regex_table, GRegex *,
-                                MTX_CMM_REGEX_DIRECTIVE);
-    }
     if (*regex == NULL)
     {
         GError *err = NULL;
@@ -1684,7 +1884,7 @@ mtx_cmm_regex_directives (MtxCmm *self)
             "", 0, 0, &err);
         if (err != NULL)
         {
-            g_printerr ("directive regex: %s\n", err->message);
+            g_error ("directive regex: %s", err->message);
             g_error_free (err);
         }
     }
@@ -1723,11 +1923,432 @@ mtx_cmm_string_replace_directives (MtxCmm *self,
                           mtx_replace_directive_cb, self, &err);
     if (err != NULL)
     {
-        g_printerr ("%s internal error:\t%s\n", __FUNCTION__, err->message);
+        g_error ("%s internal error:\t%s", __FUNCTION__, err->message);
         g_error_free (err);
         return;
     }
     g_string_assign (str, temp);
+}
+
+/**
+mtx_cmm_log_progress:
+*/
+static void
+mtx_cmm_log_progress (MtxCmm *self,
+                      const MtxCmmProgress id)
+{
+    if (self->priv->progress_fd > 0)
+    {
+        dprintf (self->priv->progress_fd, "%d\n", id);
+    }
+}
+
+/**
+mtx_insert_heading_link_cb:
+Append link reference definitions to the markdown prologue;
+add anchor links after the heading; save ToC entry data.
+
+Prologue:
+    `[`TITLE`]: `<#`URI:TITLE`>\n`
+Heading:
+    # TITLE ANCHORS '\n'
+    ANCHORS  ::= VERBATIM_LINK SLUG_LINK...
+    VERBATIM_LINK ::= `&#x200B;[`MTX_INSERT_HEADING_LINK_TEXT`](<#`URI:TITLE`>)`
+    SLUG_LINK     ::= `&#x200B;[`MTX_INSERT_HEADING_LINK_TEXT`](<SLUG>)`
+    SLUG          ::= SNAKE_SLUG | KEBAB_SLUG
+*/
+/*
+We add link definitions and zero-width heading links to the **markdown source**.
+MD4C `render_url_escaped` will URI-encode the link destination. Since the link
+text has zero width, it remains hidden on the page and cannot be clicked. This
+effectively allows such a link to function as an in-page anchor, similar to
+how an HTML tag's id="ID" attribute provides the named anchor "ID" that can be
+reached via a URL ending with "#ID".
+Each heading link is inserted three times, following slug formats commonly
+generated by various document processing applications.
+We cannot encode TITLE using `g_uri_escape_string` because its output may differ
+from that of `render_url_escaped`, which would result in a dead link. Instead,
+to encode TITLE we run the `mtx_cmm_mtx` parser twice with the output format set
+to `MTX_CMM_OUTPUT_BARE_INLINE`: the first run removes any surrounding markdown
+span (such as emphasis) from the `<TITLE text>`, and the second run generates
+the URI-encoded `<TITLE text>`.
+*/
+static gboolean
+mtx_insert_heading_link_cb (const GMatchInfo *info,
+                            GString *res,
+                            gpointer data)
+{
+    struct
+    {
+        MtxCmm *render;
+        GString *prologue;
+        guint toc_level;
+        GPtrArray *toc_entry;
+    }
+     *POD = data;
+#define ANCHOR    "&#x200B;["MTX_INSERT_HEADING_LINK_TEXT"](<%s>)"
+#define ANCHORS   "&#x200B;["MTX_INSERT_HEADING_LINK_TEXT"](<#%s>)"
+    g_autofree gchar *e = NULL;
+    g_autofree gchar *t = NULL;
+    g_autofree gchar *T = g_strstrip (g_match_info_fetch_named (info, "TITLE"));
+    g_autofree gchar *U = g_match_info_fetch_named (info, "UNDER");
+    g_autofree gchar *M = NULL;
+    g_autofree gchar *s = NULL; /* snake-case slug */
+    g_autofree gchar *k = NULL; /* kebab-case slug */
+    g_autofree gchar *anchors = NULL;
+    guint lvl = 0, n = 0;
+
+    if G_UNLIKELY(!*U && !*T)
+    {
+        /* Feature not supported for empty titles. */
+        goto unchanged;
+    }
+
+    /* Remove surrounding markdown spans from title text (t). */
+    /* Erases \n in multiline titles. */
+    gsize tlen;
+    t = mtx_cmm_mtx (POD->render, &T, &tlen, NULL, FALSE, NULL);
+
+    if G_UNLIKELY(t == NULL || !*t)
+    {
+        /* Feature not supported for empty titles. */
+        goto unchanged;
+    }
+    if (tlen != strcspn (t, "[<\\&>]"))
+    {
+        /* Feature reduced for unfriendly corner cases. */
+        goto reduced;
+    }
+
+    if (tlen != strcspn (t, "*_~"))
+    {
+        /* Feature reduced for http://github.com/mity/md4c/issues/276 , 277 */
+        guint ca, cu, ct;
+        ca = cu = ct = 0;
+        for (const gchar *p = t; *p; p++)
+        {
+            switch (*p)
+            {
+                case '*': ca++; break;
+                case '_': cu++; break;
+                case '~': ct++; break;
+            }
+        }
+        if (ca % 2 || cu % 2 || ct % 2)
+        {
+            goto reduced;
+        }
+    }
+
+    /* URI-encode title (e), that is, the link destination */
+    e = g_strdup_printf ("[](<#%s>)", t); /* Dev: must leave [text] empty. */
+    e = mtx_cmm_mtx (POD->render, &e, NULL, NULL, TRUE, NULL);
+    if (t == NULL || e == NULL)
+    {
+        goto reduced;
+    }
+
+    /* Make slugs */
+    s = mtx_str_slugify (t, ' ');
+    if (*s)
+    {
+        k = g_strdup (s);
+        for (gchar *p = s, *q = k; *p; p++, q++)
+        {
+            if (*p == ' ') {
+                *p = '_';
+                *q = '-';
+                n++;
+            }
+        }
+    }
+
+    /* Make anchors - e must go first */
+    if (*s == '\0')
+    {
+        anchors = g_strdup_printf (ANCHOR, e);
+    }
+    else if (n == 0)
+    {
+        anchors = g_strdup_printf (ANCHOR ANCHORS, e, s);
+    }
+    else
+    {
+        anchors = g_strdup_printf (ANCHOR ANCHORS ANCHORS, e, k, s);
+    }
+
+    /* Replace Title */
+    if (U[0])           /* SETEXT */
+    {
+        g_string_append (res, T);
+        g_string_append (res, anchors);
+        g_string_append_c (res, '\n');
+        g_string_append (res, U);
+        if (POD->toc_level > 0)
+        {
+            lvl = strchr (U, '=') ? 1 : 2;
+        }
+    }
+    else                /* ATX */
+    {
+        M = g_match_info_fetch_named (info, "MKD");
+        gchar *end = M;
+        for (; *end && *end == '#'; end++)
+            ;
+        for (; *end == ' '; end++)
+            ;
+        *end = '\0';
+        g_string_append (res, M);
+        g_string_append (res, T);
+        g_string_append (res, anchors);
+        if (POD->toc_level > 0)
+        {
+            gchar *p =
+            M[0] == '#' ? M : M[1] == '#' ? M + 1 : M[2] == '#' ? M + 2 : M + 3;
+            while (*p == '#')
+            {
+                ++lvl, p++;
+            }
+        }
+    }
+
+    /* Insert link reference definition */
+    g_string_append_printf (POD->prologue, "[%s]: <%s>\n", t, e);
+
+    /* Save ToC entry data */
+    if (POD->toc_level > 0 && lvl <= POD->toc_level)
+    {
+        MtxCmmTocEntry *te = g_malloc (sizeof (MtxCmmTocEntry));
+        te->dest = g_strdup (e);
+        te->text = g_strdup (t);
+        te->rendered = NULL;
+        te->level = lvl;
+        g_ptr_array_add (POD->toc_entry, te);
+    }
+
+    return FALSE;
+
+reduced:
+    /* Save ToC entry title text without the links. */
+
+    if (POD->toc_level > 0 && lvl <= POD->toc_level)
+    {
+        if (U[0])           /* SETEXT */
+        {
+            lvl = strchr (U, '=') ? 1 : 2;
+        }
+        else                /* ATX */
+        {
+            int i;
+            const gchar *S = g_match_info_get_string (info);
+            g_match_info_fetch_named_pos (info, "MKD", &i, NULL);
+            while (S[i] == ' ')
+            {
+                ++i;
+            }
+            while (S[i] == '#')
+            {
+                ++lvl, i++;
+            }
+        }
+        MtxCmmTocEntry *te = g_new0 (MtxCmmTocEntry, 1);
+        te->text = g_markup_escape_text (t, -1);
+        te->level = lvl;
+        g_ptr_array_add (POD->toc_entry, te);
+    }
+
+unchanged:
+    {
+        gint s0, e0;
+        g_match_info_fetch_pos (info, 0, &s0, &e0);
+        g_string_append_len (res, g_match_info_get_string (info) + s0, e0 - s0);
+
+        return FALSE;
+    }
+}
+
+/**
+mtx_cmm_string_insert_heading_links:
+For each markdown heading insert link reference
+definitions and anchor links, and save ToC entry data, see
+`mtx_insert_heading_link_cb` and `mtx_cmm_string_delete_heading_links`.
+
+@self: MtxCmm instance.
+@str: GString
+*/
+static void
+mtx_cmm_string_insert_heading_links (MtxCmm *self,
+                                     MtxCmm *render,
+                                     GString *str)
+{
+    GRegex *regex = mtx_cmm_regex_astx (self);
+    GError *err = NULL;
+    struct
+    {
+        MtxCmm *render;
+        GString *prologue;
+        const guint toc_level;
+        GPtrArray *toc;
+    }
+    POD = {
+        render, g_string_new (""), self->priv->toc_level, self->priv->toc,
+    };
+
+    g_autofree gchar *temp =
+    g_regex_replace_eval (regex, str->str, -1, 0, 0,
+                          mtx_insert_heading_link_cb, (gpointer) &POD, &err);
+    if (err != NULL)
+    {
+        g_error ("%s internal error:\t%s", __FUNCTION__, err->message);
+        g_error_free (err);
+        return;
+    }
+
+    /* Link reference definitions. */
+    g_string_assign (str, POD.prologue->str);
+    g_string_free (POD.prologue, TRUE);
+
+    /* ToC placement. */
+    if (self->priv->toc->len && !self->priv->meta.renderer_skip_toc)
+    {
+        /* Protect existing ToC shortcode, if any, or else append a new one. */
+        gchar *p = strstr (temp, SHORTCODE_TOC);
+        if (p != NULL)
+        {
+            memcpy (p, sUNIPUA_TOC, sizeof sUNIPUA_TOC - 1);
+            memmove (p + sizeof sUNIPUA_TOC - 1, p + sizeof SHORTCODE_TOC - 1,
+                     strchr (temp, '\0') - p - sizeof sUNIPUA_TOC);
+        }
+        else
+        {
+            g_string_append (str, sUNIPUA_TOC "\n<!-- -->\n");
+        }
+    }
+
+    g_string_append (str, temp);
+    mtx_dbg_errout (ZC_(1), "end %s\n", mtx_dbg_fmt_etime (-1));
+}
+
+/**
+mtx_cmm_toc_entry_equal:
+*/
+static gboolean
+mtx_cmm_toc_entry_equal (gconstpointer *a,
+                         gconstpointer *b)
+{
+    MtxCmmTocEntry *A = (MtxCmmTocEntry *) a;
+    MtxCmmTocEntry *B = (MtxCmmTocEntry *) b;
+    return g_str_equal (A->text, B->text);
+}
+
+/**
+mtx_delete_heading_link_cb:
+Delete anchors and ToC entry data for a bogus heading.
+Heading:
+    # TITLE ANCHORS
+*/
+static gboolean
+mtx_delete_heading_link_cb (const GMatchInfo *info,
+                            GString *res,
+                            gpointer data)
+{
+    MtxCmm *self = (MtxCmm *) data;
+    const gchar *subject = g_match_info_get_string (info);
+    gint s1, e1, s2, s3, e2;
+    if (g_match_info_fetch_pos (info, 1, &s1, &e1) && e1 > s1)
+    {
+        /* Put back leading code block output tags. */
+        g_string_append_len (res, subject + s1, e1 - s1);
+    }
+    if (g_match_info_fetch_pos (info, 2, &s2, &e2))
+    {
+        /* Put back the original markdown less the anchors. */
+        g_string_append_len (res, subject + s2, e2 - s2);
+
+        /* Don't put back the anchors - effectively delete them. */
+        ;
+
+        /* Remove the saved ToC entry matching the "heading" text. */
+        if (g_match_info_fetch_pos (info, 3, &s3, NULL))
+        {
+            guint idx;
+            MtxCmmTocEntry te;
+            te.text = g_strndup (subject + s3, e2 - s3);
+            if (g_ptr_array_find_with_equal_func (self->priv->toc, &te,
+                                                  (GEqualFunc)
+                                                  mtx_cmm_toc_entry_equal,
+                                                  &idx))
+            {
+                g_ptr_array_remove_index (self->priv->toc, idx);
+            }
+            g_free (te.text);
+        }
+    }
+    return FALSE;
+}
+
+/**
+mtx_cmm_string_delete_heading_links:
+Delete bogus heading links, see `mtx_cmm_string_insert_heading_links`.
+
+@self: MtxCmm instance.
+@str: (GString) Pango-rendered code block fragment.
+*/
+/*
+Because `mtx_cmm_regex_astx` regex ignores the existence of code blocks, it
+can mistake a shell comment in a code block for a markdown heading, leading
+to `mtx_cmm_string_insert_heading_links` inserting bogus anchor links into
+the code block, and a bogus ToC entry for the shell comment. This function
+remedies the mess.
+*/
+static void
+mtx_cmm_string_delete_heading_links (MtxCmm *self,
+                                     GString *str)
+{
+    GRegex *regex = mtx_cmm_regex_heading_link (self);
+    GError *err = NULL;
+
+    g_autofree gchar *temp =
+    g_regex_replace_eval (regex, str->str, -1, 0, 0,
+                          mtx_delete_heading_link_cb, (gpointer) self, &err);
+    if (err != NULL)
+    {
+        g_error ("%s internal error:\t%s", __FUNCTION__, err->message);
+        g_error_free (err);
+        return;
+    }
+    g_string_assign (str, temp);
+}
+
+/**
+mtx_cmm_render_toc:
+Render each internally-stored ToC entry according to the current output format.
+*/
+static void
+mtx_cmm_render_toc (MtxCmm *self)
+{
+    g_assert (self->priv->
+              output & (MTX_CMM_OUTPUT_PANGO | MTX_CMM_OUTPUT_HTML));
+              /* OUTPUT_HTML with CSS rule for class "mtx-toc" */
+
+    for (guint i = 0; i < self->priv->toc->len; i++)
+    {
+        gchar *dest = NULL, *link = NULL;
+        MtxCmmTocEntry *te = g_ptr_array_index (self->priv->toc, i);
+        if (te->dest != NULL)
+        {
+            dest = g_strconcat (te->dest, "\n", te->dest, NULL);
+            link = mtx_cmm_format_link (self, te->text, dest, NULL);
+        }
+        te->rendered = g_strdup_printf ("%s%*s %s- %s%s",
+                                        self->priv->tags.code_span_start,
+                                        (te->level - 1) * 4, "",
+                                        self->priv->tags.code_span_end,
+                                        link ? link : te->text,
+                                        self->priv->tags.br);
+        g_free (link);
+        g_free (dest);
+    }
 }
 
 /**
@@ -1737,16 +2358,11 @@ Return: GRegex* matcher to split segment on word separators.
 static GRegex *
 mtx_cmm_regex_word_split (MtxCmm *self)
 {
-    static GRegex **regex = NULL;
+    GRegex **regex = &g_array_index (self->priv->regex_table, GRegex *,
+                                     MTX_CMM_REGEX_WORD_SPLIT);
 /*
 (?<!\\)([\p{Zs}\v\x{F600}\x{F60A}\x{F60B}\x{F608}\x{F609}\x{F60F}\x{F601}]+)
 */
-
-    if (regex == NULL)
-    {
-        regex = &g_array_index (self->priv->regex_table, GRegex *,
-                                MTX_CMM_REGEX_WORD_SPLIT);
-    }
     if (*regex == NULL)
     {
         GError *err = NULL;
@@ -1764,7 +2380,7 @@ mtx_cmm_regex_word_split (MtxCmm *self)
             "", 0, 0, &err);
         if (err != NULL)
         {
-            g_printerr ("word split regex: %s\n", err->message);
+            g_error ("word split regex: %s", err->message);
             g_error_free (err);
         }
     }
@@ -1794,7 +2410,7 @@ mtx_cmm_discover_auto_code_spans (MtxCmm *self,
     words = g_regex_split_full (regex, text, strlen (text), 0, 0, 0, &err);
     if (err != NULL)
     {
-        g_printerr ("internal error: %s\n", err->message);
+        g_error ("internal error: %s", err->message);
         g_error_free (err);
     }
 
@@ -1961,16 +2577,11 @@ no match: '' "" (both empty)
 static GRegex *
 mtx_cmm_regex_dumb_quote_pairs (MtxCmm *self)
 {
-    static GRegex **regex = NULL;
+    GRegex **regex = &g_array_index (self->priv->regex_table, GRegex *,
+                                     MTX_CMM_REGEX_DUMB_QUOTE_PAIR);
 /*
 (?<B>^|[\p{Zs}\p{P}\x{F600}])(?<L>['"\x{F60F}])(?<M>.+?)(?<R>\g{L})(?=$|[\p{Zs}\p{P}\x{F600}])
 */
-
-    if (regex == NULL)
-    {
-        regex = &g_array_index (self->priv->regex_table, GRegex *,
-                                MTX_CMM_REGEX_DUMB_QUOTE_PAIR);
-    }
     if (*regex == NULL)
     {
         GError *err = NULL;
@@ -1989,7 +2600,7 @@ mtx_cmm_regex_dumb_quote_pairs (MtxCmm *self)
               "", 0, 0, &err);
         if (err != NULL)
         {
-            g_printerr ("dumb quote pair regex: %s\n", err->message);
+            g_error ("dumb quote pair regex: %s", err->message);
             g_error_free (err);
         }
     }
@@ -2039,17 +2650,16 @@ mtx_cmm_string_replace_smart_quotes (MtxCmm *self,
     GRegex *regex = mtx_cmm_regex_dumb_quote_pairs (self);
     GError *err = NULL;
 
-    gchar *temp =
+    g_autofree gchar *temp =
     g_regex_replace_eval (regex, str->str, -1, 0, 0,
                           mtx_replace_dumb_quote_pair_cb, self, &err);
     if (err)
     {
-      g_printerr ("%s internal error:\t%s\n", __FUNCTION__, err->message);
+      g_error ("%s internal error:\t%s", __FUNCTION__, err->message);
       g_error_free (err);
       return;
     }
     g_string_assign (str, temp);
-    g_free (temp);
 }
 
 /**
@@ -2088,9 +2698,9 @@ mtx_cmm_replace_smart_text (MtxCmm *self,
                 found |= APOS;
             }
             break;
-        case cUNIPUA_QUOT2:
+        case cUNIPUA_QUOT:
             if ((ptrdiff_t) (p - target->str) - start > 1
-                && *(p - 1) == cUNIPUA_QUOT1 && *(p - 2) == cUNIPUA_QUOT0)
+                && *(p - 1) == cUNIPUA1 && *(p - 2) == cUNIPUA0)
             {
                 found |= QUOT;
             }
@@ -2119,10 +2729,11 @@ mtx_cmm_replace_smart_text (MtxCmm *self,
     {
         return;
     }
-    /* Prepare space-padded work string. */
-    work = g_string_new_len (" ", target->len - start + 2);
+    /* Prepare work string. */
+    work = g_string_new ("");
+    g_string_set_size (work, target->len - start + 2);
+    work->str[0] = work->str[work->len - 1] = ' ';
     memcpy (work->str + 1, target->str + start, target->len - start);
-    *(work->str + (work->len - 1)) = ' ';
 
     if (found & MDASH)
     {
@@ -2150,13 +2761,9 @@ The render_* functions insert singletons in lieu of some output tags.
 static GRegex *
 mtx_cmm_regex_unipua (MtxCmm *self)
 {
-    static GRegex **regex = NULL;
+    GRegex **regex = &g_array_index (self->priv->regex_table, GRegex *,
+                                     MTX_CMM_REGEX_UNIPUA);
 
-    if (regex == NULL)
-    {
-        regex = &g_array_index (self->priv->regex_table, GRegex *,
-                                MTX_CMM_REGEX_UNIPUA);
-    }
     if (*regex == NULL)
     {
         GError *err = NULL;
@@ -2173,7 +2780,7 @@ mtx_cmm_regex_unipua (MtxCmm *self)
             "", 0, 0, &err);
         if (err != NULL)
         {
-            g_printerr ("unipua regex: %s\n", err->message);
+            g_error ("unipua regex: %s", err->message);
             g_error_free (err);
         }
     }
@@ -2209,13 +2816,7 @@ mtx_cmm_string_release_unipua (MtxCmm *self,
 
     GHashTable *h = g_hash_table_new (g_str_hash, g_str_equal);
 
-    GString *tag_br = g_string_new (self->priv->tags.br);
-    if (self->priv->output == MTX_CMM_OUTPUT_HTML)
-    {
-        g_string_append (tag_br, self->priv->tweaks & MTX_CMM_TWEAK_HTML5 ?
-                         ">\n" : " />\n");
-    }
-    g_hash_table_insert (h, sUNIPUA_BR, tag_br->str);
+    g_hash_table_insert (h, sUNIPUA_BR, (gchar *) self->priv->tags.br);
     g_hash_table_insert (h, sUNIPUA_E1, (gchar *) self->priv->tags.em_start);
     g_hash_table_insert (h, sUNIPUA_E0, (gchar *) self->priv->tags.em_end);
     g_hash_table_insert (h, sUNIPUA_B1,
@@ -2240,11 +2841,10 @@ mtx_cmm_string_release_unipua (MtxCmm *self,
     g_autofree gchar *temp =
     g_regex_replace_eval (regex, str->str, -1, 0, 0,
                           mtx_replace_unipua_cb, h, &err);
-    g_string_free (tag_br, TRUE);
     g_hash_table_destroy (h);
     if (err)
     {
-        g_printerr ("%s internal error:\t%s\n", __FUNCTION__, err->message);
+        g_error ("%s internal error:\t%s", __FUNCTION__, err->message);
         g_error_free (err);
         return;
     }
@@ -2259,20 +2859,16 @@ Return: GRegex* matcher for markdown markdown `~` code fence.
 static const GRegex *
 mtx_cmm_regex_tilde_code_fence (MtxCmm *self)
 {
-    static GRegex **regex = NULL;
-
-    if (regex == NULL)
-    {
-        regex = &g_array_index (self->priv->regex_table, GRegex *,
-                                MTX_CMM_REGEX_TILDE_CODE_FENCE);
-    }
+    GRegex **regex = &g_array_index (self->priv->regex_table, GRegex *,
+                                     MTX_CMM_REGEX_TILDE_CODE_FENCE);
     if (*regex == NULL)
     {
         GError *err = NULL;
-        *regex = g_regex_new ("(^|\\R) {0,3}~{3,}+", 0, 0, &err);
+        /* don't know why but group "(~{3,}+)" doesn't capture */
+        *regex = g_regex_new ("^ {0,3}~{3,}+", G_REGEX_MULTILINE, 0, &err);
         if (err != NULL)
         {
-            g_printerr ("tilde_code_fence regex: %s\n", err->message);
+            g_error ("tilde_code_fence regex: %s", err->message);
             g_error_free (err);
         }
     }
@@ -2291,10 +2887,185 @@ mtx_cmm_str_tilde_code_fence_max_len (MtxCmm *self, const gchar *str)
     guint ret = 0; /* also in case of errors */
     if (g_regex_match_all (regex, str, 0, &match_info))
     {
-        ret = strlen (g_match_info_fetch (match_info, 0));
+        gint s, e;
+        if (g_match_info_fetch_pos (match_info, 0, &s, &e))
+        {
+            ret = e - s;
+        }
     }
     g_match_info_free (match_info);
     return ret;
+}
+
+/**
+mtx_cmm_regex_astx:
+
+Return: GRegex* matcher for ATX and setext headings.
+
+Note: ATX headings are matched correctly. For setext headings full parsing
+would be necessary to be 100% correct. However, I think that, with the
+additions of some stopgaps below, this regex suffices even for setext.
+
+Named capture groups:
+- TITLE: Title text.
+- UNDER: Setext underline ("" for an ATX match).
+- MKD: [:space:]* trimmed markdown.
+
+Bugs:
+- Setext TITLE lines aren't trimmed. You may find up to three spaces
+  before each Setext line, and optional trailing spaces and tabs.
+  Trying to fix this I encountered exponential backtracking.
+- No more than three settext TITLE lines before the underline are considered.
+  This is to avoid the risk of catastrophic regex explosion when the document
+  consists of a very long single paragraph (likely the case if the document
+  consists entirely of raw HTML).
+*/
+GRegex *
+mtx_cmm_regex_astx (MtxCmm *self)
+{
+    GRegex **regex = &g_array_index (self->priv->regex_table, GRegex *,
+                                     MTX_CMM_REGEX_ASTX);
+/*
+/(?|(?:^(?<MKD> {0,3}#{1,6} \h*(?<TITLE>\V*?)\h*#*[ \t]*))|(?:^(?<MKD>(?<TITLE>(?:(?:^ {0,3}[^-*\s\v`>0-9]\V*?)\R??){1,3})(?<!\v)\R(?<UNDER> {0,3}[-=]+[ \t]*))))$/gm
+/////////TEST-STRING-BEGIN/////////{{{
+SETEXT 0
+=======
+
+# ATX 1
+
+atx 1
+
+   ##      ATX 2
+
+atx 2
+
+SETEXT 1 !
+==========
+
+setext 1
+
+SETEXT 2
++SETEXT 2
+--------
+
+setext 2
+
+------------------------------------------------------------------------------
+
+> quote
+====================
+
+* UL list item
+====================
+
+- UL list item
+====================
+
+1. OL list item
+====================
+
+   SETEXT Z
++SETEXT Z   
+============
+/////////TEST-STRING-END/////////}}}
+*/
+    if (*regex == NULL)
+    {
+        GError *err = NULL;
+    /* *INDENT-OFF* */
+        *regex = g_regex_new (
+    /* ATX or SETEX as TITLE  */ "(?|"
+    /*       ATX              */ "(?:" /* ATX heading */
+    /* start of line/file     */ "^"
+    /*                        */ "(?<MKD>"
+    /* ATX heading signature  */ " {0,3}#{1,6} "
+    /* optional leading space */ "\\h*"
+    /* trimmed title          */ "(?<TITLE>\\V*?)"
+    /* optional trailing stuff*/ "\\h*#*[ \\t]*"
+    /*                        */ ")"
+    /*                        */ ")|"
+    /*      SETEX             */ "(?:" /* non-semantic setext heading */
+    /* start of line/file shy */ "^"
+    /*                        */ "(?<MKD>"
+    /* run of ...             */ "(?<TITLE>(?:"
+    /* leading white space    */ "(?:^ {0,3}"
+    /* stopgaps - title       */ "[^-*0-9\\s\\v`>]\\V*?)" /* stop: UL/OL bullet, code block/span, block quote */
+    /* next line shy          */ "\\R??"
+    /*                        */ "){1,3})"   /* limit to 3 lines to avoid catastrophic explosion */
+    /* soak post-title newline*/ "(?<!\\v)\\R" /* thematic break line stopgap */
+    /* setext underline       */ "(?<UNDER> {0,3}[-=]+[ \\t]*)"
+    /*                        */ ")"
+    /*                        */ ")"
+    /*                        */ ")"
+    /* share end of line/file */ "$"
+                                 , G_REGEX_MULTILINE, 0, NULL);
+    /* *INDENT-ON* */
+        if (err != NULL)
+        {
+            g_error ("astx regex: %s", err->message);
+            g_error_free (err);
+        }
+    }
+    return *regex;
+}
+
+/**
+mtx_cmm_regex_heading_link:
+
+Return: GRegex* matcher for heading link.
+
+Numbered groups:
+- 1: Pango code block start tags (once)
+- 2: What looked like an ATX or Setext heading.
+- 3: Stripped heading text (TITLE)
+*/
+static GRegex *
+mtx_cmm_regex_heading_link (MtxCmm *self)
+{
+    GRegex **regex = &g_array_index (self->priv->regex_table, GRegex *,
+                                     MTX_CMM_REGEX_HEADING_LINK);
+/*
+/^((?:<[^>]+>)*)( {0,3}(?:#{1,6} +)?(\S.*?))(?:\x{F60C}#x200B;\Q[​]\E\(\x{F60D}.+?\x{F60E}\))+/gm
+*/
+/*
+/////////TEST-STRING-BEGIN/////////{{{
+<tt><span bgcolor="#FFF" fgcolor="#B56"># TITLE 1#x200B;[​](#TITLE%201)#x200B;[​](#title_1)#x200B;[​](#title-1)
+
+A
+
+   ##    TITLE 2#x200B;[​](#TITLE%202)#x200B;[​](#title_2)#x200B;[​](#title%-2)
+
+BB
+
+##   T#x200B;[​](#T)#x200B;[​](#t)#x200B;[​](#t)
+
+CCC
+
+Setext#x200B;[​](#Setext)#x200B;[​](#setext)#x200B;[​](#setext)
+===
+
+</span></tt>
+/////////TEST-STRING-END/////////}}}
+*/
+    if (*regex == NULL)
+    {
+        GError *err = NULL;
+        *regex = g_regex_new (
+        /* group 1        */  "((?:<[^>]+>)*)"                /* pango tags */
+        /* groups 2 and 3 */  "( {0,3}(?:#{1,6} +)?(\\S.*?))" /* heading */
+        /* anchors */         "(?:"
+                              "\\x{F60C}#x200B;"
+                              "\\Q["MTX_INSERT_HEADING_LINK_TEXT"]\\E"
+                              "\\(\\x{F60D}.+?\\x{F60E}\\)"   /* (<    >) */
+                              ")+"
+                              , G_REGEX_MULTILINE, 0, NULL);
+        if (err != NULL)
+        {
+            g_error ("heading link regex: %s", err->message);
+            g_error_free (err);
+        }
+    }
+    return *regex;
 }
 
 /**
@@ -2313,53 +3084,39 @@ mtx_cmm_parser_get_unit_head (MtxCmm *self)
 }
 
 /**
-mtx_cmm_parser_find_unit_index:
-Return index of the first queue unit that intersects type and flag.
+mtx_cmm_parser_is_unit_at_index:
+Does the queue unit at index match the type and flag masks?
+
 @type: %MtxCmmParserUnitType bit mask.
 @flag: %MtxCmmParserUnitFlag bit mask.
-@start: start searching a match from queue index @start.
-@unitptr: pointer to the matching unit. Nullable.
-Return: -1 if no unit matches otherwise return the index of the
-matching unit and a set *@unit.  Head has index zero.
-The instance owns the returned memory. You should not free it.
+@index: unit's index.
+
+Return TRUE if the queue unit intersects type and flag otherwise return -1.
 */
-/*static*/ int
-mtx_cmm_parser_find_unit_index (MtxCmm *self,
-                                const MtxCmmParserUnitType type,
-                                const MtxCmmParserUnitFlag flag,
-                                const int start,
-                                MtxCmmParserUnit **unitptr)
+gboolean
+mtx_cmm_parser_is_unit_at_index (MtxCmm *self,
+                                 const MtxCmmParserUnitType type,
+                                 const MtxCmmParserUnitFlag flag,
+                                 const int index)
 {
-    MtxCmmParserUnit *unit;
-    for (gint i = start; (unit = g_queue_peek_nth (self->priv->unitq, i)); i++)
-    {
-        if (unit->type & type && unit->flag & flag)
-        {
-            if (unitptr)
-            {
-                *unitptr = unit;
-            }
-            return i;
-        }
-    }
-    return -1;
+    MtxCmmParserUnit *unit = g_queue_peek_nth (self->priv->unitq, index);
+    return unit && unit->type & type && unit->flag & flag;
 }
 
 /**
 mtx_cmm_parser_unit_ends_with_c:
 */
 static inline gboolean
-mtx_cmm_parser_unit_ends_with_c (MtxCmmParserUnit *unit,
-                                 gchar c)
+mtx_cmm_parser_unit_ends_with_c (const MtxCmmParserUnit *u,
+                                 const gchar c)
 {
-    gchar *p;
-    return
-        unit->args ? (unit->args->len > 0
-                      && (p = g_array_index (unit->args, gchar *,
-                                             unit->args->len - 1)) && p ?
-                      p[strlen (p) - 1] == c : FALSE)
-        : (unit->text && unit->text->len > 0 ?
-           unit->text->str[unit->text->len - 1] == c : FALSE);
+    const gchar *p;
+    return u->args ?
+     (u->args->len > 0 &&
+      ((p = g_ptr_array_index (u->args, u->args->len - 1)) && p) ?
+      strchr (p, '\0')[-1] == c : FALSE)
+     : (u->text && u->text->len > 0 ?
+        u->text->str[u->text->len - 1] == c : FALSE);
 }
 
 /**
@@ -2401,7 +3158,7 @@ mtx_cmm_parser_get_unit_arg_under (MtxCmm *self,
         {
             if (unit->args && unit->args->len > index)
             {
-                return g_array_index (unit->args, gchar *, index);
+                return g_ptr_array_index (unit->args, index);
             }
             break;
         }
@@ -2411,18 +3168,18 @@ mtx_cmm_parser_get_unit_arg_under (MtxCmm *self,
 
 /**
 mtx_cmm_parser_merge_down_unit_arg:
-Coalesce opening ARG unit's text to the next argument of the unit below.
+Merge the opening ARG unit's text into the next unit's next argument.
 */
 /*
 Detail: pop closing ARG unit then append a copy of the opening ARG unit's text
-to the argument list of the unit below it.  If opening ARG's text is NULL then a
+to the argument list of the next unit.  If opening ARG's text is NULL then a
 NULL argument will be appended.  Pop two queue units (ARG ARG) and move them to
 the junk queue.
 */
 static void
 mtx_cmm_parser_merge_down_unit_arg (MtxCmm *self)
 {
-    MtxCmmParserUnit *arg, *below;
+    MtxCmmParserUnit *arg, *down;
     gchar *value;
 
     /* stack: ARG ARG receiver -- receiver */
@@ -2434,18 +3191,18 @@ mtx_cmm_parser_merge_down_unit_arg (MtxCmm *self)
     g_assert (((MtxCmmParserUnit *) self->priv->unitq_head)->type ==
               MTX_CMM_PARSER_UNIT_ARG);
     arg = mtx_cmm_parser_unit_pop_head (self);      /* ARG --      */
-    below =
+    down =
     (MtxCmmParserUnit *) self->priv->unitq_head;    /* receiver   */
 
-    g_assert (below->args != NULL);
+    g_assert (down->args != NULL);
     value = arg->text ? g_strdup (arg->text->str) : NULL;
-    g_array_append_val (below->args, value);
+    g_ptr_array_add (down->args, value);
 }
 
 /**
 mtx_cmm_parser_merge_down_unit_arg_inlines:
-Coalesce inlines between the opening and closing ARG_INLINES into the next
-argument of the unit below the opening ARG_INLINES.
+Merge inlines between the opening and closing ARG_INLINES into the next
+argument of the next unit below the opening ARG_INLINES.
 */
 /*
 Detail: Reach the opening ARG_INLINES unit then collect inlines until the
@@ -2461,14 +3218,14 @@ a ->text field. A and IMG only have ->args fields, which normally - when not
 nested - are formatted by mtx_cmm_parser _after_ the call to mtx_cmm_render.
 Thus here, in mtx_cmm_render, we need to format the spans ourselves. Note we
 only need do IMG formatting because A is contained but can't contain IMG.
-And since a image nesting is unrolled before this stage, we only need to
+And since image nesting is resolved before this stage, we only need to
 format simple IMG units holding their usual three ->args.
 */
 static void mtx_cmm_render_link_unit (MtxCmm *, MtxCmmParserUnit *, gchar *());
 static void
 mtx_cmm_parser_merge_down_unit_arg_inlines (MtxCmm *self)
 {
-    MtxCmmParserUnit *p, *below;
+    MtxCmmParserUnit *p, *down;
     gchar *value;
     gint i, j;
     GString *buf = NULL;
@@ -2519,8 +3276,8 @@ mtx_cmm_parser_merge_down_unit_arg_inlines (MtxCmm *self)
     }
     while (--i >= 0);
 
-    below = (MtxCmmParserUnit *) self->priv->unitq_head;  /* receiver   */
-    g_assert (below->args != NULL);
+    down = (MtxCmmParserUnit *) self->priv->unitq_head;  /* receiver   */
+    g_assert (down->args != NULL);
     if (buf)
     {
         value = buf->str;
@@ -2530,11 +3287,17 @@ mtx_cmm_parser_merge_down_unit_arg_inlines (MtxCmm *self)
     {
         value = NULL;
     }
-    g_array_append_val (below->args, value);
+    g_ptr_array_add (down->args, value);
 }
 
 /**
 mtx_cmm_render_link_unit:
+
+Render markdown link according to output type.
+
+@self:
+@unit:
+@formatter: function.
 */
 static void
 mtx_cmm_render_link_unit (MtxCmm *self,
@@ -2546,9 +3309,45 @@ mtx_cmm_render_link_unit (MtxCmm *self,
     {
         DEST, TITLE, TEXT
     };
-    gchar *dest = g_array_index (unit->args, gchar *, DEST);
-    gchar *title = g_array_index (unit->args, gchar *, TITLE);
-    gchar *text = g_array_index (unit->args, gchar *, TEXT);
+    gchar *dest  = g_ptr_array_index (unit->args, DEST);
+    gchar *title = g_ptr_array_index (unit->args, TITLE);
+    gchar *text  = g_ptr_array_index (unit->args, TEXT);
+    gchar *new_dest = NULL;
+
+    if (self->priv->output == MTX_CMM_OUTPUT_BARE_INLINE)
+    {
+        /* Special case for heading links: overwrite the destination
+        otherwise a URI will turn up in the heading link text. */
+
+        g_assert (text[0] == '0');  /* skip text[0], which holds a flag */
+        /* link_dest format: <uri-encoded>\n<verbatim> */
+        if (title == NULL)
+        {
+            /* Special case: mtx_insert_heading_link_cb is uri-encoding. */
+            /* noop*/
+        }
+        else
+        {
+            /* We assume, as it's the case, that if there is a
+            link title attribute the Pango and HTML link builder
+            functions won't include its text in the heading. */
+            dest = new_dest = g_strconcat (text + 1, "\n", text + 1, NULL);
+        }
+    }
+    else if ((self->priv->tweaks & MTX_CMM_TWEAK_RESERVED3) && dest)
+    {
+        /* Tweak to assist the viewer application while it is converting
+        markdown to HTML for web browser preview. The tweak appends ".html"
+        to link destinations that end with ".md" (assuming that .md is the
+        file name extension for markdown files). */
+        if (g_str_has_suffix (dest, ".md") && !g_str_has_prefix (dest, "http"))
+        {
+            const gchar *v = strchr (dest, '\n');
+            g_assert (v && *v);
+            v++;
+            dest = new_dest = g_strconcat(v, ".html\n", v, ".html", NULL);
+        }
+    }
 
     /* text[0] indicates whether the link unit is in a <table> context. */
     self->priv->inside_table = text[0] == '1'; /* for formatter() */
@@ -2560,8 +3359,9 @@ mtx_cmm_render_link_unit (MtxCmm *self,
         mtx_cmm_replace_smart_text (self, str, 0, str->len);
         text = str->str;
         g_string_free (str, FALSE);
-        g_array_remove_index (unit->args, TEXT);
-        g_array_insert_val (unit->args, TEXT, text);
+        gpointer *pptr = &g_ptr_array_index (unit->args, TEXT);
+        g_free (*pptr);
+        *pptr = text;
     }
     else
     {
@@ -2584,13 +3384,12 @@ mtx_cmm_render_link_unit (MtxCmm *self,
     }
     self->priv->inside_table = FALSE;
     g_free (temp);
+    g_free (new_dest);
 }
 
 /*********************************************************************
 *                          STAGE 1 RENDERER                          *
 *********************************************************************/
-
-#include "mtxrender.h"
 
 static inline int
 mtx_cmm_render (MtxCmm *self,
@@ -2612,7 +3411,7 @@ mtx_cmm_render (MtxCmm *self,
 
 /**
 mtx_cmm_render_process_output:
-mtx_render callback.
+mtx_cmm_render callback - full MTX conversion.
 */
 inline static void
 mtx_cmm_render_process_output (const MD_CHAR *out,
@@ -2622,21 +3421,19 @@ mtx_cmm_render_process_output (const MD_CHAR *out,
     MtxCmm *self = userdata;
     MtxCmmParserUnit *head = (MtxCmmParserUnit *) self->priv->unitq_head;
 
+    mtx_dbg_tally (head->type);
     self->priv->seen_unit_types |= head->type;
+    /* spans are or'ed later, in phase "CONSOLIDATE TEXT AND ARGUMENTS" */
+
+    /* A: MTX_CMM_PARSER_UNIT_JUNK is reserved for mtx_cmm_mtx. */
+    /* B: MTX_CMM_PARSER_UNIT_NULL is the stack bottom sentinel. */
+    g_assert (!(head->type & (/*A */ MTX_CMM_PARSER_UNIT_JUNK |
+                              /*B */ MTX_CMM_PARSER_UNIT_NULL)));
 
     switch (head->type)
     {
-        /* Use of MTX_CMM_PARSER_UNIT_JUNK is reserved for mtx_cmm_mtx. */
-        /* Inconsequential programming error if found here. */
-    case MTX_CMM_PARSER_UNIT_JUNK:
-        break;
-
-        /* NULL stack bottom noop corresponding to MD4C's start of document. */
-    case MTX_CMM_PARSER_UNIT_NULL:
-        break;
-
-        /* Append argument to current unit's args array. */
     case MTX_CMM_PARSER_UNIT_ARG:
+        /* Append argument to current unit's args array. */
         if (head->flag & MTX_CMM_PARSER_UNIT_FLAG_CLOSE)
         {
             mtx_cmm_parser_merge_down_unit_arg (self);
@@ -2644,8 +3441,8 @@ mtx_cmm_render_process_output (const MD_CHAR *out,
         }
         /* fall through */
 
-        /* Append inlines to the nearest opening ARG_INLINES. */
     case MTX_CMM_PARSER_UNIT_ARG_INLINES:
+        /* Append inlines to the nearest opening ARG_INLINES. */
         if (head->flag & MTX_CMM_PARSER_UNIT_FLAG_CLOSE)
         {
             mtx_cmm_parser_merge_down_unit_arg_inlines (self);
@@ -2654,13 +3451,17 @@ mtx_cmm_render_process_output (const MD_CHAR *out,
         /* fall through */
 
     default:
-        /* Grow current unit's text field. */
+        /* Grow unit's text. */
         if (length > 0 || head->type == MTX_CMM_PARSER_UNIT_ARG)
         {
             if (head->text == NULL)
+            {
                 head->text = g_string_new_len (out, length);
+            }
             else
+            {
                 g_string_append_len (head->text, out, length);
+            }
         }
         break;
     }
@@ -2668,8 +3469,40 @@ mtx_cmm_render_process_output (const MD_CHAR *out,
 
 #ifdef MTX_DEBUG
 /**********************************************************************
-*                           DEBUGGING TIPS                            *
+*                              DEBUGGING                              *
 **********************************************************************/
+/**
+mtx_unit_label:
+%MtxCmmParserUnitType labels.  MAX LABEL LENGTH: 5 CHARACTERS.
+*/
+static gchar *mtx_unit_label[] =
+{
+/* MTX_CMM_PARSER_UNIT_NULL */        "null",
+/* MTX_CMM_PARSER_UNIT_BLOCK_LI */    "li",
+/* MTX_CMM_PARSER_UNIT_BLOCK_P */     "p",
+/* MTX_CMM_PARSER_UNIT_BLOCK_QUOTE */ "bquot",
+/* MTX_CMM_PARSER_UNIT_BLOCK_CODE */  "bcode",
+/* MTX_CMM_PARSER_UNIT_BLOCK_HR */    "hr",
+/* MTX_CMM_PARSER_UNIT_BLOCK_H */     "h",
+/* MTX_CMM_PARSER_UNIT_BLOCK_HTML */  "html",
+/* MTX_CMM_PARSER_UNIT_BLOCK_OL */    "ol",
+/* MTX_CMM_PARSER_UNIT_BLOCK_UL */    "ul",
+/* MTX_CMM_PARSER_UNIT_BLOCK_TABLE */ "table",
+/* MTX_CMM_PARSER_UNIT_BLOCK_THEAD */ "thead",
+/* MTX_CMM_PARSER_UNIT_BLOCK_TBODY */ "tbody",
+/* MTX_CMM_PARSER_UNIT_BLOCK_TR */    "tr",
+/* MTX_CMM_PARSER_UNIT_BLOCK_TH */    "th",
+/* MTX_CMM_PARSER_UNIT_BLOCK_TD */    "td",
+/* MTX_CMM_PARSER_UNIT_SPAN_A */      "link",
+/* MTX_CMM_PARSER_UNIT_SPAN_IMG */    "img",
+/* MTX_CMM_PARSER_UNIT_SPAN_CODE */   "scode",
+/* MTX_CMM_PARSER_UNIT_RAW_HTML */    "rawht",
+/* MTX_CMM_PARSER_UNIT_ARG */         "arg",
+/* MTX_CMM_PARSER_UNIT_ARG_INLINES */ "argin",
+/* MTX_CMM_PARSER_UNIT_INLINES */     "inlns",
+/* MTX_CMM_PARSER_UNIT_JUNK */        "junk",
+};
+
 /*
 Function mtx_dump_queue is useful to inspect the stack.  In gdb invoke
 `p mtx_dump_queue (X,2,0,1)` where X can be "self" or "r->userdata" or
@@ -2684,9 +3517,6 @@ Debug: dump parser GQueue queue.
 @queue: parser queue to dump, nullable.
 @print_junk:
 */
-__attribute__((unused))
-static void mtx_dump_queue (gpointer, int, GQueue *, gboolean);
-
 static void
 mtx_dump_queue (gpointer instance,
                 int fd,
@@ -2704,88 +3534,18 @@ mtx_dump_queue (gpointer instance,
              "ARG", "TYPE", "FLAG", "ADDR", "TEXT AND ARGS");
     for (gint i = g_queue_get_length (queue) - 1; i >= 0; i--)
     {
-        gchar type_str[16];
+        const gchar *type_str;
         gchar flag_str[16] = { ' ' };
+        guint type_ffs;
 
         unit = (MtxCmmParserUnit *) g_queue_peek_nth (queue, i);
         if (unit->type == MTX_CMM_PARSER_UNIT_JUNK && !print_junk)
         {
             continue;
         }
-        switch (unit->type)
-        {
-        case MTX_CMM_PARSER_UNIT_ARG:
-            strcpy (type_str, "arg");
-            break;
-        case MTX_CMM_PARSER_UNIT_ARG_INLINES:
-            strcpy (type_str, "argin");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_CODE:
-            strcpy (type_str, "bcode");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_H:
-            strcpy (type_str, "h");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_HTML:
-            strcpy (type_str, "html");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_HR:
-            strcpy (type_str, "hr");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_LI:
-            strcpy (type_str, "li");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_OL:
-            strcpy (type_str, "ol");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_P:
-            strcpy (type_str, "p");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_QUOTE:
-            strcpy (type_str, "bquot");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_UL:
-            strcpy (type_str, "ul");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_TABLE:
-            strcpy (type_str, "table");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_THEAD:
-            strcpy (type_str, "thead");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_TBODY:
-            strcpy (type_str, "tbody");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_TR:
-            strcpy (type_str, "tr");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_TH:
-            strcpy (type_str, "th");
-            break;
-        case MTX_CMM_PARSER_UNIT_BLOCK_TD:
-            strcpy (type_str, "td");
-            break;
-        case MTX_CMM_PARSER_UNIT_INLINES:
-            strcpy (type_str, "inlns");
-            break;
-        case MTX_CMM_PARSER_UNIT_JUNK:
-            strcpy (type_str, "junk");
-            break;
-        case MTX_CMM_PARSER_UNIT_NULL:
-            strcpy (type_str, "null");
-            break;
-        case MTX_CMM_PARSER_UNIT_SPAN_A:
-            strcpy (type_str, "link");
-            break;
-        case MTX_CMM_PARSER_UNIT_SPAN_CODE:
-            strcpy (type_str, "scode");
-            break;
-        case MTX_CMM_PARSER_UNIT_SPAN_IMG:
-            strcpy (type_str, "img");
-            break;
-        default:
-            snprintf (type_str, 16, "%5x", unit->type);
-        }
+        type_ffs = ffs (unit->type);
+        g_assert (type_ffs < G_N_ELEMENTS (mtx_unit_label));
+        type_str = mtx_unit_label[type_ffs];
         temp = flag_str;
         *temp++ = unit->flag & MTX_CMM_PARSER_UNIT_FLAG_ARGS ? 'a' : ' ';
         *temp++ = unit->flag & MTX_CMM_PARSER_UNIT_FLAG_OPEN ? 'o' : ' ';
@@ -2834,7 +3594,7 @@ mtx_dump_queue (gpointer instance,
         }
     }
 }
-#endif
+#endif /* MTX_DEBUG */
 
 /**
 _col_strlen:
@@ -2862,45 +3622,97 @@ _col_strlen (const gchar *p)
 }
 
 /**
+mtx_cmm_string_extract_meta_data:
+Set self's document meta data from an optional XML prefix.
+
+The XML prefix is erased after use. Should A YAML prefix
+come before the XML section, YAML is ignored and erased too.
+
+@str: GString meta data source.
+*/
+static void
+mtx_cmm_extract_meta_data (MtxCmmPageMeta *meta,
+                           GString *str)
+{
+    gchar *p = str->str, *q;
+
+    /* TODO \r and \r\n */
+    if (memcmp (p, "---\n", sizeof "---\n" - 1) == 0 &&
+        ((q = strstr (p, "\n...\n")) || (q = strstr (p, "\n---\n"))))
+    {
+        q += sizeof "\n..." - 1;  /* sic */
+        memset (p, 32, q - p);
+        p = q + 1;
+    }
+    if (!memcmp (p, "<mtx>", sizeof "<mtx>" - 1) && (q = strstr (p, "</mtx>")))
+    {
+        q += sizeof "</mtx>" - 1;
+        if (mtx_markup_parse
+            (str, g_utf8_strlen (str->str, q - str->str), meta))
+        {
+            memset (p, 32, q - p);
+        }
+    }
+}
+
+/**
 mtx_cmm_mtx:
 Convert markdown to the desired output format.
 
 @self:
 @markdown: address of a pointer to the markdown string.
 @size: pointer to the size of the returned string. NULLABLE.
+@meta: pointer to #MtxCmmPageMeta pointer. Return location
+for the meta data contained in @markdown. NULLABLE.
 @clear_markdown: if TRUE, free *@markdown and set @markdown to NULL as early as
 possible during the conversion process.
+@cancellable: pointer to #GCancellable; NULLABLE.
 
-- Set the desired X with `mtx_cmm_set_output` before calling this function.
+- Call #mtx_cmm_set_output before calling #mtx_cmm_mtx.
 - Enable @clear_markdown to curb peak heap allocation.
+- Pass @cancellable to allow the caller to cancel the
+  operation at the next available cancellation point.
 
-`mtx_cmm_mtx` expects valid UTF-8 input text and does not validate.  It is
-recommended to validate input with `g_utf8_validate` before calling
-`mtx_cmm_mtx` otherwise results could be unpredictable.
+#mtx_cmm_mtx expects valid UTF-8 input text and does not validate.
+#The calling function should validate @markdown with #g_utf8_validate
+#before calling mtx_cmm_mtx otherwise results are unpredictable.
 
-Return: a newly-allocated string holding X, and set *@size to the size of
-the returned string in bytes. On error, it returns NULL and *@size is
-undefined.  In both cases if clear_markdown is TRUE, *@markdown is freed
-and *@markdown is set to NULL.
-*/
-/*
-Conversion takes place in two stages. The first stage (mtx_render)
-closely interfaces with MD4C. The interface is derived from the MD4C
-html renderer (md4c-html.c). In the first stage, render_* functions
-push text units on the MtxCmmParserUnit ->priv->unitq stack. In the
-second stage (mtx_cmm_mtx render CODA), units are popped to apply
-transformations, and joined together for final output.
+Return: a newly-allocated string holding the result of the conversion, with
+*@size set to the size of the returned string in bytes, and *@meta pointing to
+newly-allocated memory for the meta data. On error or cancellation, #mtx_cmm_mtx
+returns NULL, *@size and *@meta are unchanged. In any case if clear_markdown is
+TRUE, *@markdown is freed and *@markdown is set to NULL.
 */
 gchar *
 mtx_cmm_mtx (MtxCmm *self,
              gchar **markdown,
              gsize *size,
-             const gboolean clear_markdown)
+             MtxCmmPageMeta **meta,
+             const gboolean clear_markdown,
+             GCancellable *cancellable)
 {
+    /*
+    Conversion takes place in two stages. The first stage (mtx_render)
+    closely interfaces with MD4C. The interface is derived from the MD4C
+    html renderer (md4c-html.c). In the first stage, render_* functions
+    push text units on the MtxCmmParserUnit ->priv->unitq stack. In the
+    second stage (mtx_cmm_mtx render CODA), units are popped to apply
+    transformations, and joined together for final output.
+    */
+
+    if (self->priv->output != MTX_CMM_OUTPUT_PANGO
+        || self->priv->tweaks & MTX_CMM_TWEAK_RESERVED1)
+    {
+        /* mtx_viewer_present_page initializes the timer for PANGO. */
+        mtx_dbg_errout (ZC_ (1), "init timer %s\n", mtx_dbg_fmt_etime
+                        (mtx_dbg_etime (0)));
+    }
     g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
     g_return_val_if_fail (self->priv->output != MTX_CMM_OUTPUT_UNKNOWN, FALSE);
 
+    mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_START);
     mtx_cmm_mtx_reset (self);
+    mtx_dbg_tally_reset ();
 
     if (!(*markdown && *markdown[0]))
     {
@@ -2923,21 +3735,26 @@ mtx_cmm_mtx (MtxCmm *self,
     gchar *ref, *temp;
     MtxCmmParserUnit *unit;
     GQueue *unitq = self->priv->unitq;
-    const gboolean do_autocode =
+    const gboolean with_autocode =
         self->priv->extensions & MTX_CMM_EXTENSION_AUTO_CODE;
-    const gboolean do_permlink =
+    const gboolean with_permlink =
         self->priv->extensions & MTX_CMM_EXTENSION_PERMLINK;
     gboolean in_shebang = FALSE;
-    const gboolean do_shebang =
+    const gboolean with_shebang =
         self->priv->extensions & MTX_CMM_EXTENSION_SHEBANG;
-    const gboolean do_smart_text =
+    const gboolean with_smart_text =
         self->priv->extensions & MTX_CMM_EXTENSION_SMART_TEXT;
-    gboolean do_tables =
+    const gboolean with_heading_link =
+        self->priv->extensions & MTX_CMM_EXTENSION_HEADING_LINK &&
+        (self->priv->output & (MTX_CMM_OUTPUT_PANGO | MTX_CMM_OUTPUT_HTML));
+    gboolean with_tables =
         self->priv->extensions & MTX_CMM_EXTENSION_TABLE;
-    gboolean do_margin = self->priv->output == MTX_CMM_OUTPUT_PANGO;
+    const gboolean with_strikethrough =
+        self->priv->extensions & MTX_CMM_EXTENSION_STRIKETHROUGH;
+    gboolean with_margin = self->priv->output == MTX_CMM_OUTPUT_PANGO;
     self->priv->escaping = self->priv->escape
         || self->priv->output == MTX_CMM_OUTPUT_HTML;
-    ret = g_string_new (*markdown);
+    self->priv->mkdin = ret = g_string_new (*markdown);
     if (clear_markdown)
     {
         g_free (*markdown);
@@ -2947,7 +3764,7 @@ mtx_cmm_mtx (MtxCmm *self,
     /*********************************************************************
     *                         SHEBANG EXTENSION                          *
     *********************************************************************/
-    if (do_shebang)
+    if (with_shebang)
     {
         gchar *p = ret->str;
         if (*p++ == '#' && *p++ == '!')
@@ -2957,16 +3774,48 @@ mtx_cmm_mtx (MtxCmm *self,
             if (*p && *p++ == '/')
             {
                 in_shebang = TRUE;
-                gint m = mtx_cmm_str_tilde_code_fence_max_len (self, ret->str);
-                g_autofree gchar *fence = g_strnfill (m > 0 ? m + 1 : 3, '~');
-                g_autofree gchar *line = g_strdup_printf ("%s\n", fence);
-                g_string_prepend (ret, line);
             }
         }
+        else
+        {
+            in_shebang =
+            strncmp (ret->str, "<!DOCTYPE ", sizeof "<!DOCTYPE " - 1) == 0 ||
+            strncmp (ret->str, "<html", sizeof "<html" - 1) == 0;
+        }
+        if (in_shebang)
+        {
+            gint m = mtx_cmm_str_tilde_code_fence_max_len (self, ret->str);
+            g_autofree gchar *fence = g_strnfill (m > 0 ? m + 1 : 3, '~');
+            g_autofree gchar *line = g_strdup_printf ("%s\n", fence);
+            g_string_prepend (ret, line);
+        }
+        mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_SHEBANG);
     }
 
     /*********************************************************************
-    *                         ERASE %%DIRECTIVES                         *
+    *                       PARSE PAGE META DATA                         *
+    *********************************************************************/
+    /*
+    Erase YAML front matter, if any, because we don't do YAML.
+    Parse optional "<mtx ...>...</mtx>" XML prefix.
+    */
+
+    /* Establish sane defaults. */
+    self->priv->meta.renderer_keep_tags = 0;
+    self->priv->meta.renderer_skip_toc = 0;
+    self->priv->meta.viewer_track_page = 1;
+    /* Extraction changes self->priv->meta. */
+    mtx_cmm_extract_meta_data (&self->priv->meta, self->priv->mkdin);
+    /* Do something with the meta data. */
+    MtxCmmTweaks saved_tweaks = self->priv->tweaks;
+    if (self->priv->meta.renderer_keep_tags == 1)
+    {
+        /* To be restored upon return from this function. */
+        self->priv->tweaks |= MTX_CMM_TWEAK_UNSAFE_HTML;
+    }
+
+    /*********************************************************************
+    *                     ERASE LEGACY %%DIRECTIVES                      *
     *********************************************************************/
 
     /*
@@ -2976,10 +3825,29 @@ mtx_cmm_mtx (MtxCmm *self,
     if (!in_shebang)
     {
         mtx_cmm_string_replace_directives (self, ret);
+        mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_LEGACY);
+    }
+
+    /*********************************************************************
+    *                          AUTO HEADING LINKS                        *
+    *********************************************************************/
+
+    /*
+    Insert link reference definitions and reference links to markdown headings.
+    */
+    g_autoptr (MtxCmm) render_auto_ref_link = NULL;
+    if (!in_shebang && with_heading_link)
+    {
+        render_auto_ref_link =
+        mtx_cmm_new_internal (MTX_CMM_OUTPUT_BARE_INLINE, self);
+        mtx_cmm_string_insert_heading_links (self, render_auto_ref_link, ret);
+        mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_HEADINGS);
     }
 
 #if MTX_DEBUG > 1
-    g_printerr ("@@@@@@@@@@ markdown:\n%s\n@@@@@@@@@@\n", ret->str);
+    mtx_dbg_errout (2, _SO "{{{ INPUT MARKDOWN %p:" _SE "\n", self);
+    mtx_dbg_errseq (2, "%s", ret->str);
+    mtx_dbg_errout (2, _SO "}}} %p" _SE "\n", self);
 #endif
 
 #if MTX_DEBUG > 2
@@ -2989,32 +3857,37 @@ mtx_cmm_mtx (MtxCmm *self,
     **********************************************************************";
 #endif
 
-    self->priv->seen_unit_types = 0;
-    i =
+    i =                                    /* outputs to self->priv->unitq */
     mtx_cmm_render (self, ret->str, ret->len, mtx_cmm_render_process_output,
                     NULL,
-                    (do_tables ? MD_FLAG_TABLES : 0) |
-                    MD_FLAG_STRIKETHROUGH |
-                    (do_permlink ? MD_FLAG_PERMISSIVEAUTOLINKS : 0),
+                    (with_tables ? MD_FLAG_TABLES : 0) |
+                    (with_strikethrough ? MD_FLAG_STRIKETHROUGH : 0) |
+                    (with_permlink ? MD_FLAG_PERMISSIVEAUTOLINKS : 0),
                     MD_HTML_FLAG_SKIP_UTF8_BOM | MD_HTML_FLAG_XHTML);
     g_string_free (ret, TRUE);
+    ret = NULL;
+    mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_PARSED);
     if (i < 0)
     {
         return NULL;
     }
 #if MTX_DEBUG > 2
-    g_printerr ("%s\n", phase);
-    mtx_dump_queue (self, 2, self->priv->unitq, TRUE);
+    if (self->priv->caller == NULL)
+    {
+        g_printerr ("%s\n", phase);
+        mtx_dump_queue (self, 2, self->priv->unitq, TRUE);
+    }
 #endif
+    mtx_dbg_errout (ZC_(1), "markdown parsed %s\n", mtx_dbg_fmt_etime (-1));
 
     /*******************************************************************
     *                         RENDERING CODA                           *
     *******************************************************************/
 
-    if (do_tables &&
+    if (with_tables &&
         !(self->priv->seen_unit_types & MTX_CMM_PARSER_UNIT_BLOCK_TABLE))
     {
-        do_tables = FALSE; /* nothing to do */
+        with_tables = FALSE; /* nothing to do */
     }
 
 
@@ -3037,10 +3910,10 @@ mtx_cmm_mtx (MtxCmm *self,
     chunk is encoded with a code_ref to prevent tampering by text transforms.
     */
     /*
-    The loop starts with a section that tidies up raw HTML inlines
-    and HTML blocks.  Essentially it involves shortening text unless
-    self->priv->unsafe_html.  Note that raw HTML is only seen here if HTML
-    output mode is active.
+    The loop starts with a section that tidies up raw HTML inlines and
+    HTML blocks. For HTML output mode, raw HTML text is shortened if not
+    self->priv->unsafe_html, otherwise raw HTML is output verbatim. For all
+    other output modes, only raw HTML is output iff self->priv->unsafe.
     */
     /*.
     Then the loop visits all units on queue that have ->args to modify
@@ -3059,6 +3932,10 @@ mtx_cmm_mtx (MtxCmm *self,
 
     for (i = g_queue_get_length (unitq) - 1; i >= 0; i--)
     {
+        if (g_cancellable_is_cancelled (cancellable))
+        {
+            goto out;
+        }
         unit = (MtxCmmParserUnit *) g_queue_peek_nth (unitq, i);
         switch (unit->type)
         {
@@ -3078,7 +3955,13 @@ mtx_cmm_mtx (MtxCmm *self,
                 continue;
             }
             /* fall through */
-        case MTX_CMM_PARSER_UNIT_RAW_HTML:     /* inline tag */
+        case MTX_CMM_PARSER_UNIT_RAW_HTML:     /* inline tag and block html */
+            if (self->priv->output != MTX_CMM_OUTPUT_HTML &&
+                !(self->priv->tweaks & MTX_CMM_TWEAK_UNSAFE_HTML))
+            {
+                mtx_cmm_parser_unit_consume (&unit);
+                continue;
+            }
             ref = mtx_cmm_protect (self, (self->priv->tweaks &
                                           MTX_CMM_TWEAK_UNSAFE_HTML) ?
                                    unit->text->str : SAFE_HTML);
@@ -3109,18 +3992,24 @@ mtx_cmm_mtx (MtxCmm *self,
         /* mtx_cmm_render_link_unit renders and protects its output. */
 
         case MTX_CMM_PARSER_UNIT_SPAN_A:
+            self->priv->seen_unit_types |= MTX_CMM_PARSER_UNIT_SPAN_A;
+            mtx_dbg_tally (MTX_CMM_PARSER_UNIT_SPAN_A);
             mtx_cmm_render_link_unit (self, unit,
                                       (MtxCmmAImgFormatter *)
                                       mtx_cmm_format_link);
             break;
 
         case MTX_CMM_PARSER_UNIT_SPAN_IMG:
+            self->priv->seen_unit_types |= MTX_CMM_PARSER_UNIT_SPAN_IMG;
+            mtx_dbg_tally (MTX_CMM_PARSER_UNIT_SPAN_IMG);
             mtx_cmm_render_link_unit (self, unit,
                                       (MtxCmmAImgFormatter *)
                                       mtx_cmm_format_image);
             break;
 
         case MTX_CMM_PARSER_UNIT_SPAN_CODE:
+            self->priv->seen_unit_types |= MTX_CMM_PARSER_UNIT_SPAN_CODE;
+            mtx_dbg_tally (MTX_CMM_PARSER_UNIT_SPAN_CODE);
             if ((ref = mtx_cmm_protect (self, unit->text->str)))
             {
                 g_string_assign (unit->text, ref);
@@ -3135,6 +4024,24 @@ mtx_cmm_mtx (MtxCmm *self,
         case MTX_CMM_PARSER_UNIT_BLOCK_CODE:
             if (unit->flag & MTX_CMM_PARSER_UNIT_FLAG_OPEN)
             {
+                if (self->priv->output != MTX_CMM_OUTPUT_HTML)
+                {
+                    MtxCmmParserUnit *down =
+                    g_queue_peek_nth (self->priv->unitq, i + 1);
+                    if (down->type & MTX_CMM_PARSER_UNIT_INLINES)
+                    {
+                        /* markdown:
+                        - LI
+                            ```
+                            ...
+                            ```
+                        */
+                        if (unit->text && unit->text->str)
+                        {
+                            g_string_prepend (unit->text, "\n");
+                        }
+                    }
+                }
                 if (!(self->priv->tweaks & MTX_CMM_TWEAK_CM_BLOCK_END)
                     && unit->text && unit->text->len
                     && unit->text->str[unit->text->len - 1] == '\n')
@@ -3145,27 +4052,35 @@ mtx_cmm_mtx (MtxCmm *self,
             }
             else
             {
-                MtxCmmParserUnit *below;
+                MtxCmmParserUnit *down;
 
-                g_assert (unit->text == NULL);
-                g_assert (unit->args->len == 1);
-                below = g_queue_peek_nth (self->priv->unitq, i + 1);
-                g_assert (below && below->flag & MTX_CMM_PARSER_UNIT_FLAG_OPEN);
-                if (self->priv->output == MTX_CMM_OUTPUT_TEXT && below->text
+                g_assert (unit->args->len == 1); /* codeblock_end tag */
+
+                down = g_queue_peek_nth (self->priv->unitq, i + 1);
+                g_assert (down && down->flag & MTX_CMM_PARSER_UNIT_FLAG_OPEN);
+                if (self->priv->output == MTX_CMM_OUTPUT_TEXT && down->text
                     == NULL)
                 {
-                    below->text = g_string_new ("");
+                    down->text = g_string_new ("");
                 }
                 else
                 {
-                    g_assert (below->text != NULL);
+                    g_assert (down->text != NULL);
                 }
-                g_string_append (below->text, g_array_index (unit->args, gchar
-                                                             *, 0));
-                mtx_cmm_parser_unit_consume (&unit);
-                if ((ref = mtx_cmm_protect (self, below->text->str)))
+                g_string_append (down->text, g_ptr_array_index (unit->args, 0));
+                if (unit->text && unit->text->len)
                 {
-                    g_string_assign (below->text, ref);
+                    g_string_append (down->text, unit->text->str);
+                }
+                mtx_cmm_parser_unit_consume (&unit);
+
+                if (with_heading_link)
+                {
+                    mtx_cmm_string_delete_heading_links (self, down->text);
+                }
+                if ((ref = mtx_cmm_protect (self, down->text->str)))
+                {
+                    g_string_assign (down->text, ref);
                     g_free (ref);
                 }
             }
@@ -3210,11 +4125,16 @@ mtx_cmm_mtx (MtxCmm *self,
             g_assert (*"unhandled case label" == '!');
         }
     }
-
 #if MTX_DEBUG > 2
-    g_printerr ("%s\n", phase);
-    mtx_dump_queue (self, 2, self->priv->unitq, TRUE);
+    if (self->priv->caller == NULL)
+    {
+        g_printerr ("%s\n", phase);
+        mtx_dump_queue (self, 2, self->priv->unitq, TRUE);
+    }
 #endif
+    mtx_dbg_errout (ZC_ (1), "text/args consolidated %s\n",
+                    mtx_dbg_fmt_etime (-1));
+    mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_CONSOLIDATED);
 
 
 
@@ -3243,6 +4163,10 @@ mtx_cmm_mtx (MtxCmm *self,
     */
     for (i = g_queue_get_length (unitq) - 1; i >= 0; i--)
     {
+        if (g_cancellable_is_cancelled (cancellable))
+        {
+            goto out;
+        }
         unit = (MtxCmmParserUnit *) g_queue_peek_nth (unitq, i);
         MtxCmmParserUnit *curr;
 
@@ -3314,7 +4238,7 @@ mtx_cmm_mtx (MtxCmm *self,
 
                 /* In loose lists the contained P harvests text. */
                 gboolean is_tight =
-                *((gchar *) g_array_index (unit->args, gchar *, 1)) == 'T';
+                *((gchar *) g_ptr_array_index (unit->args, 1)) == 'T';
 
                 if (is_tight)
                 {
@@ -3403,11 +4327,15 @@ mtx_cmm_mtx (MtxCmm *self,
         default: ;     /* hush -Wswitch warning */
         }
     }
-
 #if MTX_DEBUG > 2
-    g_printerr ("%s\n", phase);
-    mtx_dump_queue (self, 2, self->priv->unitq, FALSE);
+    if (self->priv->caller == NULL)
+    {
+        g_printerr ("%s\n", phase);
+        mtx_dump_queue (self, 2, self->priv->unitq, FALSE);
+    }
 #endif
+    mtx_dbg_errout (ZC_(1), "blocks collapsed %s\n", mtx_dbg_fmt_etime (-1));
+    mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_COLLAPSED);
 
 
 
@@ -3431,12 +4359,16 @@ mtx_cmm_mtx (MtxCmm *self,
     Pango application will still be able to format block quotes correctly.
     */
 
-    if (do_margin
+    if (with_margin
         && (self->priv->seen_unit_types & MTX_CMM_PARSER_UNIT_BLOCK_QUOTE))
     {
         MtxCmmParserUnit *above;
         for (i = g_queue_get_length (unitq) - 1; i > 0; i--)
         {
+            if (g_cancellable_is_cancelled (cancellable))
+            {
+                goto out;
+            }
             unit = (MtxCmmParserUnit *) g_queue_peek_nth (unitq, i);
 
             if (unit->type == MTX_CMM_PARSER_UNIT_BLOCK_QUOTE
@@ -3460,9 +4392,15 @@ mtx_cmm_mtx (MtxCmm *self,
             }
         }
 #if MTX_DEBUG > 2
-        g_printerr ("%s\n", phase);
-        mtx_dump_queue (self, 2, self->priv->unitq, TRUE);
+        if (self->priv->caller == NULL)
+        {
+                g_printerr ("%s\n", phase);
+                mtx_dump_queue (self, 2, self->priv->unitq, TRUE);
+        }
 #endif
+        mtx_dbg_errout (ZC_ (1), "block quotes elided %s\n",
+                        mtx_dbg_fmt_etime (-1));
+        mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_ELIDED);
     }
 
 
@@ -3485,7 +4423,7 @@ mtx_cmm_mtx (MtxCmm *self,
     Note: we do assume monospace font for _col_length to make sense at all.
     */
 
-    if (do_tables && self->priv->output != MTX_CMM_OUTPUT_HTML)
+    if (with_tables && self->priv->output != MTX_CMM_OUTPUT_HTML)
     {
         GPtrArray *max_col_width = NULL;
         guint curr_col = -1;
@@ -3494,6 +4432,10 @@ mtx_cmm_mtx (MtxCmm *self,
         /* Read reversed tables, from </table> to <table> */
         for (i = 0; i < (gint) g_queue_get_length (unitq) - 1; i++)
         {
+            if (g_cancellable_is_cancelled (cancellable))
+            {
+                goto out;
+            }
             unit = (MtxCmmParserUnit *) g_queue_peek_nth (unitq, i);
 
             switch (unit->type)
@@ -3524,7 +4466,7 @@ mtx_cmm_mtx (MtxCmm *self,
                     str = g_string_new (unit->text->str);
                     mtx_dbg_errout (-1, "(%s) strlen=%lu", unit->text->str,
                                    unit->text->len);
-                    (void)mtx_cmm_string_release_protected_unmarked (self, str);
+                    mtx_cmm_string_release_unmarked (self, str);
                     mtx_dbg_errseq (-1, " => (%s) strlen=%lu", str->str,
                                     str->len);
                     clen = _col_strlen (str->str);
@@ -3558,7 +4500,7 @@ mtx_cmm_mtx (MtxCmm *self,
                                                 g_ptr_array_index
                                                 (max_col_width, c));
                     }
-                    gchar **a0 = &g_array_index (unit->args, gchar *, 0);
+                    gchar **a0 = (gchar **) &g_ptr_array_index (unit->args, 0);
                     g_free (*a0);
                     *a0 = serialize->str;
                     g_string_free (serialize, FALSE);
@@ -3573,9 +4515,15 @@ mtx_cmm_mtx (MtxCmm *self,
             }
         }
 #if MTX_DEBUG > 2
-        g_printerr ("%s\n", phase);
-        mtx_dump_queue (self, 2, self->priv->unitq, TRUE);
+        if (self->priv->caller == NULL)
+        {
+                g_printerr ("%s\n", phase);
+                mtx_dump_queue (self, 2, self->priv->unitq, TRUE);
+        }
 #endif
+        mtx_dbg_errout (ZC_ (1), "tables preprocessed %s\n",
+                        mtx_dbg_fmt_etime (-1));
+        mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_TABLE_PREPROCESSED);
     }
 
 
@@ -3596,7 +4544,7 @@ mtx_cmm_mtx (MtxCmm *self,
     the cell text proper.
     */
 
-    if (do_tables && self->priv->output != MTX_CMM_OUTPUT_HTML)
+    if (with_tables && self->priv->output != MTX_CMM_OUTPUT_HTML)
     {
         GPtrArray *max_col_width = NULL;
         gint curr_col = -1;
@@ -3605,6 +4553,10 @@ mtx_cmm_mtx (MtxCmm *self,
 
         for (i = g_queue_get_length (unitq) - 1; i > 0; i--)
         {
+            if (g_cancellable_is_cancelled (cancellable))
+            {
+                goto out;
+            }
             unit = (MtxCmmParserUnit *) g_queue_peek_nth (unitq, i);
 
             switch (unit->type)
@@ -3613,7 +4565,7 @@ mtx_cmm_mtx (MtxCmm *self,
                 if (unit->flag & MTX_CMM_PARSER_UNIT_FLAG_OPEN)
                 {
                     max_col_width = g_ptr_array_new ();
-                    a0 = g_array_index (unit->args, gchar *, 0);
+                    a0 = g_ptr_array_index (unit->args, 0);
                     gchar *pos = NULL;
                     gint tmax = 0;
                     gchar *token = strtok_r (a0, " ", &pos);
@@ -3688,8 +4640,8 @@ mtx_cmm_mtx (MtxCmm *self,
                         ;
                     }
 
-                    g_string_assign (unit->text, g_array_index (unit->args,
-                                                                gchar *, 0));
+                    g_string_assign (unit->text, g_ptr_array_index (unit->args,
+                                                                    0));
                     g_string_append (unit->text, buf);
                 }
                 break;
@@ -3702,9 +4654,15 @@ mtx_cmm_mtx (MtxCmm *self,
         }
         g_free (buf);
 #if MTX_DEBUG > 2
-        g_printerr ("%s\n", phase);
-        mtx_dump_queue (self, 2, self->priv->unitq, TRUE);
+        if (self->priv->caller == NULL)
+        {
+                g_printerr ("%s\n", phase);
+                mtx_dump_queue (self, 2, self->priv->unitq, TRUE);
+        }
 #endif
+        mtx_dbg_errout (ZC_ (1), "tables justified %s\n",
+                        mtx_dbg_fmt_etime (-1));
+        mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_TABLE_JUSTIFIED);
     }
 
 
@@ -3721,18 +4679,20 @@ mtx_cmm_mtx (MtxCmm *self,
 #endif
 
     /*
-    By now inlines are protected so as not to entangle text transformations,
-    including smart text and auto-code discovery.
-    */
-    /*
-    Here we also add Pango <span> properties to assist applications that will
-    indent blockquote and list blocks.
+    By now all inlines are protected so they can't entangle during the text
+    transformations that occur in this phase: smart text, auto-code discovery,
+    Pango <span> properties for applications that indent blockquote and list
+    blocks, and heading anchors for HTML output.
     */
 
     guint blockquote_level = 0, ol_ul_level = 0;
     gchar *copy_of_blockquote_open_str = NULL;
     for (i = g_queue_get_length (unitq) - 1; i >= 0; i--)
     {
+        if (g_cancellable_is_cancelled (cancellable))
+        {
+            goto out;
+        }
         unit = (MtxCmmParserUnit *) g_queue_peek_nth (unitq, i);
 
         switch (unit->type)
@@ -3750,7 +4710,7 @@ mtx_cmm_mtx (MtxCmm *self,
                 g_assert (unit->args && unit->args->len == 1);
                 if (unit->text)
                 {
-                    if (do_autocode)
+                    if (with_autocode)
                     {
                         mtx_cmm_replace_auto_code_spans
                             (self, unit->text, 0,
@@ -3758,7 +4718,7 @@ mtx_cmm_mtx (MtxCmm *self,
                              self->priv->tags.code_span_start,
                              self->priv->tags.code_span_end);
                     }
-                    if (do_smart_text)
+                    if (with_smart_text)
                     {
                         mtx_cmm_replace_smart_text (self, unit->text, 0,
                                                     unit->text->len);
@@ -3766,7 +4726,7 @@ mtx_cmm_mtx (MtxCmm *self,
                 }
 
                 /* Insert start tag. */
-                temp = (gchar *) g_array_index (unit->args, gchar *, 0);
+                temp = g_ptr_array_index (unit->args, 0);
                 if (unit->text)
                 {
                     g_string_prepend (unit->text, temp);
@@ -3775,15 +4735,32 @@ mtx_cmm_mtx (MtxCmm *self,
                 {
                     unit->text = g_string_new (temp);
                 }
+
+                /* Finalize HTML Heading anchors. */
+                /*
+                <h.> tags include <a> tags intended as anchors for Pango output.
+                However, these <a> tags require modifications to function as
+                HTML anchors. Change from mtx_insert_heading_link_cb output:
+                <h3>H 3\u200b<a href="#H%203">\u200b</a>\u200b<a href="#h-3">
+                \u200b</a>\u200b<a href="#h_3">\u200b</a></h3>
+                TO:
+                <h3>H 2<a id="H%203"></a><a id="h-3"></a><a id="h_3"></a></h3>
+                */
+                if (unit->type == MTX_CMM_PARSER_UNIT_BLOCK_H &&
+                    self->priv->output == MTX_CMM_OUTPUT_HTML
+                    && with_heading_link)
+                {
+                    mtx_cmm_string_release_protected (self, unit->text, NULL);
+                    g_string_replace (unit->text, "<a href=\"#", "<a id=\"", -1);
+                    g_string_replace (unit->text, "\u200b", "", -1);
+                }
             }
             else     /* Closing unit. */
             {
                 /* arg[0] = tags.<block>_end */
                 g_assert (unit->args && unit->args->len == 1);
                 /* Insert end tag. */
-                unit->text =
-                    g_string_new ((gchar *) g_array_index (unit->args, gchar
-                                                           *, 0));
+                unit->text = g_string_new (g_ptr_array_index (unit->args, 0));
             }
             break;
 
@@ -3798,13 +4775,13 @@ mtx_cmm_mtx (MtxCmm *self,
                 g_assert (unit->args && unit->args->len == 4);
 
                 gboolean is_tight =
-                *((gchar *) g_array_index (unit->args, gchar *, 1)) == 'T';
+                *((gchar *) g_ptr_array_index (unit->args, 1)) == 'T';
 
                 if (unit->text)
                 {
                     if (is_tight)      /* If not the contained BLOCK_P will do it. */
                     {
-                        if (do_autocode)
+                        if (with_autocode)
                         {
                             mtx_cmm_replace_auto_code_spans
                                 (self, unit->text,
@@ -3812,7 +4789,7 @@ mtx_cmm_mtx (MtxCmm *self,
                                  self->priv->tags.code_span_start,
                                  self->priv->tags.code_span_end);
                         }
-                        if (do_smart_text)
+                        if (with_smart_text)
                         {
                             mtx_cmm_replace_smart_text (self, unit->text, 0,
                                                         unit->text->len);
@@ -3827,32 +4804,32 @@ mtx_cmm_mtx (MtxCmm *self,
                 /* Insert start tag. */
                 if (self->priv->output != MTX_CMM_OUTPUT_PANGO)
                 {
-                    temp = (gchar *) g_array_index (unit->args, gchar *, 0);
+                    temp = g_ptr_array_index (unit->args, 0);
                     g_string_prepend (unit->text, temp);
                 }
                 else             /* Pango */
                 {
                     /* For Pango also include list item properties. */
-                    temp = (gchar *) g_array_index (unit->args, gchar *, 0);
+                    temp = g_ptr_array_index (unit->args, 0);
                     /*
                     NEVER embed LI contents in a font="..." span due to the
-                    limitation of our TextView's _text_buffer_insert_markup()
+                    limitation of mtx_text_view_buffer_insert_markup()
                     */
                     temp =
                         g_strdup_printf
                         ("<span font=\"@%s%s%s%s%s%ld%s%d\">%s</span>",
-                         _tag_info[MTX_TAG_LI_LEVEL],
-                         (gchar *) g_array_index (unit->args, gchar *, 2),
-                         _tag_info[MTX_TAG_LI_ORDINAL],
-                         (gchar *) g_array_index (unit->args, gchar *, 3),
-                         _tag_info[MTX_TAG_LI_BULLET_LEN],
-                         g_utf8_strlen (temp, -1), _tag_info[MTX_TAG_LI_ID],
+                         _tag_info_str (MTX_TAG_LI_LEVEL),
+                         (gchar *) g_ptr_array_index (unit->args, 2),
+                         _tag_info_str (MTX_TAG_LI_ORDINAL),
+                         (gchar *) g_ptr_array_index (unit->args, 3),
+                         _tag_info_str (MTX_TAG_LI_BULLET_LEN),
+                         g_utf8_strlen (temp, -1), _tag_info_str(MTX_TAG_LI_ID),
                          i, temp);
                     g_string_prepend (unit->text, temp);
                     g_free (temp);
                     g_string_append_printf (unit->text,
                                             "<span font=\"@%s%d\">%s</span>",
-                                            _tag_info[MTX_TAG_LI_ID], i,
+                                            _tag_info_str (MTX_TAG_LI_ID), i,
                                             sUNIPUA_PANGO_EMPTY_SPAN);
                 }
             }
@@ -3867,7 +4844,7 @@ mtx_cmm_mtx (MtxCmm *self,
                 render_close_li_block collapses a run of closing LI tags.
                 */
                 unit->text =
-                g_string_new ((gchar *) g_array_index (unit->args, gchar *, 0));
+                g_string_new (g_ptr_array_index (unit->args, 0));
             }
             break;
 
@@ -3885,7 +4862,7 @@ mtx_cmm_mtx (MtxCmm *self,
         */
 
         case MTX_CMM_PARSER_UNIT_BLOCK_QUOTE:
-            if (do_margin)
+            if (with_margin)
             {
                 MtxCmmParserUnit *above = NULL;
                 gchar gap[128];
@@ -3923,9 +4900,9 @@ mtx_cmm_mtx (MtxCmm *self,
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
                 snprintf (gap, sizeof (gap),
                           collapse ? "" : "<span font=\"@%s%d%s%d\">",
-                          _tag_info[MTX_TAG_BLOCKQUOTE_LEVEL],
+                          _tag_info_str (MTX_TAG_BLOCKQUOTE_LEVEL),
                           open ? ++blockquote_level : blockquote_level--,
-                          _tag_info[MTX_TAG_BLOCKQUOTE_OPEN], open != 0);
+                          _tag_info_str (MTX_TAG_BLOCKQUOTE_OPEN), open != 0);
 #pragma GCC diagnostic pop
 
                 if (open)
@@ -3938,7 +4915,7 @@ mtx_cmm_mtx (MtxCmm *self,
                     {
                         if (copy_of_blockquote_open_str == NULL)
                         {
-#if MTX_TEXT_VIEW_DEBUG > 1
+#if MTX_TEXT_VIEW_DEBUG > 2
                             /* Replace default symbol to see who does what. */
                             GString *s = g_string_new (unit->text->str);
                             /* Don't change the byte length! */
@@ -3977,18 +4954,18 @@ mtx_cmm_mtx (MtxCmm *self,
                         }
 
                         /*
-                        Block quote level decreases but still inside block quotes:
-                        inject block quote opening Pango tag to tell the Pango application
-                        which is the current level.
+                        Block quote level decreases but still inside block
+                        quotes: inject block quote opening Pango tag to tell
+                        the Pango application which is the current level.
                         */
                         if (blockquote_level)
                         {
                             snprintf (gap, sizeof (gap),
                                       "<span font=\"@%s%d%s%d\">%s</span>",
-                                      _tag_info[MTX_TAG_BLOCKQUOTE_LEVEL],
+                                      _tag_info_str (MTX_TAG_BLOCKQUOTE_LEVEL),
                                       blockquote_level,
-                                      _tag_info[MTX_TAG_BLOCKQUOTE_OPEN], TRUE,
-                                      copy_of_blockquote_open_str);
+                                      _tag_info_str (MTX_TAG_BLOCKQUOTE_OPEN),
+                                      TRUE, copy_of_blockquote_open_str);
                             g_string_append (unit->text, gap);
                         }
                     }
@@ -4009,7 +4986,7 @@ mtx_cmm_mtx (MtxCmm *self,
 
         case MTX_CMM_PARSER_UNIT_BLOCK_OL:
         case MTX_CMM_PARSER_UNIT_BLOCK_UL:
-            if (do_margin)
+            if (with_margin)
             {
                 gchar gap[128];
                 gboolean open;
@@ -4029,7 +5006,7 @@ mtx_cmm_mtx (MtxCmm *self,
                     unit->text = g_string_new (sUNIPUA_PANGO_EMPTY_SPAN);
                 }
                 snprintf (gap, sizeof (gap), "<span font=\"@%s%d\">",
-                          _tag_info[MTX_TAG_OL_UL_LEVEL], ol_ul_level);
+                          _tag_info_str (MTX_TAG_OL_UL_LEVEL), ol_ul_level);
                 if (open)
                 {
                     g_string_prepend (unit->text, gap);
@@ -4047,11 +5024,15 @@ mtx_cmm_mtx (MtxCmm *self,
         }
     }
     g_free (copy_of_blockquote_open_str);
-
 #if MTX_DEBUG > 2
-    g_printerr ("%s\n", phase);
-    mtx_dump_queue (self, 2, self->priv->unitq, FALSE);
+    if (self->priv->caller == NULL)
+    {
+        g_printerr ("%s\n", phase);
+        mtx_dump_queue (self, 2, self->priv->unitq, FALSE);
+    }
 #endif
+    mtx_dbg_errout (ZC_(1), "text transformed %s\n", mtx_dbg_fmt_etime (-1));
+    mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_TEXT_TRANSFORMED);
 
 
 
@@ -4073,6 +5054,10 @@ mtx_cmm_mtx (MtxCmm *self,
     ret = g_string_new ("");
     for (i = g_queue_get_length (unitq) - 1; i >= 0; i--)
     {
+        if (g_cancellable_is_cancelled (cancellable))
+        {
+            goto out;
+        }
         unit = (MtxCmmParserUnit *) g_queue_peek_nth (unitq, i);
         if (unit->type & (MTX_CMM_PARSER_UNIT_ARG | MTX_CMM_PARSER_UNIT_JUNK))
         {
@@ -4084,32 +5069,100 @@ mtx_cmm_mtx (MtxCmm *self,
             g_string_append (ret, unit->text->str);
         }
     }
-
 #if MTX_DEBUG > 2
-    g_printerr ("%s\n", phase);
-    mtx_dump_queue (self, 2, self->priv->unitq, FALSE);
+    if (self->priv->caller == NULL)
+    {
+        g_printerr ("%s\n", phase);
+        mtx_dump_queue (self, 2, self->priv->unitq, FALSE);
+    }
 #endif
+    mtx_dbg_errout (ZC_(1), "units joined %s\n", mtx_dbg_fmt_etime (-1));
+    mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_JOINED);
+    if (g_cancellable_is_cancelled (cancellable))
+    {
+        goto out;
+    }
 
-    /* Clean up. */
+    /*********************************************************************/
     mtx_cmm_parser_clear_queues (self);
+    /*********************************************************************/
+
+
+
+
 
 #if MTX_DEBUG > 2
     phase = "\
     **********************************************************************\n\
-    *                                FIN                                 *\n\
+    *                             INSERT ToC                             *\n\
     **********************************************************************";
-    g_printerr ("%s\n", phase);
+    if (self->priv->caller == NULL)
+    {
+        g_printerr ("%s\n", phase);
+    }
+#endif
+    /*
+    Here we insert a rendered Table of Contents comprising the entries that
+    mtx_insert_heading_link_cb added to self, and mtx_delete_heading_link_cb
+    didn't remove. At this stage we do not need to, but still can, protect
+    output tags because all text transformations have already taken place.
+    */
+    if (with_heading_link && self->priv->toc->len
+        && !self->priv->meta.renderer_skip_toc)
+    {
+        mtx_cmm_render_toc (self);
+        /*
+        Replace the ToC for sUNIPUA_TOC and wrap the replacement with
+        `toc_start`/`toc_end` output tags for future use.
+        */
+        GString *toc = g_string_new (self->priv->tags.toc_start);
+        for (guint j = 0; j < self->priv->toc->len; j++)
+        {
+            MtxCmmTocEntry *te = g_ptr_array_index (self->priv->toc, j);
+            g_string_append (toc, te->rendered);
+        }
+        g_string_append (toc, self->priv->tags.toc_end);
+        i = g_string_replace (ret, sUNIPUA_TOC, toc->str, 1);
+        g_assert (i == 1);
+        mtx_dbg_errout (ZC_(1), "ToC inserted %s\n", mtx_dbg_fmt_etime (-1));
+        mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_TOC);
+    }
+    if (g_cancellable_is_cancelled (cancellable))
+    {
+        goto out;
+    }
+
+
+
+
+
+#if MTX_DEBUG > 2
+    phase = "\
+    **********************************************************************\n\
+    *                                END                                 *\n\
+    **********************************************************************";
+    if (self->priv->caller == NULL)
+    {
+        g_printerr ("%s\n", phase);
+    }
 #endif
 
+    if (self->priv->caller == NULL)
+    {
+        mtx_dbg_errout (2, _SOgre "{{{ CODE TABLE %p:" _SE "\n", self);
 #if MTX_DEBUG > 1
-    _print_priv_table (self->priv->code_table, _SOyel "%s: CODE TABLE:" _SE
-                       "\n", __FUNCTION__);
-    g_printerr ("@@@@@@@@@@ ret->str:\n%s\n@@@@@@@@@@\n", ret->str);
+        _print_priv_table (self->priv->code_table);
 #endif
+        mtx_dbg_errout (2, _SOgre "}}} %p" _SE "\n", self);
+
+        mtx_dbg_errout (2, _SO "{{{ PROTECTED OUTPUT %p:" _SE "\n",
+                        self);
+        mtx_dbg_errseq (2, "%s", ret->str);
+        mtx_dbg_errout (2, _SO "}}} %p" _SE "\n", self);
+    }
 
     /* Release (re)protected spans. */
-    while (mtx_cmm_string_release_protected (self, ret) > 0)
-        ;
+    (void) mtx_cmm_string_release_protected (self, ret, NULL);
 
     /* Release UNIPUA singletons. */
     mtx_cmm_string_release_unipua (self, ret);
@@ -4118,11 +5171,32 @@ mtx_cmm_mtx (MtxCmm *self,
     {
         g_string_truncate (ret, ret->len - 1);
     }
-    temp = ret->str;
-    if (size != NULL)
+
+    gchar *result;
+out:
+    if (ret != NULL)
     {
-        *size = ret->len;
+        result = ret->str;
+        if (size != NULL)
+        {
+            *size = ret->len;
+        }
+        g_string_free (ret, FALSE);
+        if (meta != NULL)
+        {
+            *meta = mtx_cmm_fetch_page_meta (self);
+        }
     }
-    g_string_free (ret, FALSE);
-    return temp;
+    else
+    {
+        /* Operation was cancelled */
+        result = NULL;
+    }
+    self->priv->mkdin = NULL;
+    self->priv->tweaks = saved_tweaks;
+    mtx_dbg_errout (ZC_(1), "end %s\n", mtx_dbg_fmt_etime (-1));
+    mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_END);
+    mtx_dbg_print_tally (ZC_(1), mtx_unit_label);
+
+    return result;
 }

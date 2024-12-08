@@ -21,17 +21,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
-#ifndef __MTX_VERSION_H__
+#ifndef __MTX_RESOURCES_H__
 
-#define PROGNAME "mdview"
-#define DEFAULT_INDEX "index.md"
-#define DEFAULT_WINDOW_TITLE "mdview"
-#define MDVIEW_VERSION "2024.08.26"
-#define MDVIEW_VERSION_TEXT "\
-" PROGNAME " " MDVIEW_VERSION " @ " __TIMESTAMP__ "\n\
-License: GNU GPL v2\n\
-MDVIEW MTX (C) 2024 step, https://www.github.com/step-/mdview\n\
-MD4C       (C) 2016-2024 Martin Mitas\n\
-mdview3    (C) 2009 Leandro Pereira; (C) 2015,2016 James B; (C) 2016,2023 step"
+#define USAGE_PAGE   "resource:///usage.md"
+#define WELCOME_PAGE "resource:///welcome.md"
+#define STYLE_SHEET_PAGE_FMT "resource:///mtx%d.css"
 
-#endif  /* __MTX_VERSION_H__ */
+#endif  /* __MTX_RESOURCES_H__ */

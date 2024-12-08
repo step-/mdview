@@ -24,21 +24,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef MTX_CMM_H
 #define MTX_CMM_H
 
+#include <gio/gio.h>
 #include <glib-object.h>
 
 G_BEGIN_DECLS
 
 #define MTX_TYPE_CMM         (mtx_cmm_get_type())
 G_DECLARE_FINAL_TYPE (MtxCmm, mtx_cmm, MTX, CMM, GObject)
-typedef struct _MtxCmmPrivate MtxCmmPrivate;
-
-struct _MtxCmm
-{
-    GObject       parent_instance;
-
-    /*< private >*/
-    MtxCmmPrivate *priv;
-};
 
 /**********************************************************************/
 
@@ -47,12 +39,13 @@ struct _MtxCmm
 
 typedef enum _MtxCmmOutput
 {
-    MTX_CMM_OUTPUT_ANSI,
-    MTX_CMM_OUTPUT_TTY,
-    MTX_CMM_OUTPUT_TEXT,
-    MTX_CMM_OUTPUT_PANGO,
-    MTX_CMM_OUTPUT_HTML,
-    MTX_CMM_OUTPUT_UNKNOWN,
+    MTX_CMM_OUTPUT_UNKNOWN              = 0,
+    MTX_CMM_OUTPUT_ANSI                 = 1 << 0,
+    MTX_CMM_OUTPUT_TTY                  = 1 << 1,
+    MTX_CMM_OUTPUT_TEXT                 = 1 << 2,
+    MTX_CMM_OUTPUT_PANGO                = 1 << 3,
+    MTX_CMM_OUTPUT_HTML                 = 1 << 4,
+    MTX_CMM_OUTPUT_BARE_INLINE          = 1 << 5, /* mtx_insert_heading_link_cb */
 } MtxCmmOutput;
 
 typedef enum _MtxCmmExtensions
@@ -64,21 +57,38 @@ typedef enum _MtxCmmExtensions
     MTX_CMM_EXTENSION_PERMLINK          = 1 << 3, /* linkify unmarked links (MD4C) */
     MTX_CMM_EXTENSION_AUTO_LANG         = 1 << 4, /* prefer opening File.$LANG.ext */
     MTX_CMM_EXTENSION_TABLE             = 1 << 5, /* markdown tables (monospace font) */
+    MTX_CMM_EXTENSION_HEADING_LINK      = 1 << 6, /* auto heading reference links */
+    MTX_CMM_EXTENSION_STRIKETHROUGH     = 1 << 7, /* ~strike~ and ~~strike~~ */
 } MtxCmmExtensions;
+
+#define MTX_CMM_EXTENSION_DEFAULT (\
+    MTX_CMM_EXTENSION_SHEBANG | \
+    MTX_CMM_EXTENSION_SMART_TEXT | \
+    MTX_CMM_EXTENSION_AUTO_CODE | \
+    MTX_CMM_EXTENSION_PERMLINK | \
+    MTX_CMM_EXTENSION_TABLE | \
+    MTX_CMM_EXTENSION_HEADING_LINK | \
+    MTX_CMM_EXTENSION_STRIKETHROUGH)
 
 typedef enum _MtxCmmTweaks
 {
     MTX_CMM_TWEAK_NONE                  = 0,
     MTX_CMM_TWEAK_CM_BLOCK_END          = 1 << 0, /* add empty line at code block end */
     MTX_CMM_TWEAK_UNSAFE_HTML           = 1 << 1, /* HTML fragment includes raw HTML (cmark --unsafe) */
-    MTX_CMM_TWEAK_SOFT_BREAK            = 1 << 2, /* render soft breaks as new lines (opposite of cmark --nobreaks) */
-    MTX_CMM_TWEAK_HTML5                 = 1 << 3, /* instead of default XHTML */
+    MTX_CMM_TWEAK_SOFT_BREAK            = 1 << 2, /* render soft breaks as line endings (all output modes) */
+    MTX_CMM_TWEAK_SOFT_BREAK_BR         = 1 << 3, /* as above + insert <br> before line ending (HTML mode) */
+    MTX_CMM_TWEAK_HTML5                 = 1 << 4, /* output HTML 5 instead of the default XHTML */
+    MTX_CMM_TWEAK_FULL_HTML             = 1 << 5, /* generate full HTML including styles */
+    MTX_CMM_TWEAK_RESERVED1             = 1 << 6, /* --pango */
+    MTX_CMM_TWEAK_RESERVED2             = 1 << 7, /* --exit-test */
+    MTX_CMM_TWEAK_RESERVED3             = 1 << 8, /* .md$ => .md.html href */
 } MtxCmmTweaks;
 
 typedef enum _MtxCmmTagInfo
 {
     MTX_TAG_DEST_LINK_URI_ID = 0,
     MTX_TAG_DEST_LINK_TXT_LEN,
+    MTX_TAG_DEST_LINK_HEADING,
     MTX_TAG_DEST_IMAGE_PATH_ID,
     MTX_TAG_BLOCKQUOTE_LEVEL,
     MTX_TAG_BLOCKQUOTE_OPEN,
@@ -145,35 +155,120 @@ typedef struct _MtxCmmTags
     const gchar *th_end;
     const gchar *td_start;
     const gchar *td_end;
-
+    const gchar *toc_start;
+    const gchar *toc_end;
     MtxCmmLinkBuilder *link_builder;
     MtxCmmImageBuilder *image_builder;
 } MtxCmmTags;
 
-/**
-mtx_cmm_new:
+typedef struct _MtxCmmPageMeta
+{
+    gint renderer_keep_tags;
+    gint renderer_skip_toc;
+    gint viewer_track_page;
+} MtxCmmPageMeta;
 
-Returns: a new #MTX_CMM instance.
-*/
-MtxCmm * mtx_cmm_new (void);
+typedef enum _MtxCmmProgress
+{
+    MTX_CMM_PROGRESS_START = 0,
+    MTX_CMM_PROGRESS_SHEBANG,
+    MTX_CMM_PROGRESS_LEGACY,
+    MTX_CMM_PROGRESS_HEADINGS,
+    MTX_CMM_PROGRESS_PARSED,
+    MTX_CMM_PROGRESS_CONSOLIDATED,
+    MTX_CMM_PROGRESS_COLLAPSED,
+    MTX_CMM_PROGRESS_ELIDED,
+    MTX_CMM_PROGRESS_TABLE_PREPROCESSED,
+    MTX_CMM_PROGRESS_TABLE_JUSTIFIED,
+    MTX_CMM_PROGRESS_TEXT_TRANSFORMED,
+    MTX_CMM_PROGRESS_JOINED,
+    MTX_CMM_PROGRESS_TOC,
+    MTX_CMM_PROGRESS_END,
+} MtxCmmProgress;
 
-gchar *mtx_cmm_mtx (MtxCmm *, gchar **, gsize *, const gboolean);
-gboolean mtx_cmm_get_render_indent (MtxCmm *);
-const MtxCmmTags *mtx_cmm_get_output_tags (MtxCmm *);
-MtxCmmOutput mtx_cmm_get_output (MtxCmm *);
-gboolean mtx_cmm_set_output (MtxCmm *, MtxCmmOutput output);
-MtxCmmExtensions mtx_cmm_get_extensions (MtxCmm *);
-gboolean mtx_cmm_set_extensions (MtxCmm *, const MtxCmmExtensions);
-MtxCmmTweaks mtx_cmm_get_tweaks (MtxCmm *);
-gboolean mtx_cmm_set_tweaks (MtxCmm *, const MtxCmmTweaks);
-gboolean mtx_cmm_get_escape (MtxCmm *);
-gboolean mtx_cmm_set_escape (MtxCmm *, gboolean);
-const gchar *mtx_cmm_get_link_dest (MtxCmm *, const gint link_id);
-gint mtx_cmm_tag_get_info (MtxCmm *, const gchar *tag, const MtxCmmTagInfo subject);
-/*
-Like CommonMark cmark, by default we replace raw HTML with the comment below.
-*/
-#define SAFE_HTML "<!-- raw HTML omitted -->"
+/***********************************************************/
+
+MtxCmm *
+mtx_cmm_new (MtxCmmOutput output);
+
+gint
+mtx_cmm_get_tag_val (MtxCmm *self,
+                     const gchar *tag,
+                     const MtxCmmTagInfo subject);
+
+const gchar *
+mtx_cmm_get_link_dest (MtxCmm *self,
+                       const gint id);
+
+gboolean
+mtx_cmm_get_render_indent (MtxCmm *self);
+
+gboolean
+mtx_cmm_get_escape (MtxCmm *self);
+
+gboolean
+mtx_cmm_set_escape (MtxCmm *self,
+                    gboolean escape);
+
+MtxCmmExtensions
+mtx_cmm_get_extensions (MtxCmm *self);
+
+gboolean
+mtx_cmm_set_extensions (MtxCmm *self,
+                        const MtxCmmExtensions flags);
+
+gboolean
+mtx_cmm_set_progress_fd (MtxCmm *self,
+                         const gint fd);
+
+guint
+mtx_cmm_get_toc_level (MtxCmm *self);
+
+gboolean
+mtx_cmm_set_toc_level (MtxCmm *self,
+                       const guint value);
+
+MtxCmmTweaks
+mtx_cmm_get_tweaks (MtxCmm *self);
+
+gboolean
+mtx_cmm_set_tweaks (MtxCmm *self,
+                    const MtxCmmTweaks flags);
+
+const MtxCmmTags *
+mtx_cmm_get_output_tags (MtxCmm *self);
+
+MtxCmmOutput
+mtx_cmm_get_output (MtxCmm *self);
+
+gboolean
+mtx_cmm_set_output (MtxCmm *self,
+                    MtxCmmOutput output);
+
+gboolean
+mtx_cmm_got_blockquote (MtxCmm *self);
+
+gboolean
+mtx_cmm_got_img (MtxCmm *self);
+
+gboolean
+mtx_cmm_got_li (MtxCmm *self);
+
+gboolean
+mtx_cmm_got_link (MtxCmm *self);
+
+GRegex *
+mtx_cmm_regex_astx (MtxCmm *self);
+
+gchar *
+mtx_cmm_mtx (MtxCmm *self,
+             gchar **markdown,
+             gsize *size,
+             MtxCmmPageMeta **meta,
+             const gboolean clear_markdown,
+             GCancellable *cancellable);
+
+/***********************************************************/
 
 /*
 The renderer inserts pango markup <span>s to facilitate blockquote indentation.

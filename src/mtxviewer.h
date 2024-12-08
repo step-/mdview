@@ -49,42 +49,80 @@ from the hardinfo "help-viewer" directory.
 #define __MTX_VIEWER_H__
 
 #include <gtk/gtk.h>
+#include "mtxcmm.h"
+#include "mtxtextview.h"
 
 G_BEGIN_DECLS
+
+typedef struct _MtxViewerOptions
+{
+    const MtxCmmExtensions extensions;
+    const gchar *html_base;
+    const gint html_css;
+    guint toc_level;
+    const MtxCmmTweaks tweaks;
+} MtxViewerOptions;
 
 typedef struct _MtxViewer MtxViewer;
 struct _MtxViewer
 {
     GtkWidget *parent;
     gchar *homepage;
+    gint  progress_fd[2];    /* pipe */
 
     /*< private >**********************************************************/
 
     GtkWidget *window;
-    GtkWidget *status_bar;
+    GtkWidget *top_bar;
+    GtkStatusbar *status_bar;
 
-    GtkWidget *btn_nav_back, *btn_nav_fore;
-    GtkWidget *text_view;
+    GtkWidget *btn_nav_back, *btn_nav_fore, *btn_preview;
+    GtkWidget *combo_toc;
+    MtxTextView *text_view;
     GtkWidget *text_search;
+    gchar *backing_file;      /* for search:// and resource:// URI */
+    gint backing_fd;
+    GtkProgressBar *progress_bar;
+    GtkWidget *progress_box;
+    GCancellable *progress_logger_cancellable;
+    GQueue *progress_logger_q;
 
-    gboolean auto_lang;
+    MtxViewerOptions *options;
     gchar *current_file;             /* the page about to be displayed */
     gint  current_curpos;
     gint  changed_curpos;
+    MtxTextViewLinkInfo *landing_link_info; /* last click/key-press on a link */
     gchar *base_directory;
     const gchar * const *data_dirs;
+    gchar *failed_file;              /* the current_file that failed to load */
 
     GQueue *nav_trail;
     gpointer *nav_trail_page;        /* the page being displayed */
     gint nav_trail_page_idx;
     gboolean can_go_fore, can_go_back;
-
-    GRegex *regex_astx;
+#ifdef OPT_EXIT_TEST
+    gboolean exit_test;
+#endif
 };
 
-MtxViewer *mtx_viewer_new (const gchar *, const gchar *, const gchar *, GtkWindow *, guint, guint);
-gboolean mtx_viewer_present_page (MtxViewer *mtx_viewer, const gchar *, guint);
-void mtx_viewer_destroy (MtxViewer *mtx_viewer);
+/***********************************************************/
+
+gboolean
+mtx_viewer_present_page (MtxViewer *mvr,
+                         const gchar *page,
+                         guint offset);
+
+void
+mtx_viewer_destroy (MtxViewer *mvr);
+
+MtxViewer *
+mtx_viewer_new (const gchar *base_dir,
+                const gchar *base_file,
+                const gchar *title,
+                GtkWindow *parent,
+                const MtxViewerOptions *options);
+
+/***********************************************************/
 
 G_END_DECLS
 

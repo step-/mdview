@@ -61,9 +61,19 @@ additions for MDVIEW MTX.
 #include "mtxcmm.h"
 #include "mtxcmmprivate.h"
 
-void mtx_cmm_parser_unit_new (MtxCmm *, const MtxCmmParserUnitType, const MtxCmmParserUnitFlag);
-int mtx_cmm_parser_find_unit_index (MtxCmm *, const MtxCmmParserUnitType, const MtxCmmParserUnitFlag, const int, MtxCmmParserUnit **);
-gboolean mtx_cmm_parser_top_unit_ends_line (MtxCmm *);
+void
+mtx_cmm_parser_unit_new (MtxCmm *self,
+                         const MtxCmmParserUnitType type,
+                         const MtxCmmParserUnitFlag flag_mask);
+
+gboolean
+mtx_cmm_parser_is_unit_at_index (MtxCmm *self,
+                                 const MtxCmmParserUnitType type,
+                                 const MtxCmmParserUnitFlag flag,
+                                 const int index);
+
+gboolean
+mtx_cmm_parser_top_unit_ends_line (MtxCmm *self);
 
 #define PARSER(r)         ((MtxCmm *)(r)->userdata)
 
@@ -91,10 +101,10 @@ gboolean mtx_cmm_parser_top_unit_ends_line (MtxCmm *);
 #define R2_GET_TOP_UNIT(r) mtx_cmm_parser_get_unit_head (PARSER(r))
 
 #define R2_IS_TOP_UNIT(r, type_mask, flag_mask) \
-    (mtx_cmm_parser_find_unit_index (PARSER(r), type_mask, flag_mask, 0, NULL) == 0)
+    mtx_cmm_parser_is_unit_at_index (PARSER(r), type_mask, flag_mask, 0)
 
-#define R2_IS_UNIT_BELOW(r, type_mask, flag_mask) \
-    (mtx_cmm_parser_find_unit_index (PARSER(r), type_mask, flag_mask, 1, NULL) == 1)
+#define R2_IS_UNDER_TOP_UNIT(r, type_mask, flag_mask) \
+    mtx_cmm_parser_is_unit_at_index (PARSER(r), type_mask, flag_mask, 1)
 
 #define R2_TOP_UNIT_ENDS_WITH_NEWLINE(r) \
     mtx_cmm_parser_top_unit_ends_line (PARSER(r))
@@ -134,9 +144,9 @@ struct MD_HTML_tag {
     int li_ordinal[MTX_MAX_LI_LEVEL];
     const MtxCmmTags* tags;
     gboolean output_html;
+    gboolean output_unsafe_html; /* only affects non-HTML output modes */
     gboolean escape;
     gboolean softbreak_tweak;
-    gboolean html5_tweak;
     gboolean indent_li_block;
     gboolean inside_table;
 };
@@ -547,9 +557,6 @@ render_open_hr_block(MD_HTML* r)
 {
     R2_NEW_UNIT(r, MTX_CMM_PARSER_UNIT_BLOCK_HR, MTX_CMM_PARSER_UNIT_FLAG_OPEN | MTX_CMM_PARSER_UNIT_FLAG_CLOSE);
     RENDER_VERBATIM(r, r->tags->rule);
-    if (r->output_html) {
-        RENDER_VERBATIM(r, r->html5_tweak ? ">\n" : " />\n");
-    }
     R2_SEAL_UNIT(r);
 }
 
@@ -598,7 +605,6 @@ render_open_code_block(MD_HTML* r, const MD_BLOCK_CODE_DETAIL* det)
 
         RENDER_VERBATIM(r, r->tags->codeblock_start);
 
-        /* If known, output the HTML 5 attribute class="language-LANGNAME". */
         if(det->lang.text != NULL) {
             RENDER_VERBATIM(r, " class=\"language-");
             render_attribute(r, &det->lang, render_html_escaped);
@@ -614,9 +620,11 @@ render_open_code_block(MD_HTML* r, const MD_BLOCK_CODE_DETAIL* det)
 static void
 render_close_code_block(MD_HTML* r, const MD_BLOCK_CODE_DETAIL* det __attribute__((unused)))
 {
-    /*
-    Pass end tag as the argument of a new unit to allow mtx_cmm_mtx to access
-    the text field of the opening unit without having to pry it open.
+    /* Asserted by mtx_cmm_mtx:
+    Append the _end tag as the argument of a new unit so the _end tag won't
+    get in the way of mtx_cmm_mtx accessing the opening unit->text. If text
+    immediately follows the markdown closing code block "```", it will end
+    up in this unit's text.
     */
     R2_NEW_UNIT(r, MTX_CMM_PARSER_UNIT_BLOCK_CODE, MTX_CMM_PARSER_UNIT_FLAG_ARGS | MTX_CMM_PARSER_UNIT_FLAG_CLOSE);
     R2_ADD_ARG(r);
@@ -640,7 +648,7 @@ static void
 render_open_p_block (MD_HTML *r)
 {
     /* Imitate cmark's output in loose list. */
-    if (r->output_html && R2_IS_UNIT_BELOW(r, MTX_CMM_PARSER_UNIT_BLOCK_LI, MTX_CMM_PARSER_UNIT_FLAG_OPEN))
+    if (r->output_html && R2_IS_UNDER_TOP_UNIT(r, MTX_CMM_PARSER_UNIT_BLOCK_LI, MTX_CMM_PARSER_UNIT_FLAG_OPEN))
         RENDER_VERBATIM(r, "\n");
 
     R2_NEW_UNIT(r, MTX_CMM_PARSER_UNIT_BLOCK_P, MTX_CMM_PARSER_UNIT_FLAG_ARGS | MTX_CMM_PARSER_UNIT_FLAG_OPEN);
@@ -907,7 +915,7 @@ render_open_img_span(MD_HTML* r, const MD_SPAN_IMG_DETAIL* det)
     render_close_img_span.
     */
 
-    /* Inject a prefix to the span's text. With this, the rendering coda will be
+    /* Inject prefix before text. With this, the rendering coda will be
     able to compensate <table> column alignment for <a> links. */
     render_verbatim (r, r->inside_table ? "1" : "0", 1);
 }
@@ -970,12 +978,15 @@ render_text_softbr(MD_HTML* r)
 {
     /* image_nesting_level == 0 means this text is outside an image span. */
     RENDER_VERBATIM (r, (r->softbreak_tweak && r->image_nesting_level == 0) ?
-                     "\n" : " ");
+                     (r->softbreak_tweak > 1 ? sUNIPUA_BR : "\n") : " ");
 }
 
 static inline void
 render_text_html(MD_HTML* r, const MD_CHAR* text, const MD_SIZE size)
 {
+    if (!r->output_html && !r->output_unsafe_html)
+        return;
+
     if (R2_IS_TOP_UNIT(r, MTX_CMM_PARSER_UNIT_BLOCK_HTML, MTX_CMM_PARSER_UNIT_FLAG_OPEN))
         /* Line inside a larger HTML block. */
         render_verbatim(r, text, size);
@@ -1134,7 +1145,7 @@ text_callback(MD_TEXTTYPE type, const MD_CHAR* text, MD_SIZE size, void* userdat
         case MD_TEXT_BR:        render_text_hardbr(r);
                                 break;
         case MD_TEXT_SOFTBR:    render_text_softbr(r); break;
-        case MD_TEXT_HTML:      if(r->output_html) render_text_html(r, text, size); break;
+        case MD_TEXT_HTML:      render_text_html(r, text, size); break;
         case MD_TEXT_ENTITY:    render_entity(r, text, size, render_html_escaped); break;
         default:                if(r->escape) render_html_escaped(r, text, size);
                                 else                render_verbatim(r, text, size);
@@ -1161,6 +1172,8 @@ md_mtx (const MD_CHAR* input, MD_SIZE input_size,
         -1, 0, { 0 }, 0, 0, 0, 0, 0, 0, 0,
     };
     int i;
+    MtxCmmOutput output;
+    MtxCmmTweaks tweaks;
 
     MD_PARSER parser = {
         0,
@@ -1195,11 +1208,18 @@ md_mtx (const MD_CHAR* input, MD_SIZE input_size,
     }
 
     g_assert (render.userdata);
+    tweaks = mtx_cmm_get_tweaks (render.userdata);
+    output = mtx_cmm_get_output (render.userdata);
     render.tags = mtx_cmm_get_output_tags (render.userdata);
-    render.output_html = mtx_cmm_get_output (render.userdata) == MTX_CMM_OUTPUT_HTML;
+    render.output_html =
+    output == MTX_CMM_OUTPUT_HTML || output == MTX_CMM_OUTPUT_BARE_INLINE;
+    render.output_unsafe_html =
+    !render.output_html && tweaks & MTX_CMM_TWEAK_UNSAFE_HTML;
     render.escape = render.output_html || mtx_cmm_get_escape (render.userdata);
-    render.softbreak_tweak = mtx_cmm_get_tweaks (render.userdata) & MTX_CMM_TWEAK_SOFT_BREAK;
-    render.html5_tweak = mtx_cmm_get_tweaks (render.userdata) & MTX_CMM_TWEAK_HTML5;
+    if (tweaks & MTX_CMM_TWEAK_SOFT_BREAK)
+    {
+        render.softbreak_tweak = tweaks & MTX_CMM_TWEAK_SOFT_BREAK_BR ? 2 : 1;
+    }
     render.indent_li_block = mtx_cmm_get_render_indent (render.userdata);
 
     return md_parse(input, input_size, &parser, (void*) &render);

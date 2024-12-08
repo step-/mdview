@@ -49,29 +49,34 @@ Orange, Blue,Cyan, Magenta, Red, Teal, Grey
 *                           Using Palette #2                          *
 ***********************************************************************/
 
+        /*****************************************************/
+        /* This section is process by resources/make_css.awk */
+        /*****************************************************/
+
 /*             Using palette #2             */
-#define MTX_COLOR_BG           "#FFF"
-#define MTX_COLOR_FG           "#000"
-#define MTX_COLOR_CODE_SPAN_FG "#B56"
-#define MTX_COLOR_CODEBLOCK_BG "#FFF" /* #EEE */
-#define MTX_COLOR_CODEBLOCK_FG "#B56" /* #000 */
-#define MTX_COLOR_H1_FG        "#444"
-#define MTX_COLOR_H2_FG        "#444"
-#define MTX_COLOR_H3_FG        "#444"
-#define MTX_COLOR_H4_FG        "#000"
-#define MTX_COLOR_H5_FG        "#000"
-#define MTX_COLOR_H6_FG        "#000"
-#define MTX_COLOR_URL_FG       "#048"
-#define MTX_COLOR_HIGHLIGHT_BG "#FFF2B0"
-/*#define MTX_COLOR_HIGHLIGHT_FG "#000"*/
-#define MTX_COLOR_TABLE_BG     "#FBFBFB"
-#define MTX_COLOR_TABLE_FG     "#EBEBEB"
-#define MTX_COLOR_THEAD_BG     "#F4F4FF"
-#define MTX_COLOR_THEAD_FG     "#E4E4E4"
-#define MTX_COLOR_TH_BG        "#F4F4F4"
-#define MTX_COLOR_TH_FG        "#222"
-#define MTX_COLOR_TD_BG        "#FBFBFB"
-#define MTX_COLOR_TD_FG        "#000"
+#define MTX_COLOR_BG                    "#FFF"
+#define MTX_COLOR_FG                    "#000"
+#define MTX_COLOR_CODE_SPAN_FG          "#B56"
+#define MTX_COLOR_CODEBLOCK_BG          "#FFF"
+#define MTX_COLOR_CODEBLOCK_FG          "#B56"
+#define MTX_COLOR_H1_FG                 "#444"
+#define MTX_COLOR_H2_FG                 "#444"
+#define MTX_COLOR_H3_FG                 "#444"
+#define MTX_COLOR_H4_FG                 "#000"
+#define MTX_COLOR_H5_FG                 "#000"
+#define MTX_COLOR_H6_FG                 "#000"
+#define MTX_COLOR_URL_FG                "#048"        /* off palettes   */
+#define MTX_COLOR_URL_HEADING_FG        MTX_COLOR_BG  /* unnoticeable */
+#define MTX_COLOR_HIGHLIGHT_BG          "#CB4"        /* from palette 1 */
+#define MTX_COLOR_HIGHLIGHT_FG                        /* FG impinges on URL FG */
+#define MTX_COLOR_TABLE_BG              "#FBFBFB"
+#define MTX_COLOR_TABLE_FG              "#EBEBEB"
+#define MTX_COLOR_THEAD_BG              "#F4F4FF"
+#define MTX_COLOR_THEAD_FG              "#E4E4E4"
+#define MTX_COLOR_TH_BG                 "#F4F4F4"
+#define MTX_COLOR_TH_FG                 "#222"
+#define MTX_COLOR_TD_BG                 "#FBFBFB"
+#define MTX_COLOR_TD_FG                 "#000"
 
 #endif /* __MTX_COLOR_H */
 

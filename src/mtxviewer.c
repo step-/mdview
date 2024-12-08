@@ -47,7 +47,7 @@ from the hardinfo "help-viewer" directory.
  */
 
 #define _GNU_SOURCE                      /* for strcasestr() */
-#define GLIB_VERSION_MIN_REQUIRED GLIB_VERSION_2_66
+#define GLIB_VERSION_MIN_REQUIRED GLIB_VERSION_2_68
 #include <string.h>
 #include <stdlib.h>
 #include <gtk/gtk.h>
@@ -61,6 +61,7 @@ from the hardinfo "help-viewer" directory.
 #include <locale.h>
 
 #include "mtxcmm.h"
+#include "mtxresources.h"
 #include "mtxtextview.h"
 #include "mtxviewer.h"
 #include "mtxversion.h"
@@ -76,10 +77,18 @@ typedef struct mtx_viewer_nav_unit
     guint offset;
 } MtxViewerNavUnit;
 
-static gboolean do_file_search (MtxViewer *, const gchar *);
-static gboolean do_resource_load (MtxViewer *, const gchar *, const gchar *);
-static void file_load_complete (MtxTextView *, const gchar *, gpointer);
-static void on_curpos_changed (GtkTextBuffer *, GParamSpec *, gpointer);
+typedef struct
+{
+    MtxViewer *mvr;
+} progress_logger_data;
+
+typedef struct
+{
+    MtxViewer *mvr;
+    int id;
+} progress_logger_update_data;
+
+#include "mtxviewer.decl.h"
 
 #ifdef VIEWER_DEBUG
 
@@ -122,12 +131,16 @@ _nav_trail_print_status_bar (MtxViewer *mvr)
     gint nav_trail_length;
     MtxViewerNavUnit *page;
     gchar *name;
-    GString *message = g_string_new (NULL);
+    GString *message;
 
+    gtk_statusbar_pop (mvr->status_bar, STATUSBAR_CTX_LINK);
+    gtk_statusbar_pop (mvr->status_bar, STATUSBAR_CTX_WARN);
+    gtk_statusbar_pop (mvr->status_bar, STATUSBAR_CTX_MAIN);
     if (mvr->nav_trail_page == NULL)
     {
         return;
     }
+    message = g_string_new ("");
     page = (MtxViewerNavUnit *) mvr->nav_trail_page;
     for (gint i = 0; i < mvr->nav_trail_page_idx; i++)
     {
@@ -136,7 +149,16 @@ _nav_trail_print_status_bar (MtxViewer *mvr)
         g_string_append_printf (message, " « %s", name);
         g_free (name);
     }
-    if (mvr->nav_trail_page_idx > 0)
+    if (mvr->nav_trail_page_idx == 0)
+    {
+        if (!mtx_viewer_is_current_tracked (mvr))
+        {
+            g_string_append (message, Q_
+                             ("Home page accel, in status bar before the name|"
+                              "(Alt-H)"));
+        }
+    }
+    else
     {
         g_string_append (message, " \u25C0");
     }
@@ -155,9 +177,7 @@ _nav_trail_print_status_bar (MtxViewer *mvr)
         g_string_append_printf (message, " %s »", name);
         g_free (name);
     }
-    gtk_statusbar_pop (GTK_STATUSBAR (mvr->status_bar), STATUSBAR_CTX_LINK);
-    gtk_statusbar_pop (GTK_STATUSBAR (mvr->status_bar), STATUSBAR_CTX_WARN);
-    gtk_statusbar_push (GTK_STATUSBAR (mvr->status_bar), STATUSBAR_CTX_MAIN,
+    gtk_statusbar_push (mvr->status_bar, STATUSBAR_CTX_MAIN,
                         message->str);
     g_string_free (message, TRUE);
 }
@@ -175,7 +195,7 @@ _nav_trail_back (MtxViewer *mvr)
     mvr->nav_trail_page_idx--;
     mvr->nav_trail_page =
     g_queue_peek_nth (mvr->nav_trail, mvr->nav_trail_page_idx);
-    if (mvr->nav_trail_page_idx == 0)
+    if (mvr->nav_trail_page_idx <= 0)
     {
         gtk_widget_set_sensitive (mvr->btn_nav_back, mvr->can_go_back = FALSE);
     }
@@ -185,7 +205,7 @@ _nav_trail_back (MtxViewer *mvr)
     }
     _nav_trail_print_status_bar (mvr);
 #ifdef VIEWER_DEBUG
-        g_printerr ("+++++++++++ %s: ", __FUNCTION__); _nav_trail_print (mvr);
+    g_printerr ("+++++++++++ %s: ", __FUNCTION__); _nav_trail_print (mvr);
 #endif // VIEWER_DEBUG
 }
 
@@ -219,7 +239,8 @@ _nav_trail_fore (MtxViewer *mvr)
 
 /**
 _nav_trail_insert:
-insert file in the navigation trail after the current page and go forward.
+Insert file in the navigation trail after the current page,
+and go forward so that the file becomes the current page.
 
 @mvr: pointer to #MtxViewer instance.
 @file: path.
@@ -245,7 +266,7 @@ _nav_trail_insert (MtxViewer *mvr,
 }
 
 /**
-_nav_trail_fore_clear
+_nav_trail_fore_clear:
 Clear the navigation trail forward of the current page.
 
 @mvr: pointer to #MtxViewer instance
@@ -284,7 +305,7 @@ _scroll_to_curpos (MtxViewer *mvr,
 {
     GtkTextIter iter;
     GtkTextMark *mark;
-    MtxTextView *tv = MTX_TEXT_VIEW (mvr->text_view);
+    MtxTextView *tv = mvr->text_view;
 #ifdef MTX_DEBUG
 #define mtx_dbg_get_curpos(LEVEL, FMTPREFIX)                           \
     do {                                                               \
@@ -294,6 +315,14 @@ _scroll_to_curpos (MtxViewer *mvr,
     } while (0);
 #endif
 
+    if (highlight & MTX_TEXT_VIEW_HILIGHT_CLEAR_LINE)
+    {
+        if (mvr->landing_link_info != NULL)
+        {
+            mtx_text_view_clear_line_highlights (tv,
+                                                 mvr->landing_link_info->mark);
+        }
+    }
     mtx_dbg_errout (-1, "A \"%s\" curpos(%d)", mvr->current_file, curpos);
     gtk_text_buffer_get_iter_at_offset (tv->buffer, &iter, curpos);
     gtk_text_buffer_place_cursor (tv->buffer, &iter);
@@ -305,18 +334,22 @@ _scroll_to_curpos (MtxViewer *mvr,
 #ifdef MTX_DEBUG
         mtx_dbg_get_curpos (-1, " => B");
 #endif
-        mtx_text_view_highlight_at_cursor (MTX_TEXT_VIEW
-                                           (mvr->text_view), highlight);
+        mtx_text_view_highlight_at_cursor (tv, highlight);
     }
 #ifdef MTX_DEBUG
     mtx_dbg_get_curpos (-1, " => Z");
-    mtx_dbg_errseq(0, "%c", '\n');
+    mtx_dbg_errseq(-1, "%c", '\n');
 #undef mtx_dbg_get_curpos
 #endif
 }
 
+/**
+idle_scroll_to_current_curpos:
+To be called from g_idle_add only to ensure that scrolling is initiated
+on the new page about to be loaded instead of on the current page.
+*/
 static gboolean
-idle_scroll_to_curpos (MtxViewer *mvr)
+idle_scroll_to_current_curpos (MtxViewer *mvr)
 {
     _scroll_to_curpos (mvr, mvr->current_curpos,
                        MTX_TEXT_VIEW_HILIGHT_NORMAL);
@@ -336,19 +369,13 @@ open_url (MtxViewer *mvr,
           const gchar *url)
 {
     const gchar *browsers[] =
-    {
-        "xdg-open", "gnome-open", "kfmclient openURL",
-        "sensible-browser", "firefox", "epiphany",
-        "iceweasel", "seamonkey", "galeon", "mozilla",
-        "opera", "konqueror", "netscape", "vivaldi",
-        "links -g", NULL
-    };
+    { "xdg-open", "gnome-open", "kfmclient openURL", NULL };
     gint i = 0;
-    gchar *browser = (gchar *) g_getenv ("BROWSER");
+    const gchar *browser = g_getenv ("BROWSER");
 
     if (browser == NULL || *browser == '\0')
     {
-        browser = (gchar *) browsers[i++];
+        browser = browsers[i++];
     }
     do {
         gchar *cmdline = g_strdup_printf ("%s '%s'", browser, url);
@@ -359,20 +386,19 @@ open_url (MtxViewer *mvr,
             return;
         }
         g_free (cmdline);
-        browser = (gchar *) browsers[i++];
+        browser = browsers[i++];
     } while (browser != NULL);
     {
         gchar *message =
-        g_strdup (_("Web browser not found. Set environment variable BROWSER."));
-        gtk_statusbar_push (GTK_STATUSBAR (mvr->status_bar), STATUSBAR_CTX_WARN,
-                            message);
+        g_strdup (_("Browser not found. Set environment variable BROWSER."));
+        gtk_statusbar_push (mvr->status_bar, STATUSBAR_CTX_WARN, message);
         g_free (message);
     }
 }
 
 /**
 edit_text_file:
-Edit a file using the default editor.
+Edit a disk file using the default editor.
 
 Default editor search order (first match wins):
 $DEFAULTTEXTEDITOR, defaulttexteditor,
@@ -408,67 +434,743 @@ edit_text_file (MtxViewer *mvr,
     {
         gchar *message =
         g_strdup (_("Text editor not found. Set environment variable DEFAULTTEXTEDITOR."));
-        gtk_statusbar_push (GTK_STATUSBAR (mvr->status_bar), STATUSBAR_CTX_WARN,
-                            message);
+        gtk_statusbar_push (mvr->status_bar, STATUSBAR_CTX_WARN, message);
         g_free (message);
     }
 }
 
 /**
-dispatch_to_page:
-Load a new page from a file path or a URI.
+mtx_viewer_save_backing_file:
+Save content to **the** backing file.
+
+Call this function to save the markdown text of the current page, which is
+identified by a search:// or resource:// URI and does not correspond to a
+disk file. It creates a temporary disk file for edit_text_file to open when
+the user presses the Ctrl+E hotkey.
+
+Return: TRUE on successful file write otherwise FALSE.
+*/
+static gboolean
+mtx_viewer_save_backing_file (MtxViewer *mvr,
+                              const gchar *buf,
+                              const gsize size)
+{
+    gboolean retval = FALSE;
+
+    if (mvr->backing_fd >= 0)
+    {
+        retval = g_file_set_contents (mvr->backing_file, buf, size, NULL);
+    }
+    return retval;
+}
+/****************************************************************************
+*                          PROGRESS TRACKER TASKS                        {{{*
+****************************************************************************/
+
+static void progress_logger_async (GObject *, MtxViewer *, GCancellable *, GAsyncReadyCallback, gpointer);
+static void progress_logger_thread_cb (GTask *, gpointer, gpointer, GCancellable *);
+static gboolean progress_logger_update (progress_logger_update_data *);
+static gint progress_logger_finish (GAsyncResult *, GError **);
+static void progress_logger_completed (GObject *, GAsyncResult *, gpointer);
+
+/**
+progress_logger_start:
+%GSourceFunc.
+*/
+static gboolean
+progress_logger_start (MtxViewer *mvr)
+{
+    if (g_queue_get_length (mvr->progress_logger_q) == 0)
+    {
+        /* There should be at least one id, that is myself.
+        Zero means that the page loaded quickly enough for
+        progress_logger_stop to run ahead of me thus closing the gate. */
+        return FALSE;
+    }
+    g_queue_pop_head (mvr->progress_logger_q);
+    g_cancellable_reset (mvr->progress_logger_cancellable);
+    /* Let's start */
+    if (pipe (mvr->progress_fd) == -1)
+    {
+        g_warning ("%s: pipe: %s\n", PROGNAME, g_strerror (errno));
+        return FALSE;
+    }
+    gtk_progress_bar_set_fraction (mvr->progress_bar, 0);
+    gtk_progress_bar_set_text (mvr->progress_bar, _("Working..."));
+    gtk_widget_set_visible (mvr->progress_box, TRUE);
+    progress_logger_async (NULL, mvr,
+                           mvr->progress_logger_cancellable,
+                           (GAsyncReadyCallback) progress_logger_completed,
+                           NULL);
+    mtx_text_view_set_progress_fd (mvr->text_view, mvr->progress_fd[1]);
+    return FALSE;
+}
+
+/**
+progress_logger_stop:
+*/
+static void
+progress_logger_stop (MtxViewer *mvr)
+{
+    gpointer *p;
+    while ((p = g_queue_pop_head (mvr->progress_logger_q)))
+    {
+        g_source_remove (GPOINTER_TO_UINT (p));
+    }
+    g_cancellable_cancel (mvr->progress_logger_cancellable);
+    gtk_widget_set_visible (mvr->progress_box, FALSE);
+    mtx_text_view_set_progress_fd (mvr->text_view, -1);
+    close (mvr->progress_fd [0]);
+    close (mvr->progress_fd [1]);
+    mvr->progress_fd[0] = mvr->progress_fd[1] = 0;
+}
+
+/**
+progress_logger_schedule:
+Delay some time then start a progress logger task.
+Call `progress_logger_stop` to remove the task from the
+queue before it starts or to cancel it while it's running.
+*/
+static void
+progress_logger_schedule (MtxViewer *mvr)
+{
+    const guint id = g_timeout_add_seconds (2, G_SOURCE_FUNC
+                                            (progress_logger_start), mvr);
+    g_queue_push_tail (mvr->progress_logger_q, GUINT_TO_POINTER (id));
+}
+
+/**
+progress_logger_update:
+@data: owned.
+*/
+static gboolean
+progress_logger_update (progress_logger_update_data *data)
+{
+    const gchar *msgid[] = {
+    [MTX_CMM_PROGRESS_START]                 = Q_("progress|Parsing..."),
+    [MTX_CMM_PROGRESS_SHEBANG]               = Q_("progress|Shebang."),
+    [MTX_CMM_PROGRESS_LEGACY]                = Q_("progress|Legacy support."),
+    [MTX_CMM_PROGRESS_HEADINGS]              = Q_("progress|Headings."),
+    [MTX_CMM_PROGRESS_PARSED]                = Q_("progress|Parsed."),
+    [MTX_CMM_PROGRESS_CONSOLIDATED]          = Q_("progress|Units optimized."),
+    [MTX_CMM_PROGRESS_COLLAPSED]             = Q_("progress|Inlines optimized."),
+    [MTX_CMM_PROGRESS_ELIDED]                = Q_("progress|Blocks optimized."),
+    [MTX_CMM_PROGRESS_TABLE_PREPROCESSED]    = Q_("progress|Tables loaded."),
+    [MTX_CMM_PROGRESS_TABLE_JUSTIFIED]       = Q_("progress|Tables formatted."),
+    [MTX_CMM_PROGRESS_TEXT_TRANSFORMED]      = Q_("progress|Text filters applied."),
+    [MTX_CMM_PROGRESS_JOINED]                = Q_("progress|Text ready."),
+    [MTX_CMM_PROGRESS_TOC]                   = Q_("progress|Table of Contents."),
+    [MTX_CMM_PROGRESS_END]                   = Q_("progress|Markup ready."),
+    [MTX_TEXT_VIEW_PROGRESS_START]           = Q_("progress|Rendering page..."),
+    [MTX_TEXT_VIEW_PROGRESS_MARKUP_INSERTED] = Q_("progress|Content loaded."),
+    [MTX_TEXT_VIEW_PROGRESS_IMAGES_LINKS]    = Q_("progress|Links loaded."),
+    [MTX_TEXT_VIEW_PROGRESS_INDENTED]        = Q_("progress|Lines indented."),
+    [MTX_TEXT_VIEW_PROGRESS_RENDERED]        = Q_("progress|Page rendered."),
+    [MTX_TEXT_VIEW_PROGRESS_END]             = Q_("progress|Done."),
+    };
+    const gulong id = (gulong) data->id;
+    GtkProgressBar *bar = data->mvr->progress_bar;
+    g_free (data);
+    const gulong N = G_N_ELEMENTS (msgid);
+    g_assert (id < N);
+    const gchar *message = msgid[id];
+    const gdouble fraction = (id + 1) * 1.0 / N;
+    gtk_progress_bar_set_text (bar, message);
+    gtk_progress_bar_set_fraction (bar, fraction);
+    return FALSE;
+}
+
+/**
+progress_logger_thread_cb:
+Update the progress bar once.
+*/
+static void
+progress_logger_thread_cb (GTask *task,
+                           gpointer source_object __attribute__((unused)),
+                           gpointer task_data,
+                           GCancellable *cancellable)
+{
+    FILE *fp;
+    gchar buf[16];
+    progress_logger_data *data = task_data;
+
+    /* Handle cancellation. */
+    if (g_task_return_error_if_cancelled (task))
+    {
+        g_cancellable_reset (cancellable);
+        return;
+    }
+
+    if ((fp = fdopen (data->mvr->progress_fd[0], "r")) == NULL)
+    {
+        g_task_return_int (task, -1);
+    }
+    while (!g_cancellable_is_cancelled (cancellable) &&
+           fgets (buf, sizeof buf, fp))
+    {
+        progress_logger_update_data *udat =
+        g_new0 (progress_logger_update_data, 1);
+        udat->mvr = data->mvr;
+        udat->id = atoi (buf);
+        g_idle_add (G_SOURCE_FUNC (progress_logger_update), udat);
+    }
+    g_cancellable_reset (cancellable);
+    g_task_return_int (task, 0);
+}
+
+/**
+progress_logger_async:
+Start a thread task that will keep udating the progress bar.
+*/
+static void
+progress_logger_async (GObject *object __attribute__((unused)),
+                       MtxViewer *mvr,
+                       GCancellable *cancellable __attribute__((unused)),
+                       GAsyncReadyCallback callback __attribute__((unused)),
+                       gpointer user_data __attribute__((unused)))
+{
+    GTask *task = NULL;
+    progress_logger_data *data;
+
+    g_return_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable));
+
+    task = g_task_new (object, cancellable, callback, user_data);
+    g_task_set_source_tag (task, progress_logger_async);
+
+    if (g_task_set_return_on_cancel (task, TRUE))
+    {
+
+        data = g_new0 (progress_logger_data, 1);
+        data->mvr = mvr;
+        g_task_set_task_data (task, data, g_free);
+
+        /* When it's done it will call @callback in
+        the current thread default main context. */
+        g_task_run_in_thread (task, progress_logger_thread_cb);
+    }
+
+    g_object_unref (task);
+}
+
+/**
+progress_logger_finish:
+*/
+static gint
+progress_logger_finish (GAsyncResult *result,
+                        GError **error)
+{
+    g_return_val_if_fail (G_IS_TASK (result) &&
+                          g_task_get_source_tag (G_TASK (result))
+                          == progress_logger_async, -1);
+    g_return_val_if_fail (error == NULL || *error == NULL, -1);
+
+    return g_task_propagate_int (G_TASK (result), error);
+}
+
+/**
+progress_logger_completed:
+*/
+static void
+progress_logger_completed (GObject *object __attribute__((unused)),
+                           GAsyncResult *result,
+                           gpointer user_data __attribute__((unused)))
+{
+    g_assert (object == NULL); /* future expansion */
+    g_assert (user_data == NULL);
+
+    GError *error = NULL;
+    gint ret __attribute__((unused)) = progress_logger_finish (result, &error);
+    /* error->message can be "Operation was cancelled." */
+    if (error != NULL)
+    {
+        g_error_free (error);
+    }
+}
+
+static gboolean
+statusbar_warn_pop (gpointer data)
+{
+    MtxViewer *mvr = data;
+#if GTK_CHECK_VERSION(3,0,0)
+    gtk_widget_set_halign (gtk_statusbar_get_message_area
+                           (mvr->status_bar), GTK_ALIGN_START);
+#endif
+    gtk_statusbar_pop (mvr->status_bar, STATUSBAR_CTX_WARN);
+    return G_SOURCE_REMOVE;
+}
+
+/**
+mtx_viewer_statusbar_warn_seconds:
+Write warning message to the status bar and clear it after a delay.
+*/
+static void
+mtx_viewer_statusbar_warn_seconds (MtxViewer *mvr,
+                                   const guint seconds,
+                                   const gchar *message)
+{
+    gtk_statusbar_push (mvr->status_bar, STATUSBAR_CTX_WARN, message);
+#if GTK_CHECK_VERSION(3,0,0)
+    gtk_widget_set_halign (gtk_statusbar_get_message_area
+                           (mvr->status_bar), GTK_ALIGN_END);
+#endif
+    g_timeout_add_seconds (seconds, G_SOURCE_FUNC (statusbar_warn_pop), mvr);
+}
+
+/**
+mtx_viewer_is_page_in_progress
+Is a page being loaded? If so warn the user.
+*/
+static gboolean
+mtx_viewer_is_page_in_progress (MtxViewer *mvr)
+{
+    if (mvr->progress_logger_q->length > 0 ||
+        mvr->progress_fd[0] || mvr->progress_fd[1])
+    {
+        mtx_viewer_statusbar_warn_seconds (mvr, 2, _(
+            "::: Action not allowed while the page is loading :::"));
+        return TRUE;
+    };
+    return FALSE;
+}
+/*************************************************************************}}}
+****************************************************************************/
+
+/****************************************************************************
+* COMPLETION CALLBACKS PASSED TO mtx_viewer_route_page TO UPDATE THE GUI {{{*
+****************************************************************************/
+
+struct _completer_data
+{
+    enum
+    {
+        NAV_FORE_CB,
+        NAV_BACK_CB,
+        NAV_HOME_CLICKED_CB,
+        ON_LINK_CLICKED_CB,
+        SEARCH_ENTRY_ACTIVATE_CB,
+        DO_INSERT_PAGE_CB,
+        PRESENT_PAGE_CB,
+        ERROR_PAGE_CB,
+    } completer;
+
+    union {
+        struct {
+            MtxViewer *mvr;
+            guint saved_curpos;
+            gchar *page;             /* owned */
+        } nav_fore_cb;
+
+        struct {
+            MtxViewer *mvr;
+            guint saved_curpos;
+            gchar *page;             /* owned */
+        } nav_back_cb;
+
+        struct {
+            MtxViewer *mvr;
+            gchar *page;             /* owned */
+        } nav_home_clicked_cb;
+
+        struct {
+            MtxViewer *mvr;
+            guint offset;
+            gchar *page;             /* owned */
+        } on_link_clicked_cb;
+
+        struct {
+            MtxViewer *mvr;
+            guint offset;
+            const gchar *scheme;
+            gchar *uri;              /* owned */
+        } search_entry_activate_cb;
+
+        struct {
+            MtxViewer *mvr;
+            guint offset;
+            gchar *page;             /* owned */
+        } do_insert_page_cb;
+
+        struct {
+            MtxViewer *mvr;
+            guint offset;
+            gchar *page;             /* owned */
+        } present_page_cb;
+
+        struct {
+            MtxViewer *mvr;
+            gchar *page;             /* owned */
+        } error_page_cb;
+    } args;
+} completer_data;
+
+static void
+nav_fore_cb (gpointer *instance __attribute__((unused)),
+             gboolean cond,
+             GError *error,    /*owned */
+             gpointer data[])
+{
+    struct _completer_data *p = (struct _completer_data *) data;
+    g_assert (p->completer == NAV_FORE_CB);
+    MtxViewer *mvr = p->args.nav_fore_cb.mvr;
+    guint saved_curpos = p->args.nav_fore_cb.saved_curpos;
+    g_autofree gchar *page = p->args.nav_fore_cb.page;
+    g_autoptr (GError) err = error;
+
+    progress_logger_stop (mvr);
+    if (cond)
+    {
+        _nav_trail_fore (mvr);
+    }
+    else
+    {
+        mvr->current_curpos = saved_curpos;
+        mtx_viewer_insert_error_page (mvr, page, error);
+    }
+    g_free (data);
+    mtx_viewer_widgets_set_sensitive (mvr, TRUE);
+}
+
+static void
+nav_back_cb (gpointer *instance __attribute__((unused)),
+             gboolean cond,
+             GError *error,    /*owned */
+             gpointer data[])
+{
+    struct _completer_data *p = (struct _completer_data *) data;
+    g_assert (p->completer == NAV_BACK_CB);
+    MtxViewer *mvr = p->args.nav_back_cb.mvr;
+    guint saved_curpos = p->args.nav_back_cb.saved_curpos;
+    g_autofree gchar *page = p->args.nav_back_cb.page;
+    g_autoptr (GError) err = error;
+
+    progress_logger_stop (mvr);
+    if (cond)
+    {
+        _nav_trail_back (mvr);
+    }
+    else
+    {
+        mvr->current_curpos = saved_curpos;
+        mtx_viewer_insert_error_page (mvr, page, error);
+    }
+    g_free (data);
+    mtx_viewer_widgets_set_sensitive (mvr, TRUE);
+}
+
+static void
+nav_home_clicked_cb (gpointer *instance __attribute__((unused)),
+                     gboolean cond,
+                     GError *error,    /*owned */
+                     gpointer data[])
+{
+    struct _completer_data *p = (struct _completer_data *) data;
+    g_assert (p->completer == NAV_HOME_CLICKED_CB);
+    MtxViewer *mvr = p->args.nav_home_clicked_cb.mvr;
+    g_autofree gchar *page = p->args.nav_home_clicked_cb.page;
+    g_autoptr (GError) err = error;
+
+    progress_logger_stop (mvr);
+    if (cond)
+    {
+        _nav_trail_fore_clear (mvr);
+        mvr->current_curpos = 0;
+    }
+    else
+    {
+        mtx_viewer_insert_error_page (mvr, page, error);
+    }
+    g_free (data);
+    mtx_viewer_widgets_set_sensitive (mvr, TRUE);
+}
+
+static void
+on_link_clicked_cb (gpointer *instance __attribute__((unused)),
+                    gboolean cond,
+                    GError *error,    /*owned */
+                    gpointer data[])
+{
+    struct _completer_data *p = (struct _completer_data *) data;
+    g_assert (p->completer == ON_LINK_CLICKED_CB);
+    MtxViewer *mvr = p->args.on_link_clicked_cb.mvr;
+    guint offset = p->args.on_link_clicked_cb.offset;
+    gchar *page = p->args.on_link_clicked_cb.page;    /* owned */
+    g_autoptr (GError) err = error;
+
+    progress_logger_stop (mvr);
+    if (cond)
+    {
+        _nav_trail_fore_clear (mvr);
+        _nav_trail_insert (mvr, mvr->current_file, offset);
+        mvr->current_curpos = 0;
+    }
+    else
+    {
+        mtx_viewer_insert_error_page (mvr, page, error);
+    }
+    g_free (page);
+    g_free (data);
+    mtx_viewer_widgets_set_sensitive (mvr, TRUE);
+}
+
+static void
+search_entry_activate_cb (gpointer *instance __attribute__((unused)),
+                          gboolean cond,
+                          GError *error,    /*owned */
+                          gpointer data[])
+{
+    struct _completer_data *p = (struct _completer_data *) data;
+    g_assert (p->completer == SEARCH_ENTRY_ACTIVATE_CB);
+    MtxViewer *mvr = p->args.search_entry_activate_cb.mvr;
+    guint offset = p->args.search_entry_activate_cb.offset;
+    const gchar *scheme = p->args.search_entry_activate_cb.scheme;
+    gchar *uri = p->args.search_entry_activate_cb.uri;    /* owned */
+    g_autoptr (GError) err = error;
+
+    progress_logger_stop (mvr);
+    if (cond)
+    {
+        if (scheme == /*search*/NULL || strcmp (scheme, "search") == 0)
+        {
+            /*
+            Unlike nav_home_clicked and on_link_clicked, which clear
+            the fore trail on mtx_viewer_route_page success, in this
+            case I prefer to insert the search results page in the trail
+            after the current page, without clearing the fore trail.
+            */
+            _nav_trail_insert (mvr, uri, offset);
+        }
+        /* reminder: new schemes added below shall manage navigation history */
+    }
+    else
+    {
+        mtx_viewer_insert_error_page (mvr, uri, error);
+    }
+    g_free (uri);
+    g_free (data);
+    mtx_viewer_widgets_set_sensitive (mvr, TRUE);
+}
+
+/**
+do_insert_page_cb:
+Insert the page into the navigation trail after
+the current slot without clearing the fore trail.
+*/
+static void
+do_insert_page_cb (gpointer *instance __attribute__((unused)),
+                   gboolean cond,
+                   GError *error,    /*owned */
+                   gpointer data[])
+{
+    struct _completer_data *p = (struct _completer_data *) data;
+    g_assert (p->completer == DO_INSERT_PAGE_CB);
+    MtxViewer *mvr = p->args.do_insert_page_cb.mvr;
+    guint offset = p->args.do_insert_page_cb.offset;
+    gchar *page = p->args.do_insert_page_cb.page;    /* owned */
+    g_autoptr (GError) err = error;
+
+    progress_logger_stop (mvr);
+    if (cond)
+    {
+        gboolean tracked = mtx_viewer_is_current_tracked (mvr);
+        if (tracked)
+        {
+            _nav_trail_insert (mvr, page, offset);
+        }
+        gtk_widget_set_sensitive (mvr->btn_preview, tracked);
+    }
+    else
+    {
+        mtx_viewer_insert_error_page (mvr, page, error);
+    }
+    g_free (page);
+    g_free (data);
+    mtx_viewer_widgets_set_sensitive (mvr, TRUE);
+}
+
+static void
+present_page_cb (gpointer *instance __attribute__((unused)),
+                 gboolean cond,
+                 GError *error,    /* owned */
+                 gpointer data[])
+{
+    struct _completer_data *p = (struct _completer_data *) data;
+    g_assert (p->completer == PRESENT_PAGE_CB);
+    MtxViewer *mvr = p->args.present_page_cb.mvr;
+    guint offset = p->args.present_page_cb.offset;
+    gchar *page = p->args.present_page_cb.page;    /* owned */
+    g_autoptr (GError) err = error;
+
+    progress_logger_stop (mvr);
+    if (cond)
+    {
+        gboolean tracked = mtx_viewer_is_current_tracked (mvr);
+        if (tracked)
+        {
+            _nav_trail_fore_clear (mvr);
+            _nav_trail_insert (mvr, mvr->current_file, offset);
+        }
+        gtk_widget_set_sensitive (mvr->btn_preview, tracked);
+    }
+    else
+    {
+        mtx_viewer_insert_error_page (mvr, page, error);
+    }
+    gtk_window_present (GTK_WINDOW (mvr->window));
+    gtk_widget_grab_focus (GTK_WIDGET (mvr->text_view));
+    g_free (page);
+    g_free (data);
+    mtx_viewer_widgets_set_sensitive (mvr, TRUE);
+#ifdef OPT_EXIT_TEST
+    if (mvr->exit_test)
+    {
+        g_idle_add ((GSourceFunc) gtk_main_quit, NULL);
+    }
+#endif
+}
+
+/**
+error_page_cb:
+Minimalistic handler for errors that may occur while presenting the error page.
+*/
+static void
+error_page_cb (gpointer *instance __attribute__((unused)),
+               gboolean cond __attribute__((unused)),
+               GError *error,    /* owned */
+               gpointer data[])
+{
+    struct _completer_data *p = (struct _completer_data *) data;
+    g_assert (p->completer == ERROR_PAGE_CB);
+    MtxViewer *mvr = p->args.error_page_cb.mvr;
+    gchar *page = p->args.error_page_cb.page;    /* owned */
+    g_autoptr (GError) err = error;
+
+    progress_logger_stop (mvr);
+    if (error != NULL)
+    {
+        g_prefix_error (&error, "\"%s\": ", page);
+        gtk_statusbar_push (mvr->status_bar, STATUSBAR_CTX_WARN,
+                            error->message);
+    }
+    gtk_window_present (GTK_WINDOW (mvr->window));
+    gtk_widget_grab_focus (GTK_WIDGET (mvr->text_view));
+    g_free (page);
+    g_free (data);
+    mtx_viewer_widgets_set_sensitive (mvr, TRUE);
+}
+
+
+/*************************************************************************}}}
+****************************************************************************/
+
+/**
+mtx_viewer_insert_error_page:
+Display the standard error page instead of a faulty/missing page.
+
+@mvr:
+@page: path of the faulty/missing page to fill the error page.
+@error: pointer to %GError to fill the error page.
+*/
+static void
+mtx_viewer_insert_error_page (MtxViewer *mvr,
+                              const gchar *page,
+                              GError *error)
+{
+    gchar *message, *mkd;
+    const gchar *errmsg = (error != NULL ? error->message :
+                           g_strerror (ENOENT));   /* just guessing */
+    g_assert (mvr->failed_file == NULL);
+    mvr->failed_file = g_strdup (page);
+    message =
+    g_strdup_printf (Q_ ("1=path:2=error|%1$s:\n%2$s."), page, errmsg);
+    mkd = mtx_viewer_make_error_page (mvr, message, mvr->current_file != NULL
+                                      ? mvr->current_file : USAGE_PAGE);
+    g_free (message);
+    gtk_statusbar_pop (mvr->status_bar, STATUSBAR_CTX_MAIN);
+    if (mkd != NULL)
+    {
+        struct _completer_data *cdat = g_new0 (struct _completer_data, 1);
+        cdat->completer = ERROR_PAGE_CB;
+        cdat->args.error_page_cb.mvr = mvr;
+        cdat->args.error_page_cb.page = g_strdup (page);
+        GClosure *do_error_page_complete =
+        g_cclosure_new (G_CALLBACK (error_page_cb), cdat, NULL);
+        g_closure_set_marshal (do_error_page_complete,
+                               g_cclosure_marshal_VOID__UINT_POINTER);
+
+        gchar **pptr = g_malloc (sizeof (gchar *));
+        *pptr = mkd;
+        mtx_text_view_set_text (mvr->text_view, pptr, "/", TRUE, NULL,
+                                do_error_page_complete);
+    }
+}
+
+/**
+mtx_viewer_route_page:
+Asynchronously load a new page from a file path or a URI.
 Supported URIs: `resource://...`, `search://...`.
 on_link_clicked() handles URI schemes `http:`, `https:`, `ftp:` and `mailto:`.
 
 Returns: TRUE if a new page was loaded otherwise returns FALSE.
 */
 /*
-A discipline of navigation history:
-Viewer navigation history shall be managed only by the callers of this function
+Discipline for navigation history:
+Viewer navigation history shall be managed only by the @completer closure
 and by the `file_load_complete` callback, which is connected to the
 "file-load-complete" signal emitted by `mtx_text_view_load_file()`.
 */
 static gboolean
-dispatch_to_page (MtxViewer *mvr,
-                  const gchar *path)
+mtx_viewer_route_page (MtxViewer *mvr,
+                       const gchar *path,
+                       GClosure *completer)
 {
     const gchar *scheme = g_uri_peek_scheme (path);
     gboolean retval = FALSE; /* => found an unknown scheme */
 
-    if (g_strcmp0 (scheme, "search") == 0)
+    mtx_viewer_widgets_set_sensitive (mvr, FALSE);
+    g_clear_pointer (&mvr->failed_file, g_free);
+    if G_UNLIKELY (g_strcmp0 (scheme, "search") == 0)
     {
-        retval = do_file_search (mvr, path + sizeof ("search://") - 1);
-        if (retval)
-        {
-            file_load_complete (MTX_TEXT_VIEW (mvr->text_view), path, mvr);
-        }
+        gtk_statusbar_push (mvr->status_bar, STATUSBAR_CTX_MAIN,
+                            _("Searching ..."));
+        progress_logger_schedule (mvr);
+
+        /* Partially async (searching itself isn't). */
+        retval = mtx_viewer_search_files (mvr, path + sizeof ("search://") -
+                                          1, path, completer);
     }
     else if (g_strcmp0 (scheme, "resource") == 0)
     {
+        gtk_statusbar_push (mvr->status_bar, STATUSBAR_CTX_MAIN,
+                            _("Loading ..."));
+        progress_logger_schedule (mvr);
+
+        /* Partially async (resource unpacking isn't). */
         const gchar *p = path + sizeof "resource://" - 1;
-        retval = do_resource_load (mvr, p, p);
-        if (retval)
-        {
-            file_load_complete (MTX_TEXT_VIEW (mvr->text_view), path, mvr);
-        }
+        retval = mtx_viewer_load_resource (mvr, p, p, path, completer);
     }
     else if (scheme == NULL)
     {
+        g_autofree gchar *p = g_path_get_basename (path);
+        g_autofree gchar *m = g_strdup_printf (_("Loading %s ..."), p);
+        gtk_statusbar_push (mvr->status_bar, STATUSBAR_CTX_MAIN, m);
+        progress_logger_schedule (mvr);
+
+        /* Fully async. */
         retval =
-        mtx_text_view_load_file (MTX_TEXT_VIEW (mvr->text_view),
-                                 path,
-                                 mvr->current_file ==
-                                 NULL ? "" : mvr->current_file, TRUE);
+        mtx_text_view_load_file (mvr->text_view, path, mvr->current_file ==
+                                 NULL ? "" : mvr->current_file, TRUE,
+                                 completer);
     }
-    else
-    {
-        /* TODO status bar message telling scheme+path can't load */
-    }
-    g_idle_add (G_SOURCE_FUNC (idle_scroll_to_curpos), mvr);
+
+    mtx_dbg_errout (1, "end %s\n", mtx_dbg_fmt_etime (-1));
     return retval;
 }
 
 /**
+nav_fore_clicked:
+
+Asynchronous page presentation task, calling `nav_fore_cb` to deal
+with the result and show an error page if necessary.
 */
 static void
 nav_fore_clicked (GtkWidget *widget __attribute__((unused)),
@@ -478,17 +1180,28 @@ nav_fore_clicked (GtkWidget *widget __attribute__((unused)),
     MtxViewerNavUnit *fore =
     (MtxViewerNavUnit *) g_queue_peek_nth (mvr->nav_trail,
                                            mvr->nav_trail_page_idx + 1);
+    if (fore == NULL)
+    {
+        /* Bail out from chain of page navigation errors. */
+        _nav_trail_fore_clear (mvr);
+        return;
+    }
+    gchar *page = fore->file;
     guint saved_curpos = mvr->current_curpos;
     ((MtxViewerNavUnit *) mvr->nav_trail_page)->offset = mvr->changed_curpos;
     mvr->current_curpos = fore->offset;
-    if (dispatch_to_page (mvr, fore->file))
-    {
-        _nav_trail_fore (mvr);
-    }
-    else
-    {
-        mvr->current_curpos = saved_curpos;
-    }
+
+    struct _completer_data *cdat = g_new0 (struct _completer_data, 1);
+    cdat->completer = NAV_FORE_CB;
+    cdat->args.nav_fore_cb.mvr = mvr;
+    cdat->args.nav_fore_cb.saved_curpos = saved_curpos;
+    cdat->args.nav_fore_cb.page = g_strdup (page);
+    GClosure *nav_fore_complete =
+    g_cclosure_new (G_CALLBACK (nav_fore_cb), cdat, NULL);
+    g_closure_set_marshal (nav_fore_complete,
+                           g_cclosure_marshal_VOID__UINT_POINTER);
+
+    (void) mtx_viewer_route_page (mvr, page, nav_fore_complete);
 }
 
 /**
@@ -501,14 +1214,18 @@ accel_nav_fore (GtkAccelGroup *group __attribute__((unused)),
                 gpointer data)
 {
     MtxViewer *mvr = (MtxViewer *) data;
-    if (mvr->can_go_fore)
+    if (mvr->can_go_fore && !mtx_viewer_is_page_in_progress (mvr))
     {
-        nav_fore_clicked (NULL, data);
+        nav_fore_clicked (NULL, mvr);
     }
     return TRUE;
 }
 
 /**
+nav_back_clicked:
+
+Asynchronous page presentation task, calling `nav_back_cb` to deal
+with the result and show an error page if necessary.
 */
 static void
 nav_back_clicked (GtkWidget *widget __attribute__((unused)),
@@ -518,17 +1235,22 @@ nav_back_clicked (GtkWidget *widget __attribute__((unused)),
     MtxViewerNavUnit *back =
     (MtxViewerNavUnit *) g_queue_peek_nth (mvr->nav_trail,
                                            mvr->nav_trail_page_idx - 1);
+    gchar *page = back->file;
     guint saved_curpos = mvr->current_curpos;
     ((MtxViewerNavUnit *) mvr->nav_trail_page)->offset = mvr->changed_curpos;
     mvr->current_curpos = back->offset;
-    if (dispatch_to_page (mvr, back->file))
-    {
-        _nav_trail_back (mvr);
-    }
-    else
-    {
-        mvr->current_curpos = saved_curpos;
-    }
+
+    struct _completer_data *cdat = g_new0 (struct _completer_data, 1);
+    cdat->completer = NAV_BACK_CB;
+    cdat->args.nav_back_cb.mvr = mvr;
+    cdat->args.nav_back_cb.saved_curpos = saved_curpos;
+    cdat->args.nav_back_cb.page = g_strdup (page);
+    GClosure *nav_back_complete =
+    g_cclosure_new (G_CALLBACK (nav_back_cb), cdat, NULL);
+    g_closure_set_marshal (nav_back_complete,
+                           g_cclosure_marshal_VOID__UINT_POINTER);
+
+    (void) mtx_viewer_route_page (mvr, page, nav_back_complete);
 }
 
 /**
@@ -541,17 +1263,35 @@ accel_nav_back (GtkAccelGroup *group __attribute__((unused)),
                 gpointer data)
 {
     MtxViewer *mvr = (MtxViewer *) data;
-    if (mvr->can_go_back)
+    if (mvr->can_go_back && !mtx_viewer_is_page_in_progress (mvr))
     {
-        nav_back_clicked (NULL, data);
+        nav_back_clicked (NULL, mvr);
     }
     return TRUE;
 }
 
 /**
+*/
+static gboolean
+link_info_dest_equal (gconstpointer *a,
+                      gconstpointer *b)
+{
+    return g_strcmp0 (((MtxTextViewLinkInfo *) a)->dest,
+                      ((MtxTextViewLinkInfo *) b)->dest) == 0;
+}
+
+/**
 on_link_clicked:
-Callback from #MtxTextView class.
+
+Asynchronous page presentation task, calling `on_link_clicked_cb` to deal
+with the result and show an error page if necessary. This function is
+called from the #MtxTextView class.
+
 @link_dest: format: <uri-encoded>\n<verbatim>
+
+Note: if the name of a local file starts with "#" then the
+destination of a markdown link to the file must start with "file://"
+otherwise the destination will be processed as an in-page anchor.
 */
 static void
 on_link_clicked (MtxTextView *text_view,
@@ -559,83 +1299,377 @@ on_link_clicked (MtxTextView *text_view,
                  gpointer data)
 {
     MtxViewer *mvr = (MtxViewer *) data;
-    gchar *end = strchr (link_dest, '\n');       /* uri-encoded */
-    g_assert (end != NULL);
-    gchar *link = g_strndup (link_dest, end - link_dest);
-    const gchar *scheme = g_uri_peek_scheme (link);
-    const gchar *current_scheme = g_uri_peek_scheme (mvr->current_file);
+    gchar *nl = strchr (link_dest, '\n');       /* uri-encoded */
+    g_assert (nl != NULL);
+    const gchar *scheme = g_uri_peek_scheme (link_dest);
 
-    if (scheme == NULL)
+    gtk_statusbar_pop (mvr->status_bar, STATUSBAR_CTX_LINK);
+
+    if (scheme && (strcmp (scheme, "https") == 0 || strcmp (scheme, "http") == 0
+             || strcmp (scheme, "ftp") == 0 || strcmp (scheme, "mailto") == 0))
     {
-        gtk_statusbar_pop (GTK_STATUSBAR (mvr->status_bar), STATUSBAR_CTX_LINK);
-        const guint offset = mvr->changed_curpos;
-        if (mtx_text_view_load_file (text_view, link, current_scheme ? "/" :
-                                     mvr->current_file, TRUE))
+        gchar *uri = g_strndup (link_dest, nl - link_dest);
+        open_url (mvr, uri);
+        g_free (uri);
+        return;
+    }
+    if (mtx_viewer_is_page_in_progress (mvr))
+    {
+        return;
+    }
+
+    /* Read the note in the top comment. */
+    if (link_dest[0] == '#'
+        && mvr->options->extensions & MTX_CMM_EXTENSION_HEADING_LINK)
+    {
+        /* Scroll to the matching heading. */
+
+        if (link_dest[1])
         {
-            _nav_trail_fore_clear (mvr);
-            _nav_trail_insert (mvr, mvr->current_file, offset);
-            mtx_text_view_cursor_to_top (MTX_TEXT_VIEW (mvr->text_view));
+            guint index;
+            MtxTextViewLinkInfo *p, link_info = {0};
+            GtkTextIter iter;
+            link_info.dest = g_strndup (link_dest, nl - link_dest);
+            link_info.type = MTX_TEXT_VIEW_LINK_INFO_TYPE_HEADING;
+            /* Does the link destination match a reference link or a slug? */
+            gboolean found = g_ptr_array_find_with_equal_func
+                (text_view->link_marks, &link_info,
+                 (GEqualFunc) link_info_dest_equal, &index);
+            if (!found)
+            {
+                /* No match; try lowercase because slugs are lowercase. */
+                for (gchar *c = (gchar *) link_info.dest; *c; c++)
+                {
+                    *c = g_ascii_tolower (*c);
+                }
+                found = g_ptr_array_find_with_equal_func
+                    (text_view->link_marks, &link_info,
+                     (GEqualFunc) link_info_dest_equal, &index);
+            }
+            if (found)
+            {
+                if (mvr->landing_link_info)
+                {
+                    /* The previous landing spot. It's highlighted. */
+                    mtx_text_view_clear_line_highlights (text_view,
+                                                         mvr->
+                                                         landing_link_info->
+                                                         mark);
+                }
+                p = g_ptr_array_index (text_view->link_marks, index);
+                gtk_text_buffer_get_iter_at_mark (text_view->buffer, &iter,
+                                                  p->mark);
+                mvr->current_curpos = gtk_text_iter_get_offset (&iter);
+                /* The new landing spot. It could carry stale highlights. */
+                mvr->landing_link_info = p;
+                if (text_view->jumpoff_mark != NULL)
+                {
+                    mtx_text_view_clear_line_highlights (text_view,
+                                                         text_view->
+                                                         jumpoff_mark);
+                }
+                /* Now jump to the new spot. Since it's an in-page jump it
+                   can be done immediately, without going through g_idle_add
+                   like it happens for idle_scroll_to_current_curpos. */
+                _scroll_to_curpos (mvr, mvr->current_curpos,
+                                   MTX_TEXT_VIEW_HILIGHT_CLEAR_LINE |
+                                   MTX_TEXT_VIEW_HILIGHT_NORMAL);
+            }
+            g_free ((gchar *) link_info.dest);
         }
     }
-    else if (strcmp (scheme, "file") == 0)
+    else if (scheme == NULL || strcmp (scheme, "file") == 0 ||
+             strcmp (scheme, "resource") == 0 || strcmp (scheme, "search") == 0)
     {
-        gtk_statusbar_pop (GTK_STATUSBAR (mvr->status_bar), STATUSBAR_CTX_LINK);
+        const gchar *page = (g_strcmp0 (scheme, "file") == 0 ? nl + sizeof
+                             "file://" : nl + 1);
         const guint offset = mvr->changed_curpos;
-        if (mtx_text_view_load_file (text_view, link + sizeof "file://" - 1,
-                                     current_scheme ? "/" :
-                                     mvr->current_file, TRUE))
+
+        struct _completer_data *cdat = g_new0 (struct _completer_data, 1);
+        cdat->completer = ON_LINK_CLICKED_CB;
+        cdat->args.on_link_clicked_cb.mvr = mvr;
+        cdat->args.on_link_clicked_cb.offset = offset;
+        cdat->args.on_link_clicked_cb.page = g_strdup (page);
+        GClosure *on_link_clicked_complete =
+        g_cclosure_new (G_CALLBACK (on_link_clicked_cb), cdat, NULL);
+        g_closure_set_marshal (on_link_clicked_complete,
+                               g_cclosure_marshal_VOID__UINT_POINTER);
+
+        (void) mtx_viewer_route_page (mvr, page, on_link_clicked_complete);
+    }
+}
+
+/**
+*/
+static void
+cancel_loading_clicked (GtkWidget *widget __attribute__((unused)),
+                        gpointer data)
+{
+    MtxViewer *mvr = (MtxViewer *) data;
+    mtx_text_view_load_markup_cancel (mvr->text_view);
+    gtk_widget_set_visible (mvr->progress_box, FALSE);
+    gtk_statusbar_pop  (mvr->status_bar, STATUSBAR_CTX_MAIN);
+    gtk_statusbar_push (mvr->status_bar, STATUSBAR_CTX_MAIN,
+                        _("Cancelling..."));
+}
+
+/**
+*/
+static gboolean
+accel_cancel_loading (GtkAccelGroup *group __attribute__((unused)),
+                      GObject *obj __attribute__((unused)),
+                      guint keyval __attribute__((unused)),
+                      GdkModifierType mod __attribute__((unused)),
+                      gpointer data)
+{
+    MtxViewer *mvr = (MtxViewer *) data;
+    if (gtk_widget_get_visible (mvr->progress_box))
+    {
+        cancel_loading_clicked (NULL, mvr);
+    }
+    return TRUE;
+}
+
+/**
+preview_complete:
+Open the browser if mdview --html ran successfully.
+*/
+static void
+preview_complete (GPid     pid,
+                  gint     status,
+                  gpointer user_data)
+{
+    struct {
+        GtkWidget *btn;
+        MtxViewer *mvr;
+        gchar *uri;  /* owned */
+    } *udat = user_data;
+
+    g_spawn_close_pid (pid);
+    if (g_spawn_check_wait_status (status, NULL))
+    {
+        open_url (udat->mvr, udat->uri);
+    }
+    gtk_widget_set_sensitive (udat->btn, TRUE);
+    g_free (udat->uri);
+    g_free (udat);
+}
+
+/**
+preview_clicked:
+Run mdview --html current_file asynchronously, and arrange for pick-up.
+*/
+static void
+preview_clicked (GtkWidget *widget,
+                 gpointer data)
+{
+    gchar **argv = NULL;
+    GPid child_pid;
+    g_autoptr (GError) error = NULL;
+    MtxViewer *mvr = (MtxViewer *) data;
+    if (widget == NULL)
+    {
+        widget = mvr->btn_preview;
+    }
+    gtk_widget_set_sensitive (widget, FALSE);
+    gchar *base = g_path_get_basename (mvr->current_file);
+    gchar *p = g_build_filename (g_get_tmp_dir (), base, NULL);
+    g_autofree gchar *outf = g_strconcat (p, ".html", NULL);
+    g_free (p);
+    g_free (base);
+    g_autofree gchar *html_base = NULL;
+
+    if (mvr->options->html_base != NULL)
+    {
+        html_base = g_strconcat ("--html-base=", mvr->options->html_base, NULL);
+    }
+    p = g_strdup_printf (PROGNAME " --emask=%d" " --tmask=%d"
+                         " --html --html5 --html-full" " %s --html-css=%d"
+                         " --toc-level=%d" " \"--output=%s\"" " \"%s\""
+                         " \"%s\"", mvr->options->extensions,
+                         mvr->options->tweaks | MTX_CMM_TWEAK_RESERVED3,
+                         html_base ? html_base : "",
+                         mvr->options->html_css < 0 ? 2 :
+                         mvr->options->html_css, mvr->options->toc_level,
+                         outf, mvr->base_directory, mvr->current_file);
+    if (g_shell_parse_argv (p, NULL, &argv, &error) && error == NULL)
+    {
+        g_spawn_async_with_pipes (NULL, argv, NULL, G_SPAWN_SEARCH_PATH |
+                                  G_SPAWN_DO_NOT_REAP_CHILD, NULL,
+                                  NULL, &child_pid, NULL, NULL, NULL, &error);
+    }
+    g_strfreev (argv);
+    if (error != NULL)
+    {
+        g_printerr (_("%s: Error: %s\n"), PROGNAME, error->message);
+        gtk_widget_set_sensitive (widget, TRUE);
+        return;
+    }
+
+    struct
+    {
+        GtkWidget *btn;
+        MtxViewer *mvr;
+        gchar *uri;
+    } *udat = g_malloc (sizeof *udat);
+    udat->btn = widget;
+    udat->mvr = mvr;
+    udat->uri = g_strconcat ("file://", outf, NULL);
+    g_child_watch_add (child_pid, preview_complete, udat);
+}
+
+/**
+*/
+static gboolean
+accel_preview (GtkAccelGroup *group __attribute__((unused)),
+               GObject * obj __attribute__((unused)),
+               guint keyval __attribute__((unused)),
+               GdkModifierType mod __attribute__((unused)),
+               gpointer data)
+{
+    MtxViewer *mvr = (MtxViewer *) data;
+    if (!mtx_viewer_is_page_in_progress (mvr))
+    {
+        preview_clicked (NULL, mvr);
+    }
+    return TRUE;
+}
+
+/**
+on_toc_changed:
+
+Asynchronous page presentation task, calling `do_insert_page_cb`
+to deal with the result and show an error page if necessary.
+This function changes ToC depth then reloads the current page.
+*/
+static void
+on_toc_changed (GtkWidget *widget,
+                gpointer data)
+{
+    MtxViewer *mvr = (MtxViewer *) data;
+    gchar *text =
+    gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (widget));
+    const guint level = text[0] - '0';
+    g_free (text);
+
+    if (mvr->current_file != NULL && mvr->options->toc_level != level)
+    {
+        MtxViewerNavUnit *rip = NULL;
+        if (mvr->nav_trail->length > 0)
         {
-            _nav_trail_fore_clear (mvr);
-            _nav_trail_insert (mvr, mvr->current_file, offset);
-            mtx_text_view_cursor_to_top (MTX_TEXT_VIEW (mvr->text_view));
+            rip = g_queue_pop_nth (mvr->nav_trail, mvr->nav_trail_page_idx);
+            g_assert (rip);
+            /* _nav_trail_back can leave mvr->nav_trail_page temporarily NULL */
+            _nav_trail_back (mvr);
+        }
+
+        mvr->options->toc_level = level;
+        mtx_text_view_set_toc_level (mvr->text_view, level);
+
+        struct _completer_data *cdat = g_new0 (struct _completer_data, 1);
+        cdat->completer = DO_INSERT_PAGE_CB;
+        cdat->args.do_insert_page_cb.mvr = mvr;
+        cdat->args.do_insert_page_cb.offset = 0;
+        cdat->args.do_insert_page_cb.page =
+        g_strdup (rip ? rip->file : mvr->current_file);
+        GClosure *do_insert_page_complete =
+        g_cclosure_new (G_CALLBACK (do_insert_page_cb), cdat, NULL);
+        g_closure_set_marshal (do_insert_page_complete,
+                               g_cclosure_marshal_VOID__UINT_POINTER);
+
+        (void) mtx_viewer_route_page (mvr, cdat->args.do_insert_page_cb.page,
+                                      do_insert_page_complete);
+        if (rip != NULL)
+        {
+            _nav_unit_clear (rip, mvr);
         }
     }
-    else if (strcmp (scheme, "https") == 0 || strcmp (scheme, "http") == 0
-             || strcmp (scheme, "ftp") == 0 || strcmp (scheme, "mailto") == 0)
+}
+
+/**
+*/
+static gboolean
+accel_toc (GtkAccelGroup *group __attribute__((unused)),
+           GObject * obj __attribute__((unused)),
+           guint keyval __attribute__((unused)),
+           GdkModifierType mod __attribute__((unused)),
+           gpointer data)
+{
+    MtxViewer *mvr = (MtxViewer *) data;
+    if (!mtx_viewer_is_page_in_progress (mvr))
     {
-        open_url (mvr, link);
+        gtk_combo_box_popup (GTK_COMBO_BOX (mvr->combo_toc));
     }
-    g_free (link);
+    return TRUE;
 }
 
 /**
 file_load_complete:
 Callback from #MtxTextView class and, in some cases, called directly by
-#dispatch_to_page.
+#mtx_viewer_route_page.
 */
 static void
-file_load_complete (MtxTextView *text_view __attribute__((unused)),
+file_load_complete (MtxTextView *text_view,
                     const gchar *file,
                     gpointer data)
 {
     MtxViewer *mvr = (MtxViewer *) data;
-    gchar *message = NULL;
     const gchar *scheme = g_uri_peek_scheme (file);
 
-    if (g_strcmp0 (scheme, "search") == 0)
+    if (mtx_viewer_is_current_tracked (mvr))
     {
-        message = g_strdup (_("Search complete."));
+        gchar *message = NULL;
+
+        if (g_strcmp0 (scheme, "search") == 0)
+        {
+            message = g_strdup (_("Search complete."));
+        }
+        else if (g_strcmp0 (scheme, "resource") == 0)
+        {
+            message = g_strdup (_("Loaded."));
+        }
+        else if (scheme == NULL)
+        {
+            gchar *p = g_path_get_basename (file);
+            message = g_strdup_printf (_("%1$s loaded."), p);
+            g_free (p);
+        }
+        gtk_statusbar_pop (mvr->status_bar, STATUSBAR_CTX_LINK);
+        gtk_statusbar_pop (mvr->status_bar, STATUSBAR_CTX_WARN);
+        gtk_statusbar_push (mvr->status_bar, STATUSBAR_CTX_MAIN, message);
+        g_free (message);
     }
-    else if (g_strcmp0 (scheme, "resource") == 0)
+    else
     {
-        message = g_strdup (_("Loaded."));
+        _nav_trail_print_status_bar (mvr);
     }
-    else if (scheme == NULL)
-    {
-        gchar *p = g_path_get_basename (file);
-        message = g_strdup_printf (_("%1$s loaded."), p);
-        g_free (p);
-    }
+
+    mtx_text_view_clear_page_highlights (text_view);
+    /* Do not set mvr->current_curpos here! */
 
     /* Set the currently-loaded file. */
     g_free (mvr->current_file);
     mvr->current_file = g_strdup (file);
 
-    gtk_statusbar_pop (GTK_STATUSBAR (mvr->status_bar), STATUSBAR_CTX_LINK);
-    gtk_statusbar_pop (GTK_STATUSBAR (mvr->status_bar), STATUSBAR_CTX_WARN);
-    gtk_statusbar_push (GTK_STATUSBAR (mvr->status_bar), STATUSBAR_CTX_MAIN,
-                        message);
-    g_free (message);
+    mvr->landing_link_info = NULL;
+
+    progress_logger_stop (mvr);
+
+    /* Scroll only after the new page has finished loading */
+    g_idle_add (G_SOURCE_FUNC (idle_scroll_to_current_curpos), mvr);
+}
+
+/**
+on_new_text_buffer:
+Callback on signal by #MtxTextView mtx_text_view_swap_buffer.
+*/
+static void
+on_new_text_buffer (MtxTextView *text_view,
+                    gpointer data)
+{
+    MtxViewer *mvr = (MtxViewer *) data;
+    g_signal_connect (text_view->buffer, "notify::cursor-position", G_CALLBACK
+                      (on_curpos_changed), mvr);
 }
 
 /**
@@ -664,8 +1698,7 @@ hovering_over_link (MtxTextView *text_view __attribute__((unused)),
     gchar *temp;
 
     temp = g_strdup_printf (_("Link to %s"), link);
-    gtk_statusbar_push (GTK_STATUSBAR (mvr->status_bar), STATUSBAR_CTX_LINK,
-                        temp);
+    gtk_statusbar_push (mvr->status_bar, STATUSBAR_CTX_LINK, temp);
     g_free (temp);
 }
 
@@ -679,7 +1712,44 @@ hovering_over_text (MtxTextView *text_view __attribute__((unused)),
 {
     MtxViewer *mvr = (MtxViewer *) data;
 
-    gtk_statusbar_pop (GTK_STATUSBAR (mvr->status_bar), STATUSBAR_CTX_LINK);
+    gtk_statusbar_pop (mvr->status_bar, STATUSBAR_CTX_LINK);
+}
+
+/**
+mtx_viewer_is_current_tracked:
+Does the current page meta data request not to add the page to the trail?
+*/
+static gboolean
+mtx_viewer_is_current_tracked (MtxViewer *mvr)
+{
+    const MtxCmmPageMeta *meta =
+    mtx_text_view_fetch_page_meta (mvr->text_view);
+    gboolean ret = meta == NULL || meta->viewer_track_page;
+    return ret;
+}
+
+/**
+mtx_viewer_is_current_skipping_toc:
+Does the current page meta data allow the Table of Contents feature?
+*/
+static gboolean
+mtx_viewer_is_current_skipping_toc (MtxViewer *mvr)
+{
+    const MtxCmmPageMeta *meta =
+    mtx_text_view_fetch_page_meta (mvr->text_view);
+    gboolean ret = meta == NULL || meta->renderer_skip_toc;
+    return ret;
+}
+
+static void
+mtx_viewer_widgets_set_sensitive (MtxViewer *mvr,
+                                  gboolean enable)
+{
+    gtk_widget_set_sensitive (mvr->btn_preview,
+                              mtx_viewer_is_current_tracked (mvr));
+    gtk_widget_set_sensitive (mvr->combo_toc,
+                              !mtx_viewer_is_current_skipping_toc (mvr));
+    gtk_widget_set_sensitive (mvr->top_bar, enable);
 }
 
 /**
@@ -740,15 +1810,15 @@ _is_text_and_markdown (const gchar *content_type,
 _build_search_lists:
 
 Build two lists of searchable files in the homepage directory.  Only text files
-are considered. If auto_languages is active, results will prefer File.$LANG.ext
-over File.ext.
+are considered. The list of searched files honors the auto_language extension
+feature (an existing File.$LANG.ext is preferred over File.ext).
 
 @markdown: address of a #GSList pointer that will received the list of markdown
 files in the directory.
 @text: address of a #GSList pointer that will received the list of other text
 files in the directory.
 
-Returns: the total number of elements in the two lists or -1 if case of error.
+Return: the total number of elements in the two lists or -1 in case of error.
 List elements can be NULL. *@markdown and @text are NULL if a list is empty.
 The caller owns the returned lists and should free them when done.
 */
@@ -787,11 +1857,9 @@ _build_search_lists (MtxViewer *mvr,
         {
             GSList **head = is_text_markdown ? markdown : text;
             gchar *filename = NULL;
-            if (mvr->auto_lang)
+            if (mvr->options->extensions & MTX_CMM_EXTENSION_AUTO_LANG)
             {
-                filename =
-                mtx_text_view_auto_lang_find (MTX_TEXT_VIEW
-                                              (mvr->text_view), path);
+                filename = mtx_text_view_auto_lang_find (mvr->text_view, path);
             }
             if (filename == NULL)
             {
@@ -825,13 +1893,14 @@ _file_search (gpointer path, gpointer pod)
     GString *retstr    = ppod->retstr;
     gchar **terms      = ppod->terms;
     guint *counter     = ppod->ctr;
-    GRegex *regex_astx = ppod->regex_astx;
+    const GRegex *regex_astx = ppod->regex_astx;
     GtkEntry *entry    = ppod->entry;
     gboolean found = FALSE;
 
     gtk_entry_progress_pulse (entry);
     errno = 0;
-    g_autofree gchar *contents = _get_file_contents (path, NULL, TRUE);
+    g_autofree gchar *contents =
+    mtx_text_view_mmap_read_file (path, NULL, TRUE);
     if (contents == NULL)
     {
         if (errno)
@@ -864,7 +1933,7 @@ _file_search (gpointer path, gpointer pod)
     {
         *counter +=1;
         /*
-        Extract the page title from the first level-1 setext heading
+        Extract the page title from the heading.
         */
         GString *title = NULL, *dest = NULL;
         g_autoptr (GMatchInfo) minfo = NULL;
@@ -906,8 +1975,15 @@ _file_search (gpointer path, gpointer pod)
 }
 
 /**
-do_file_search:
-Load the results of a search URI into a new viewing page.
+mtx_viewer_search_files:
+Load the results of a search URI into a new page.
+
+@mvr: %MtxViewer instance.
+@text: needle string.
+@file_complete: string, file for which to call
+file_load_complete (as if the "file-load-complete" signal
+was emitted) if async completion is successful.
+@completer: GClosure invoked after the asynchronous operations have completed.
 
 Returns: TRUE if the new page was generated otherwise returns FALSE.
 */
@@ -916,9 +1992,13 @@ Result is a synthetic page.
 We must not call mtx_text_view_load_file!
 */
 static gboolean
-do_file_search (MtxViewer *mvr,
-                const gchar *text)
+mtx_viewer_search_files (MtxViewer *mvr,
+                         const gchar *text,
+                         const gchar *file_complete,
+                         GClosure* completer)
 {
+    g_return_val_if_fail (file_complete != NULL, FALSE);
+
     GString *markdown = g_string_new (NULL);
     gchar *stripped, **terms;
     gint ctr_subjects, ctr_results = 0;
@@ -952,10 +2032,12 @@ do_file_search (MtxViewer *mvr,
         GString *retstr;
         gchar **terms;
         gint *ctr;
-        GRegex *regex_astx;
+        const GRegex *regex_astx;
         GtkEntry *entry;
     } POD;
-    POD pod = { TRUE, markdown, terms, &ctr_results, mvr->regex_astx, entry };
+    POD pod = { TRUE, markdown, terms, &ctr_results,
+        mtx_text_view_get_regex_astx (mvr->text_view),
+        entry };
 
     g_slist_foreach (mkd, (GFunc) _file_search, &pod);
     g_slist_free_full (mkd, g_free);
@@ -990,12 +2072,17 @@ do_file_search (MtxViewer *mvr,
         g_strdup_printf (Q_("search:1=ctr_subjects,2=ctr_results:3=terms|### %1$s, %2$s, %3$s\n# \n"),
                          ctr_subjects_str, ctr_results_str, terms_str);
         g_string_prepend (markdown, heading);
+        mtx_viewer_save_backing_file (mvr, markdown->str, markdown->len);
+        g_string_prepend (markdown, "<mtx><renderer><skip_toc>1</skip_toc></renderer></mtx>\n");
     }
-    /* show the results inside the textview */
+
+    /* Display results. */
+    gchar **pptr = g_malloc (sizeof (gchar *));
+    *pptr = markdown->str;
     gboolean retval =
-    mtx_text_view_set_text (MTX_TEXT_VIEW (mvr->text_view),
-                            &markdown->str, NULL, TRUE);
-    g_string_free (markdown, FALSE);
+    mtx_text_view_set_text (mvr->text_view, pptr, NULL, TRUE, file_complete,
+                            completer);
+    g_string_free (markdown, FALSE); /* mtx_text_view_load_markup_data_free */
 
     gtk_entry_set_progress_fraction (entry, 0.0f);
     gtk_widget_set_sensitive (mvr->window, TRUE);
@@ -1004,42 +2091,52 @@ do_file_search (MtxViewer *mvr,
 }
 
 /**
-do_resource_load:
+mtx_viewer_load_resource:
 Load the results of a resource URI into a new viewing page.
 
 @mvr: The #MtxTextView instance.
 @path: A disk file path. NULLABLE
-@uri: An embedded resource file path. NULLABLE
+@embed: Path of an embedded resource file. NULLABLE
+@file_complete: string, file for which to call
+file_load_complete (as if the "file-load-complete" signal
+was emitted) if async completion is successful.
+@completer: GClosure invoked after the asynchronous operations have completed.
 
-First @path is looked in $XDG_USER_DATE:$XDG_DATA_DIRS, if that fails
-then the embedded @uri is used.
+Look for "PROGNAME/@path" in $XDG_USER_DATA:$XDG_DATA_DIRS;
+if not found then use the embedded @uri.
 
 Returns: TRUE if the new page was generated otherwise it returns FALSE.
 */
 static gboolean
-do_resource_load (MtxViewer *mvr,
-                  const gchar *path,
-                  const gchar *embed)
+mtx_viewer_load_resource (MtxViewer *mvr,
+                          const gchar *path,
+                          const gchar *embed,
+                          const gchar *file_complete,
+                          GClosure *completer)
 {
+    g_return_val_if_fail (file_complete != NULL, FALSE);
+
     gboolean retval = FALSE;
 
     /* Possibly load a disk file. */
     if (path != NULL)
     {
         g_autofree gchar *file = NULL;
-        g_autofree gchar *contents = NULL;
+        gchar *contents = NULL; /* mtx_text_view_load_markup_data_free */
 
         for (const gchar * const *p = mvr->data_dirs; *p; p++)
         {
 
             file = g_build_filename (*p, PROGNAME, path, NULL);
             contents =
-            mtx_text_view_get_file_contents (MTX_TEXT_VIEW (mvr->text_view),
-                                             file, NULL, TRUE);
+            mtx_text_view_get_file_contents (mvr->text_view, file, NULL, TRUE);
             if (contents != NULL)
             {
-                retval = mtx_text_view_set_text (MTX_TEXT_VIEW (mvr->text_view),
-                                                 &contents, file, TRUE);
+                gchar **pptr = g_malloc (sizeof (gchar *));
+                *pptr = contents;
+                retval = mtx_text_view_set_text (mvr->text_view, pptr, file,
+                                                 TRUE, file_complete,
+                                                 completer);
                 break;
             }
             g_free (file);
@@ -1054,11 +2151,16 @@ do_resource_load (MtxViewer *mvr,
     {
         g_autoptr (GBytes) bytes =
         g_resources_lookup_data (embed, 0, NULL);
-        const gchar *contents = (const gchar *) g_bytes_get_data (bytes, NULL);
-        if (contents != NULL)
+        const gchar *contents = bytes == NULL ? NULL :
+            (const gchar *) g_bytes_get_data (bytes, NULL);
+        /* Carry on regardless, letting errors bubble up to @completer. */
+        if (TRUE)
         {
-            retval = mtx_text_view_set_text (MTX_TEXT_VIEW (mvr->text_view),
-                                             (gchar **) &contents, "/", FALSE);
+            gchar **pptr = g_malloc (sizeof (gchar *));
+            *pptr = g_strdup (contents);
+            mtx_viewer_save_backing_file (mvr, contents, strlen (contents));
+            retval = mtx_text_view_set_text (mvr->text_view, pptr, "/", TRUE,
+                                             file_complete, completer);
         }
     }
     return retval;
@@ -1066,41 +2168,44 @@ do_resource_load (MtxViewer *mvr,
 
 /**
 do_open_welcome_page:
-Load the welcome page.
+
+Asynchronous page presentation task, calling `do_insert_page_cb` to deal
+with the result and show an error page if necessary. This function loads
+the welcome page.
 
 @mvr: The #MtxTextView instance.
-
-Returns: TRUE if the help page was opened.
 */
-static gboolean
+static void
 do_open_welcome_page (MtxViewer *mvr)
 {
-    gboolean retval;
-    const gchar *page = "resource:///welcome.md";
+    if (mtx_viewer_is_page_in_progress (mvr))
+    {
+        return;
+    }
+    const gchar *page = WELCOME_PAGE;
     const guint offset = mvr->current_curpos = 0;
+    /*
+    For consistency with search_entry_activate_cb, I prefer not
+    to clear the fore trail before inserting the resource:// URI.
+    */
+    struct _completer_data *cdat = g_new0 (struct _completer_data, 1);
+    cdat->completer = DO_INSERT_PAGE_CB;
+    cdat->args.do_insert_page_cb.mvr = mvr;
+    cdat->args.do_insert_page_cb.offset = offset;
+    cdat->args.do_insert_page_cb.page = g_strdup (page);
+    GClosure *do_insert_page_complete =
+    g_cclosure_new (G_CALLBACK (do_insert_page_cb), cdat, NULL);
+    g_closure_set_marshal (do_insert_page_complete,
+                           g_cclosure_marshal_VOID__UINT_POINTER);
 
-    retval = dispatch_to_page (mvr, page);
-    if (retval)
-    {
-        /*
-        For consistency with the way the search:// URI in search_entry_activate
-        is presented, here I prefer not to clear the fore trail before inserting
-        the resource:// URI.
-        */
-
-        _nav_trail_insert (mvr, page, offset);
-    }
-    else
-    {
-        g_autofree gchar *temp =
-        g_strdup_printf (("'%s': resource not found"), page);
-        gtk_statusbar_push (GTK_STATUSBAR (mvr->status_bar),
-                            STATUSBAR_CTX_WARN, temp);
-    }
-    return retval;
+    (void) mtx_viewer_route_page (mvr, page, do_insert_page_complete);
 }
 
 /**
+search_entry_activate:
+Route the search entry text, setting focus to the search entry. It's an
+asynchronous page presentation task, calling `search_entry_activate_cb`
+to deal with the result and show an error page if necessary.
 */
 static void
 search_entry_activate (GtkEntry *entry, gpointer data)
@@ -1108,6 +2213,10 @@ search_entry_activate (GtkEntry *entry, gpointer data)
     MtxViewer *mvr = (MtxViewer *) data;
     const gchar *needle = gtk_entry_get_text (entry);
 
+    if (mtx_viewer_is_page_in_progress (mvr))
+    {
+        return;
+    }
     if (*needle)
     {
         g_autofree gchar *uri = NULL;
@@ -1122,22 +2231,24 @@ search_entry_activate (GtkEntry *entry, gpointer data)
         {
             uri = g_strdup (needle);
         }
-        if (dispatch_to_page (mvr, uri))
-        {
-            /*
-            Unlike on_link_clicked and nav_home_clicked, which clear the fore
-            trail on dispatch_to_page success, in this case I prefer to insert
-            the search results page in the trail after the current page, without
-            clearing the fore trail.
-            */
 
-            _nav_trail_insert (mvr, uri, offset);
-        }
+        struct _completer_data *cdat = g_new0 (struct _completer_data, 1);
+        cdat->completer = SEARCH_ENTRY_ACTIVATE_CB;
+        cdat->args.search_entry_activate_cb.mvr = mvr;
+        cdat->args.search_entry_activate_cb.offset = offset;
+        cdat->args.search_entry_activate_cb.scheme = scheme;
+        cdat->args.search_entry_activate_cb.uri = g_strdup (uri);
+        GClosure *search_entry_activate_complete =
+        g_cclosure_new (G_CALLBACK (search_entry_activate_cb), cdat, NULL);
+        g_closure_set_marshal (search_entry_activate_complete,
+                               g_cclosure_marshal_VOID__UINT_POINTER);
+
+        (void) mtx_viewer_route_page (mvr, uri, search_entry_activate_complete);
     }
     else
     {
         /* takes care of managing the navigation history */
-        (void) do_open_welcome_page (mvr);
+        do_open_welcome_page (mvr);
     }
     gtk_widget_grab_focus (GTK_WIDGET (mvr->text_search));
 }
@@ -1166,8 +2277,7 @@ search_entry_icon_press (GtkEntry *entry,
             event->button &= ~0x1000;
             options |= (event->button == 1 ? MTX_TEXT_VIEW_SEARCH_FORE :
                 MTX_TEXT_VIEW_SEARCH_BACK);
-            (void) mtx_text_view_find_text (MTX_TEXT_VIEW (mvr->text_view),
-                                            needle, options);
+            (void) mtx_text_view_find_text (mvr->text_view, needle, options);
         }
         else
         {
@@ -1229,20 +2339,33 @@ accel_search_back (GtkAccelGroup *group __attribute__((unused)),
 }
 
 /**
+nav_home_clicked:
+Asynchronous page presentation task, calling `nav_home_clicked_cb`
+to deal with the result and show an error page if necessary. This
+function resets page navigation history then reloads the home page.
 */
 static void
 nav_home_clicked (GtkWidget *button __attribute__((unused)),
                   gpointer data)
 {
     MtxViewer *mvr = (MtxViewer *) data;
-    gchar *homepage = mvr->homepage == NULL ? DEFAULT_INDEX : mvr->homepage;
-    const guint offset = mvr->changed_curpos;
+    gchar *page = mvr->homepage == NULL ? DEFAULT_INDEX : mvr->homepage;
 
-    if (dispatch_to_page (mvr, homepage))
+    while (mvr->nav_trail_page_idx > 0)
     {
-        _nav_trail_fore_clear (mvr);
-        _nav_trail_insert (mvr, homepage, offset);
+        _nav_trail_back (mvr);
     }
+
+    struct _completer_data *cdat = g_new0 (struct _completer_data, 1);
+    cdat->completer = NAV_HOME_CLICKED_CB;
+    cdat->args.nav_home_clicked_cb.mvr = mvr;
+    cdat->args.nav_home_clicked_cb.page = g_strdup (page);
+    GClosure *nav_home_clicked_complete =
+    g_cclosure_new (G_CALLBACK (nav_home_clicked_cb), cdat, NULL);
+    g_closure_set_marshal (nav_home_clicked_complete,
+                           g_cclosure_marshal_VOID__UINT_POINTER);
+
+    (void) mtx_viewer_route_page (mvr, page, nav_home_clicked_complete);
 }
 
 /**
@@ -1254,7 +2377,11 @@ accel_nav_home (GtkAccelGroup *group __attribute__((unused)),
                 GdkModifierType mod __attribute__((unused)),
                 gpointer data)
 {
-    nav_home_clicked (NULL, data);
+    MtxViewer *mvr = (MtxViewer *) data;
+    if (!mtx_viewer_is_page_in_progress (mvr))
+    {
+        nav_home_clicked (NULL, mvr);
+    }
     return TRUE;
 }
 
@@ -1270,10 +2397,10 @@ scroll_to_link_and_highlight (MtxViewer *mvr,
                               const MtxTextViewLinkInfo *link_info)
 {
     GtkTextIter iter;
-    MtxTextView *tv = MTX_TEXT_VIEW (mvr->text_view);
+    MtxTextView *tv = mvr->text_view;
     gtk_text_buffer_get_iter_at_mark (tv->buffer, &iter, link_info->mark);
     gtk_text_buffer_place_cursor (tv->buffer, &iter);
-    mtx_text_view_clear_search_highlights (tv);
+    mtx_text_view_clear_page_highlights (tv);
     mtx_text_view_highlight_at_cursor_chars (tv, link_info->llen,
                                              MTX_TEXT_VIEW_HILIGHT_NORMAL);
     gtk_widget_grab_focus (GTK_WIDGET (tv));
@@ -1290,7 +2417,7 @@ accel_link_fore (GtkAccelGroup *group __attribute__((unused)),
                  gpointer data)
 {
     MtxViewer *mvr = (MtxViewer *) data;
-    MtxTextView *tv = MTX_TEXT_VIEW (mvr->text_view);
+    MtxTextView *tv = mvr->text_view;
     const MtxTextViewLinkInfo *p;
 
     p = mtx_text_view_link_info_get_near_offset (tv, mvr->changed_curpos, +1);
@@ -1311,7 +2438,7 @@ accel_link_back (GtkAccelGroup *group __attribute__((unused)),
                  gpointer data)
 {
     MtxViewer *mvr = (MtxViewer *) data;
-    MtxTextView *tv = MTX_TEXT_VIEW (mvr->text_view);
+    MtxTextView *tv = mvr->text_view;
     const MtxTextViewLinkInfo *p;
 
     p = mtx_text_view_link_info_get_near_offset (tv, mvr->changed_curpos, -1);
@@ -1331,7 +2458,11 @@ accel_open_help (GtkAccelGroup *group __attribute__((unused)),
                  GdkModifierType mod __attribute__((unused)),
                  gpointer data)
 {
-    (void) do_open_welcome_page ((MtxViewer *) data);
+    MtxViewer *mvr = (MtxViewer *) data;
+    if (!mtx_viewer_is_page_in_progress (mvr))
+    {
+        (void) do_open_welcome_page (mvr);
+    }
     return TRUE;
 }
 
@@ -1346,59 +2477,115 @@ accel_edit_current (GtkAccelGroup *group __attribute__((unused)),
 {
     MtxViewer *mvr = (MtxViewer *) data;
     MtxTextView *tv = (MtxTextView *) mvr->text_view;
-    gchar *file_name = mvr->current_file;
+    const gchar *file_name = NULL;
+    const gchar *scheme = g_uri_peek_scheme (mvr->current_file);
 
+    if (g_strcmp0 (scheme, "search") == 0 || g_strcmp0 (scheme, "resource")== 0)
+    {
+        file_name = mvr->backing_file;
+    }
+    else
+    {
+        file_name =
+        mvr->failed_file != NULL ? mvr->failed_file : mvr->current_file;
+    }
     if (file_name != NULL)
     {
-        if (file_name[0] == '/')
+        gchar *path = NULL;
+        if (file_name[0] != '/')
         {
-            edit_text_file (mvr, file_name);
+            path = g_build_filename (tv->image_directory, file_name, NULL);
+            if (!g_file_test (path, G_FILE_TEST_EXISTS))
+            {
+                gchar *name = g_path_get_basename (file_name);
+                g_free (path);
+                path = g_build_filename (tv->image_directory, name, NULL);
+                g_free (name);
+            }
+            file_name = path;
         }
-        else
-        {
-            gchar *path =
-            g_build_filename (tv->image_directory, file_name, NULL);
-            edit_text_file (mvr, path);
-            g_free (path);
-        }
+        edit_text_file (mvr, file_name);
+        g_free (path);
     }
     return TRUE;
 }
 
 /**
-mtx_viewer_present_page:
-Present a file or supported URI.
+mtx_viewer_make_error_page:
+Return markdown error page with a custom message inside .
 
 @mvr: pointer to #MtxViewer.
-@page: filepath or supported URI.
+@message: string, often a printf format string.
+@back_link: back-link return page. NULLABLE. If NULL a back-link is not added
+to the page.
 
-Returns: TRUE if the page is presented otherwise returns FALSE after displaying
-an error dialog.
+Returns: markdown string or NULL on error. The caller of this function owns
+the returned memory.
 */
-gboolean
-mtx_viewer_present_page (MtxViewer *mvr,
-                          const gchar *page,
-                          guint offset)
+static gchar *
+mtx_viewer_make_error_page (MtxViewer *mvr __attribute__((unused)),
+                            const gchar *message,
+                            const gchar *back_link)
 {
-    gboolean retval = dispatch_to_page (mvr, page);
-    if (retval)
+    /* *INDENT-OFF* */
+    g_autofree gchar *uri = NULL;
+    g_autofree gchar *link = NULL;
+    if (back_link == NULL)
     {
-        _nav_trail_fore_clear (mvr);
-        _nav_trail_insert (mvr, mvr->current_file, offset);
-        gtk_window_present (GTK_WINDOW (mvr->window));
+        link = g_strdup ("");
     }
     else
     {
-        GtkWidget *dialog =
-        gtk_message_dialog_new (GTK_WINDOW (mvr->parent),
-                                GTK_DIALOG_DESTROY_WITH_PARENT,
-                                GTK_MESSAGE_ERROR,
-                                GTK_BUTTONS_CLOSE,
-                                _("Cannot open '%s'."), page);
-        gtk_dialog_run (GTK_DIALOG (dialog));
-        gtk_widget_destroy (dialog);
+        uri = g_markup_escape_text (back_link, -1);
+        link = g_strdup_printf("[%s](%s)\n",
+                               Q_("error page back-link label|Back"), uri);
     }
-    return retval;
+    return g_strdup_printf (
+        "<mtx>"
+            "<renderer>"
+                "<keep_tags>1</keep_tags>"
+                "<skip_toc>1</skip_toc>"
+            "</renderer>"
+            "<viewer>"
+                "<track_page>0</track_page>"
+            "</viewer>"
+        "</mtx>\n"
+        "<span size=\"x-large\">"
+        "\n\n~~~~\n%s\n~~~~\n\n%s</span>",
+        message, link);
+    /* *INDENT-ON* */
+}
+
+/**
+mtx_viewer_present_page:
+Present a file or supported URI truncating the forward navigation trail.
+
+@mvr: pointer to #MtxViewer.
+@page: filepath or supported URI.
+@offset: text buffer offset.
+
+Return: TRUE if the page was successfully routed for presentation in the
+viewer, otherwise FALSE. When the asynchronous routing task has finished,
+the `present_page_cb` callback is invoked, which will deal with the result
+by either refreshing the GUI or showing the error page.
+*/
+gboolean
+mtx_viewer_present_page (MtxViewer *mvr,
+                         const gchar *page,
+                         guint offset)
+{
+    mtx_dbg_errout (1, "init timer %s\n",
+                    mtx_dbg_fmt_etime (mtx_dbg_etime (0)));
+    struct _completer_data *cdat = g_new0 (struct _completer_data, 1);
+    cdat->completer = PRESENT_PAGE_CB;
+    cdat->args.present_page_cb.mvr = mvr;
+    cdat->args.present_page_cb.offset = offset;
+    cdat->args.present_page_cb.page = g_strdup (page);
+    GClosure *present_page_complete =
+    g_cclosure_new (G_CALLBACK (present_page_cb), cdat, NULL);
+    g_closure_set_marshal (present_page_complete,
+                           g_cclosure_marshal_VOID__UINT_POINTER);
+    return mtx_viewer_route_page (mvr, page, present_page_complete);
 }
 
 /**
@@ -1417,21 +2604,37 @@ mtx_viewer_destroy:
 void
 mtx_viewer_destroy (MtxViewer *mvr)
 {
+    if (mtx_viewer_is_page_in_progress (mvr))
+    {
+        accel_cancel_loading (NULL, NULL, 0, 0, mvr);
+    }
     if (mvr->nav_trail != NULL)
     {
-        g_queue_foreach (mvr->nav_trail, (GFunc) _nav_unit_clear, mvr);
+        if (mvr->nav_trail->length)
+        {
+            g_queue_foreach (mvr->nav_trail, (GFunc) _nav_unit_clear, mvr);
+        }
         g_queue_clear (mvr->nav_trail);
         g_queue_free (mvr->nav_trail);
         mvr->nav_trail = NULL;
     }
-
+    if (mvr->progress_logger_cancellable != NULL)
+    {
+        g_object_unref (mvr->progress_logger_cancellable);
+    }
+    if (mvr->progress_logger_q != NULL)
+    {
+        g_queue_free (mvr->progress_logger_q);
+    }
+    if (mvr->backing_fd >= 0)
+    {
+        close (mvr->backing_fd);
+        unlink (mvr->backing_file);
+        g_free (mvr->backing_file);
+    }
     g_free (mvr->current_file);
     g_free (mvr->base_directory);
     g_free ((gpointer) mvr->data_dirs);
-    if (mvr->regex_astx != NULL)
-    {
-        g_regex_unref (mvr->regex_astx);
-    }
     if (mvr->parent == NULL && gtk_main_level ())
     {
         gtk_main_quit ();
@@ -1442,12 +2645,14 @@ mtx_viewer_destroy (MtxViewer *mvr)
 */
 static gboolean
 viewer_destroy_me (GtkWidget *widget __attribute__((unused)),
+                   GdkEvent *event __attribute__((unused)),
                    gpointer data)
 {
     MtxViewer *mvr = (MtxViewer *) data;
 
-    mtx_viewer_destroy (mvr);
-    return FALSE;
+    mtx_viewer_destroy (mvr); /* quits gtk main */
+    gtk_widget_destroy (widget);
+    return TRUE;
 }
 
 static gboolean
@@ -1460,7 +2665,7 @@ viewer_key_pressed (GtkWidget *widget,
     switch (event->keyval)
     {
         case GDK_KEY_Escape:
-            mtx_viewer_destroy (mvr);
+            mtx_viewer_destroy (mvr);   /* quits gtk main */
             gtk_widget_destroy (widget);
             return TRUE;
     }
@@ -1468,20 +2673,51 @@ viewer_key_pressed (GtkWidget *widget,
 }
 
 /**
+mtx_viewer_tool_button_new_from_resource:
+Make a toolbar button icon from an embedded resource at a given GTK button size.
+
+@resource: embedded resource path.
+@size_enum: #GtkButton size enumeration value.
+
+Return: the icon widget or NULL on error.
+*/
+static GtkWidget *
+mtx_viewer_button_icon_new_from_resource (const gchar *resource,
+                                          const gint size_enum)
+{
+    gint w,h;
+
+    gtk_icon_size_lookup (size_enum, &w, &h);
+    GdkPixbuf *pb = gdk_pixbuf_new_from_resource (resource, NULL);
+    GdkPixbuf *sp = gdk_pixbuf_scale_simple (pb, w, h, GDK_INTERP_BILINEAR);
+    GtkWidget *im = gtk_image_new_from_pixbuf (sp);
+    g_object_unref (pb);
+    g_object_unref (sp);
+    return im;
+}
+
+/**
 mtx_viewer_new:
+
+@base_dir: home page directory.
+@base_file: home page.
+@title: window title.
+@parent: window.
+@extensions: #MtxCmmExtensions flags.
+@toc_level: table of contents maximum level.
+@tweaks: #MtxCmmTweaks flags.
 */
 MtxViewer *
 mtx_viewer_new (const gchar *base_dir,
                 const gchar *base_file,
                 const gchar *title,
                 GtkWindow *parent,
-                guint extensions,
-                guint tweaks)
+                const MtxViewerOptions *options)
 {
     MtxViewer *mvr;
     GtkWidget *mtx_viewer;
     GtkWidget *vbox;
-    GtkWidget *hbox;
+    GtkWidget *top_bar;
     GtkWidget *toolbar1;
     GtkWidget *separatortoolitem1;
     GtkWidget *toolbar2;
@@ -1489,43 +2725,44 @@ mtx_viewer_new (const gchar *base_dir,
     GtkWidget *toolitem4;
     GtkWidget *search_entry;
     GtkWidget *scrolled_mtx_viewer;
-    GtkWidget *mtx_text_view;
+    MtxTextView *text_view;
+    GtkWidget *progress_bar, *progress_box, *btn_cancel_loading;
     GtkWidget *status_bar;
-    GtkWidget *btn_nav_back, *btn_nav_fore, *btn_nav_home;
+    GtkWidget *btn_nav_back, *btn_nav_fore, *btn_nav_home, *btn_preview;
+    GtkWidget *combo_toc;
     GtkAccelGroup *accel;
 
     mtx_viewer = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+    gtk_widget_set_name (mtx_viewer, PROGNAME"-main-win");
     gtk_widget_set_size_request (mtx_viewer, 300, 200);
     gtk_window_set_default_size (GTK_WINDOW (mtx_viewer), 640, 480);
     gtk_window_set_title (GTK_WINDOW (mtx_viewer),
                           title ? title : DEFAULT_WINDOW_TITLE);
     gtk_window_set_transient_for (GTK_WINDOW (mtx_viewer), parent);
 
-#if !GTK_CHECK_VERSION(3,0,0)
-    GdkPixbuf *icon = gtk_widget_render_icon (mtx_viewer, GTK_STOCK_HELP,
-                                              GTK_ICON_SIZE_DIALOG, NULL);
+    GdkPixbuf *icon = gdk_pixbuf_new_from_resource ("/app.svg", NULL);
     gtk_window_set_icon (GTK_WINDOW (mtx_viewer), icon);
     g_object_unref (icon);
-
+#if !GTK_CHECK_VERSION(3,0,0)
     vbox = gtk_vbox_new (FALSE, 0);
 #else
-    gtk_window_set_icon_name (GTK_WINDOW (mtx_viewer), "help-browser");
     vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
 #endif
     gtk_widget_show (vbox);
     gtk_container_add (GTK_CONTAINER (mtx_viewer), vbox);
 
 #if !GTK_CHECK_VERSION(3,0,0)
-    hbox = gtk_hbox_new (FALSE, 0);
+    top_bar = gtk_hbox_new (FALSE, 0);
 #else
-    hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+    top_bar = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
 #endif
-    gtk_widget_show (hbox);
-    gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
+    gtk_widget_set_name (top_bar, PROGNAME"-top-bar");
+    gtk_widget_show (top_bar);
+    gtk_box_pack_start (GTK_BOX (vbox), top_bar, FALSE, FALSE, 0);
 
     toolbar1 = gtk_toolbar_new ();
     gtk_widget_show (toolbar1);
-    gtk_box_pack_start (GTK_BOX (hbox), toolbar1, TRUE, TRUE, 0);
+    gtk_box_pack_start (GTK_BOX (top_bar), toolbar1, TRUE, TRUE, 0);
     gtk_toolbar_set_style (GTK_TOOLBAR (toolbar1), GTK_TOOLBAR_BOTH_HORIZ);
 
 #if !GTK_CHECK_VERSION(3,0,0)
@@ -1549,7 +2786,7 @@ mtx_viewer_new (const gchar *base_dir,
     btn_nav_back = (GtkWidget *) gtk_tool_button_new (icon_previous, _("Back"));
 #endif
     gtk_widget_set_tooltip_text (btn_nav_back,
-                                 _("(Alt-B) Go back"));
+                                 _("(Alt-B) Navigate back to the previous page"));
     gtk_widget_show (btn_nav_back);
     gtk_container_add (GTK_CONTAINER (toolbar1), btn_nav_back);
     /* gtk_tool_item_set_is_important (GTK_TOOL_ITEM (btn_nav_back), TRUE); */
@@ -1563,11 +2800,31 @@ mtx_viewer_new (const gchar *base_dir,
     gtk_image_new_from_icon_name ("go-next", GTK_ICON_SIZE_LARGE_TOOLBAR);
     btn_nav_fore = (GtkWidget *) gtk_tool_button_new (icon_next, _("Forward"));
 #endif
-    gtk_widget_set_tooltip_text (btn_nav_fore, _("(Alt-F) Go forward"));
+    gtk_widget_set_tooltip_text (btn_nav_fore,
+                                 _("(Alt-F) Navigate forward to the next page"));
     gtk_widget_show (btn_nav_fore);
     gtk_container_add (GTK_CONTAINER (toolbar1), btn_nav_fore);
     /* gtk_tool_item_set_is_important (GTK_TOOL_ITEM (btn_nav_fore), TRUE); */
     gtk_widget_set_sensitive (btn_nav_fore, FALSE);
+
+    GtkWidget *ico_preview =
+    mtx_viewer_button_icon_new_from_resource ("/preview.svg",
+                                              GTK_ICON_SIZE_LARGE_TOOLBAR);
+    btn_preview = (GtkWidget *) gtk_tool_button_new (ico_preview,
+                                                     _("HTML Preview"));
+    gtk_widget_set_tooltip_text (btn_preview,
+                                 _("(Alt-P) Preview the page in the browser"));
+    gtk_widget_show (btn_preview);
+    gtk_container_add (GTK_CONTAINER (toolbar1), btn_preview);
+
+    combo_toc = gtk_combo_box_text_new ();
+    gtk_widget_set_tooltip_text (combo_toc,
+                                 _("(Alt-T) Change Table of Contents depth"));
+    gtk_widget_show (combo_toc);
+    GtkWidget *toolitem_toc = (GtkWidget *) gtk_tool_item_new ();
+    gtk_widget_show (toolitem_toc);
+    gtk_container_add (GTK_CONTAINER (toolbar1), toolitem_toc);
+    gtk_container_add (GTK_CONTAINER (toolitem_toc), combo_toc);
 
     separatortoolitem1 = (GtkWidget *) gtk_separator_tool_item_new ();
     gtk_widget_show (separatortoolitem1);
@@ -1575,7 +2832,7 @@ mtx_viewer_new (const gchar *base_dir,
 
     toolbar2 = gtk_toolbar_new ();
     gtk_widget_show (toolbar2);
-    gtk_box_pack_end (GTK_BOX (hbox), toolbar2, FALSE, TRUE, 0);
+    gtk_box_pack_end (GTK_BOX (top_bar), toolbar2, FALSE, TRUE, 0);
     gtk_toolbar_set_style (GTK_TOOLBAR (toolbar2), GTK_TOOLBAR_BOTH_HORIZ);
     gtk_toolbar_set_show_arrow (GTK_TOOLBAR (toolbar2), FALSE);
 
@@ -1622,14 +2879,57 @@ mtx_viewer_new (const gchar *base_dir,
     gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scrolled_mtx_viewer),
                                     GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
-    mtx_text_view = mtx_text_view_new ();
-    mtx_text_view_set_extensions (MTX_TEXT_VIEW (mtx_text_view), extensions);
-    mtx_text_view_set_tweaks (MTX_TEXT_VIEW (mtx_text_view), tweaks);
-    mtx_text_view_set_image_directory (MTX_TEXT_VIEW (mtx_text_view), base_dir);
-    mtx_text_view_set_auto_lang_find (MTX_TEXT_VIEW (mtx_text_view),
-                                          extensions &
-                                          MTX_CMM_EXTENSION_AUTO_LANG);
-    gtk_container_add (GTK_CONTAINER (scrolled_mtx_viewer), mtx_text_view);
+    text_view = MTX_TEXT_VIEW (mtx_text_view_new ());
+    mtx_text_view_set_extensions (text_view, options->extensions);
+    mtx_text_view_set_toc_level (text_view, options->toc_level);
+    mtx_text_view_set_tweaks (text_view, options->tweaks);
+    mtx_text_view_set_image_directory (text_view, base_dir);
+    mtx_text_view_set_auto_lang_find (text_view,
+                                      options-> extensions &
+                                       MTX_CMM_EXTENSION_AUTO_LANG);
+    gtk_container_add (GTK_CONTAINER (scrolled_mtx_viewer),
+                       GTK_WIDGET (text_view));
+
+    /**********************************************************************
+    *                            Progress Box                             *
+    ******************************************************************{{{*/
+#if !GTK_CHECK_VERSION(3,0,0)
+    progress_box = gtk_hbox_new (FALSE, 0);
+#else
+    progress_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+#endif
+    gtk_widget_set_name (progress_box, PROGNAME"-progress-box");
+    gtk_widget_show (progress_box);
+
+#if !GTK_CHECK_VERSION(3,0,0)
+    btn_cancel_loading =
+    (GtkWidget *) gtk_tool_button_new_from_stock ("gtk-cancel");
+#else
+    GtkWidget *icon_cancel =
+    gtk_image_new_from_icon_name ("gtk-cancel", GTK_ICON_SIZE_LARGE_TOOLBAR);
+    btn_cancel_loading =
+    (GtkWidget *) gtk_tool_button_new (icon_cancel, _("Cancel page loading"));
+#endif
+    gtk_widget_set_tooltip_text (btn_cancel_loading,
+                                 _("(Alt-X) Cancel loading this page"));
+    gtk_box_pack_start (GTK_BOX (progress_box), btn_cancel_loading, FALSE,
+                        FALSE, 0);
+    gtk_widget_show (btn_cancel_loading);
+
+    progress_bar = gtk_progress_bar_new ();
+#if GTK_CHECK_VERSION(3,0,0)
+    gtk_widget_set_margin_end (progress_bar, 20);
+    gtk_progress_bar_set_show_text (GTK_PROGRESS_BAR (progress_bar), TRUE);
+    gtk_box_pack_start (GTK_BOX (progress_box), progress_bar, TRUE, TRUE, 0);
+#else
+    gtk_box_pack_start (GTK_BOX (progress_box), progress_bar, TRUE, TRUE, 0);
+    GtkWidget *spacer = gtk_label_new (NULL);
+    gtk_widget_set_size_request (spacer, 20, -1);
+    gtk_box_pack_end (GTK_BOX (progress_box), spacer, FALSE, FALSE, 0);
+#endif
+    gtk_box_pack_start (GTK_BOX (vbox), progress_box, FALSE, FALSE, 0);
+    /*******************************************************************}}}
+    **********************************************************************/
 
     status_bar = gtk_statusbar_new ();
     gtk_widget_show (status_bar);
@@ -1637,44 +2937,61 @@ mtx_viewer_new (const gchar *base_dir,
 
     mvr = g_new0 (MtxViewer, 1);
     mvr->window = mtx_viewer;
-    mvr->status_bar = status_bar;
+    mvr->top_bar = top_bar;
+    mvr->status_bar = GTK_STATUSBAR (status_bar);
     mvr->btn_nav_back = btn_nav_back;
     mvr->btn_nav_fore = btn_nav_fore;
-    mvr->text_view = mtx_text_view;
+    mvr->btn_preview = btn_preview;
+    mvr->combo_toc = combo_toc;
+    mvr->text_view = text_view;
     mvr->text_search = search_entry;
-    mvr->base_directory = g_strdup (base_dir);
+    mvr->backing_fd = g_file_open_tmp (PROGNAME "_search_XXXXXX.md",
+                                       &mvr->backing_file, NULL);
+    mvr->progress_bar = GTK_PROGRESS_BAR (progress_bar);
+    mvr->progress_box = progress_box;
+    mvr->progress_logger_cancellable = g_cancellable_new ();
+    mvr->progress_logger_q = g_queue_new ();
+    mvr->base_directory = g_strdup (base_dir ? base_dir : ".");
     mvr->nav_trail = g_queue_new ();
     mvr->nav_trail_page = NULL;
     mvr->nav_trail_page_idx = -1;
     mvr->parent = GTK_WIDGET (parent);
     mvr->can_go_back = mvr->can_go_fore = FALSE;
-    mvr->auto_lang = extensions & MTX_CMM_EXTENSION_AUTO_LANG;
+    mvr->options = (MtxViewerOptions *) options;
+#ifdef OPT_EXIT_TEST
+    mvr->exit_test = options->tweaks & MTX_CMM_TWEAK_RESERVED2;
+#endif
 
     g_signal_connect (mtx_viewer, "delete-event",
                       G_CALLBACK (viewer_destroy_me), mvr);
     g_signal_connect (mtx_viewer, "key-press-event",
                       G_CALLBACK (viewer_key_pressed), mvr);
-    g_signal_connect (mtx_text_view, "link-clicked",
+    g_signal_connect (text_view, "link-clicked",
                       G_CALLBACK (on_link_clicked), mvr);
-    g_signal_connect (mtx_text_view, "hovering-over-link",
+    g_signal_connect (text_view, "hovering-over-link",
                       G_CALLBACK (hovering_over_link), mvr);
-    g_signal_connect (mtx_text_view, "hovering-over-text",
+    g_signal_connect (text_view, "hovering-over-text",
                       G_CALLBACK (hovering_over_text), mvr);
-    g_signal_connect (mtx_text_view, "file-load-complete",
+    g_signal_connect (text_view, "file-load-complete",
                       G_CALLBACK (file_load_complete), mvr);
-    g_signal_connect (MTX_TEXT_VIEW(mtx_text_view)->buffer,
-                      "notify::cursor-position",
-                      G_CALLBACK (on_curpos_changed), mvr);
+    g_signal_connect (text_view, "new-text-buffer",
+                      G_CALLBACK (on_new_text_buffer), mvr);
+    on_new_text_buffer (text_view, mvr);
     g_signal_connect (btn_nav_back, "clicked", G_CALLBACK (nav_back_clicked),
                       mvr);
     g_signal_connect (btn_nav_fore, "clicked", G_CALLBACK (nav_fore_clicked),
                       mvr);
     g_signal_connect (btn_nav_home, "clicked", G_CALLBACK (nav_home_clicked),
                       mvr);
+    g_signal_connect (btn_preview, "clicked", G_CALLBACK (preview_clicked),
+                      mvr);
+    g_signal_connect (combo_toc, "changed", G_CALLBACK (on_toc_changed), mvr);
     g_signal_connect (search_entry, "activate",
                       G_CALLBACK (search_entry_activate), mvr);
     g_signal_connect (search_entry, "icon-press",
                       G_CALLBACK (search_entry_icon_press), mvr);
+    g_signal_connect (btn_cancel_loading, "clicked", G_CALLBACK
+                      (cancel_loading_clicked), mvr);
 
     accel = gtk_accel_group_new ();
     gtk_accel_group_connect (accel, gdk_keyval_from_name ("F1"),
@@ -1714,9 +3031,21 @@ mtx_viewer_new (const gchar *base_dir,
                              GDK_SHIFT_MASK | GDK_CONTROL_MASK, 0,
                              g_cclosure_new (G_CALLBACK (accel_link_back), mvr,
                                              NULL));
+    gtk_accel_group_connect (accel, gdk_keyval_from_name ("p"),
+                             GDK_MOD1_MASK, 0,
+                             g_cclosure_new (G_CALLBACK (accel_preview),
+                                             mvr, NULL));
+    gtk_accel_group_connect (accel, gdk_keyval_from_name ("t"),
+                             GDK_MOD1_MASK, 0,
+                             g_cclosure_new (G_CALLBACK (accel_toc),
+                                             mvr, NULL));
     gtk_accel_group_connect (accel, gdk_keyval_from_name ("e"),
                              GDK_CONTROL_MASK, 0,
                              g_cclosure_new (G_CALLBACK (accel_edit_current),
+                                             mvr, NULL));
+    gtk_accel_group_connect (accel, gdk_keyval_from_name ("x"),
+                             GDK_MOD1_MASK, 0,
+                             g_cclosure_new (G_CALLBACK (accel_cancel_loading),
                                              mvr, NULL));
     gtk_window_add_accel_group (GTK_WINDOW (mtx_viewer), accel);
 
@@ -1725,9 +3054,9 @@ mtx_viewer_new (const gchar *base_dir,
         gchar **a, **p, *u;
         /* Glib owns a and u */
         a = (gchar **) g_get_system_data_dirs ();
-        p = g_new (gchar *, g_strv_length (a) + 2);
-        mvr->data_dirs = (const gchar * const *) p;
         u = (gchar *) g_get_user_data_dir ();
+        p = g_new (gchar *, g_strv_length (a) + 1 + (*u ? 1 : 0));
+        mvr->data_dirs = (const gchar * const *) p;
         if (*u)
         {
             *p++ = u;
@@ -1738,42 +3067,63 @@ mtx_viewer_new (const gchar *base_dir,
         }
         *p = NULL;
     }
-    /*
-    Regex matcher for ATX and setext headings
-    (the setext regex has some limitations as discussed in efe6f0f).
-    */
-    /* *INDENT-OFF* */
-    mvr->regex_astx = g_regex_new (
-    /* ATX or SETEX as TITLE  */ "(?|"
-    /*       ATX              */ "(?:" /* ATX heading */
-    /* start of line/file     */ "(?:\\R|^)"
-    /* ATX heading signature  */ " {0,3}#{1,6}[ \\t]+"
-    /* ~alphabetic title      */ "(?<TITLE>.*?(?:\\p{Ll}|\\p{Lu}).*?)"
-    /* ATX optional ending    */ "#*\\s*?"
-    /*                        */ ")|"
-    /*      SETEX             */ "(?:" /* non-semantic setext heading */
-    /* run of ...             */ "(?<TITLE>(?:"
-    /* start of line/file     */ "(?:\\R|^)"
-    /* no empty line, no list */ "(?: {0,3}[^-*\\s\\r`].*?))" /* no code */
-    /*                        */ "+)"
-    /* setext underlines      */ "(?:\\R|^) {0,3}[-=]+[ \\t]*"
-    /*                        */ ")"
-    /*                        */ ")"
-    /* share end of line/file */ "(?:\\R|$)"
-                                 , 0, 0, NULL);
-    /* *INDENT-ON* */
 
-    if (!mtx_viewer_present_page
-        (mvr, base_file == NULL ? DEFAULT_INDEX : base_file, 0))
+    mvr->homepage = (gchar *) (base_file == NULL ? DEFAULT_INDEX : base_file);
+    if (base_dir == NULL)
     {
+        base_dir = "";
+    }
+    if (base_dir[0] == '\0')
+    {
+        if (base_file == NULL)
+        {
+            base_file = USAGE_PAGE;
+        }
+    }
+    g_autofree gchar *page = g_build_filename (base_dir, base_file, NULL);
+    if (!g_file_test (page, G_FILE_TEST_EXISTS))
+    {
+        const gchar *scheme = g_uri_peek_scheme (base_file);
+        if (scheme != NULL && (strcmp (scheme, "resource") == 0 || strcmp
+                               (scheme, "search") == 0))
+        {
+            g_free (page);
+            page = g_strdup (base_file);
+        }
+    }
+    if (g_str_has_prefix (base_file, "resource://"))
+    {
+        mtx_text_view_set_image_directory (text_view, ".");
+    }
+
+    gtk_widget_show_all (mvr->window);
+    gtk_widget_set_visible (progress_box, FALSE);
+    {
+        gchar b[2] = {0};
+        for (b[0] = '6'; b[0] >= '0'; b[0]--)
+        {
+            gtk_combo_box_text_prepend_text (GTK_COMBO_BOX_TEXT (combo_toc), b);
+        }
+        gtk_combo_box_set_active (GTK_COMBO_BOX (combo_toc),
+                                  mvr->options->toc_level);
+    }
+    while (gtk_events_pending ())
+    {
+        gtk_main_iteration ();
+    }
+
+    if (!mtx_viewer_present_page (mvr, page, 0)) /* can be the USAGE_PAGE */
+    {
+        /*
+        Examples of generic error: ???
+        */
+        g_printerr (_("%s: generic error.\n"), PROGNAME);
+        mtx_viewer_destroy (mvr);   /* quits gtk main */
         gtk_widget_destroy (mvr->window);
-        mtx_viewer_destroy (mvr);
         g_free (mvr);
         return NULL;
     }
 
-    gtk_widget_show_all (mvr->window);
-    gtk_widget_grab_focus (mvr->text_view);
     return mvr;
 }
 

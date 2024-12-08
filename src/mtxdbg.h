@@ -24,14 +24,25 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #ifndef MTX_DBG_H
 #define MTX_DBG_H
 
+/* standout, standout end */
+#define _SO    "\033[7m"
+#define _SE    "\033[0m"
+#define _SObla "\033[7;30m"
+#define _SOred "\033[7;31m"
+#define _SOgre "\033[7;32m"
+#define _SOyel "\033[7;33;46m"
+#define _SOblu "\033[7;34m"
+#define _SOmag "\033[7;35m"
+#define _SOcya "\033[7;36m"
+#define _SOwhi "\033[7;37m"
+
 #ifdef __cplusplus
     extern "C" {
 #endif
 
 #ifdef MTX_DEBUG
 
-#include <stdarg.h>
-#include <stdio.h>
+#include <strings.h>
 #include <unistd.h>
 
 /**
@@ -69,22 +80,8 @@ incrementally.
 */
 
 
-static int mtx_dbg_dprint (int, int, const char *, ...)
-__attribute__((unused, format(printf, 3, 4))); /* 3=format 4=params */
-
-static int
-mtx_dbg_dprint (int level, int fd, const char *fmt, ...)
-{
-    int ret = 0;
-    if (level <= MTX_DEBUG)
-    {
-        va_list args;
-        va_start (args, fmt);
-        ret = vdprintf (fd < 0 ? STDERR_FILENO : fd, fmt, args);
-        va_end (args);
-    }
-    return ret;
-}
+int mtx_dbg_dprint (int, int, const char *, ...)
+__attribute__((format(printf, 3, 4))); /* 3=format 4=params */
 
 #define mtx_dbg_dprint(level, ...)                                     \
     ((level) < 0 ? (void)0 : mtx_dbg_dprint (level, __VA_ARGS__))
@@ -96,13 +93,63 @@ mtx_dbg_dprint (int level, int fd, const char *fmt, ...)
 #define mtx_dbg_errseq(level, fmt, ...)                                \
     mtx_dbg_dprint(level, STDERR_FILENO, fmt, __VA_ARGS__)
 
+/**
+mtx_dbg_tally:
+This macro counts power-of-two integers.
+*/
+#define mtx_dbg_tally(n)           mtx_dbg_tally_ary[ffs (n)]++
+extern int mtx_dbg_tally_ary[32];
+
+/**
+mtx_dbg_tally_reset:
+This macro resets the counters.
+*/
+#define mtx_dbg_tally_reset()                                             \
+do {                                                                      \
+    for (unsigned int u_ = 0; u_ < 32; u_++) {                            \
+        mtx_dbg_tally_ary[u_] = 0;                                        \
+    }                                                                     \
+} while (0)
+
+/**
+mtx_dbg_print_tally:
+This macro prints mtx_dbg_tally_ary counters.
+
+@level: see mtx_dbg_dprint.
+@label: const char ** label array.
+*/
+#define mtx_dbg_print_tally(level, label)                                 \
+do {                                                                      \
+    unsigned long ctr_ = 0;                                               \
+    mtx_dbg_errout (level, "%s", "tally");                                \
+    for (unsigned int u_ = 0; u_ < 32; u_++) {                            \
+        if (mtx_dbg_tally_ary[u_] > 0) {                                  \
+            ctr_ += mtx_dbg_tally_ary[u_];                                \
+            mtx_dbg_errseq (level, " %s:%d", label[u_],                   \
+                            mtx_dbg_tally_ary[u_]);                       \
+    }}                                                                    \
+    mtx_dbg_errseq (level, " total:%lu\n", ctr_);                         \
+} while (0)
+
+double mtx_dbg_etime (unsigned);
+const char *mtx_dbg_fmt_etime (double delta);
+
 #else  /* MTX_DEBUG */
 
 #define mtx_dbg_dprint(...)
 #define mtx_dbg_errout(...)
 #define mtx_dbg_errseq(...)
+#define mtx_dbg_etime(...)
+#define mtx_dbg_fmt_etime(...)
+#define mtx_dbg_tally(...)
+#define mtx_dbg_tally_reset(...)
+#define mtx_dbg_print_tally(...)
+
 
 #endif /* MTX_DEBUG */
+
+/* usage: `mtx_dbg_err* (Z1_(cond, level), ...)` to skip printing if cond. */
+#define Z1_(cond, level)         ((cond) ? -1 : (level))
 
 #ifdef __cplusplus
     }  /* extern "C" { */

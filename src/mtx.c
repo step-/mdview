@@ -23,6 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include <ctype.h>
 #include "mtx.h"
+#include "mtxcmmprivate.h"
+#include "mtx.decl.h"
 
 /**
 mtx_word_is_ident:
@@ -146,8 +148,11 @@ Test Nth character before / after current return-word start / end.
         cwl = i;
     }
 
-    /* absolute path length >= 4 bytes */
-    if (cwl >= 4 && *s == '/')
+/* *INDENT-OFF*/
+    /* pathname length >= 4 bytes */
+    /* (absolute path or path starting with "./" or "../") */
+    if (cwl >= 4 && (*s == '/' || (s[0] == '.' && (s[1] == '/' ||
+        (s[1] == '.' && (s[2] == '/' || (s[2] == '.' && s[3] == '/')))))))
     {
         if (RFLANK(1, '/'))
         {
@@ -156,6 +161,7 @@ Test Nth character before / after current return-word start / end.
         ret = MTX_CMM_WORD_ABS_PATH;
         goto out;
     }
+/* *INDENT-ON* */
 
     /*****************************************/
     /* ignore leading punctuation except '_' */
@@ -200,7 +206,8 @@ Test Nth character before / after current return-word start / end.
     }
 
     /* bugzillas */
-    if (LFLANK(1, '#'))
+    if (LFLANK (1, '#')
+        && !(LFLANK (2, '[') || LFLANK (2, '<') || LFLANK (2, '(')))
     {
         s--, cwl++;
         ret = MTX_CMM_WORD_BUGZILLA;
@@ -256,5 +263,131 @@ out:
     *start = (ptrdiff_t) (s - text);
     *length = cwl;
     return ret;
+}
+
+/**
+mtx_cmm_str_slugify:
+
+@str: pure text string (markdown removed)
+@sep: separator character that will replace spaces
+*/
+/*
+Our slugify is equivalent to pandoc's auto_identifiers+ascii_identifiers.
+The spec in `pandoc --help` version 3.3 says (my notes in ALL CAPS):
+Extension: auto_identifiers
+   A heading without an explicitly specified identifier will be
+   automatically assigned a unique identifier based on the heading text.
+   The default algorithm used to derive the identifier from the heading text is:
+
+   * Remove all formatting, links, etc.    @str PRECONDITION
+   * Remove all footnotes.                 NOT AVAILABLE
+   * Remove all non-alphanumeric characters, except underscores, hyphens, and
+     periods.
+   * Replace all spaces and newlines with hyphens.
+   * Convert all alphabetic characters to lowercase.
+   * Remove everything up to the first letter (identifiers may not begin with a
+     number or punctuation mark).
+   * If nothing is left after this, use the identifier "section".
+
+Thus, for example,
+
+Heading                       Identifier
+----------------------------- -----------------------------
+Heading identifiers in HTML   heading-identifiers-in-html
+Maître d'hôtel                maître-dhôtel
+*Dogs*?--in *my* house?       dogs--in-my-house
+[HTML], [S5], or [RTF]?       html-s5-or-rtf
+3. Applications               applications
+33                            section
+
+NOT IMPLEMENTED
+These rules should, in most cases, allow one to determine the identifier from
+the heading text. The exception is when several headings have the same text;
+in this case, the first will get an identifier as described above; the second
+will get the same identifier with -1 appended; the third with -2; and so on.
+
+Extension: ascii_identifiers
+   Causes the identifiers produced by auto_identifiers to
+   be pure ASCII. Accents are stripped off of accented
+   Latin letters, and non-Latin letters are omitted.
+
+IN ACTUAL RUNS (test/pandoc_auto_identifiers.sh) PANDOC 3.3 ALSO DOES:
+  * SQUEEZE INTERIOR SPACES.
+  * TRIM TRAILING SPACES.
+*/
+gchar *
+mtx_str_slugify (const gchar *str,
+                 const gchar sep)
+{
+    gboolean squeezing;
+    gchar *p, *q;
+    gchar *a = g_str_to_ascii (str, "C");
+    for (p = q = a; *p; p++)
+    {
+        if (g_ascii_isalnum (*p))
+        {
+            *q++ = g_ascii_tolower (*p);
+        }
+        else if G_UNLIKELY
+            (*p == '_' || *p == '-' || *p == '.' ||
+             *p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')
+        {
+            *q++ = *p;
+        }
+    }
+    *q = '\0';
+    while (--q >= a && *q == ' ')
+        *q = '\0';
+    for (p = a; *p && !g_ascii_isalpha (*p); p++)
+        ;
+    for (q = a, squeezing = FALSE; *p; p++)
+    {
+        if (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')
+        {
+            if (!squeezing)
+            {
+                *q++ = sep;
+                squeezing = TRUE;
+            }
+        }
+        else
+        {
+            *q++ = *p;
+            squeezing = FALSE;
+        }
+    }
+    *q = '\0';
+    return a;
+}
+
+/**
+mtx_str_delete_unipua_em_strong:
+Remove UNIPUA code points for markdown * and **.
+
+@str: C string to be modified in place.
+*/
+void
+mtx_str_delete_unipua_em_strong (gchar *str)
+{
+    gchar *p = str;
+    gchar *z = strchr (str, '\0');
+    do
+    {
+        if (*p++ == cUNIPUA0 && *p++ == cUNIPUA1)
+        {
+            switch (*p++)
+            {
+                /* unlikely */
+                case cUNIPUA_E1:
+                case cUNIPUA_E0:
+                case cUNIPUA_B1:
+                case cUNIPUA_B0:
+                    memmove (p - 3, p, z - p + 1);
+                    p -= 3, z -= 3;
+                    break;
+            }
+        }
+    }
+    while (*p);
 }
 

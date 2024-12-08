@@ -32,21 +32,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #error "Pango version < 1.50.0 detected."
 #endif
 
-#define MTX_STYLE_PANGO_BLOCKQUOTE "fgcolor=\"silver\""
-#define MTX_STYLE_PANGO_CODE_SPAN  "fgcolor=\""MTX_COLOR_CODE_SPAN_FG"\""
-#define MTX_STYLE_PANGO_CODEBLOCK  "bgcolor=\""MTX_COLOR_CODEBLOCK_BG"\" fgcolor=\""MTX_COLOR_CODEBLOCK_FG"\""
-#define MTX_STYLE_PANGO_H1         "fgcolor=\""MTX_COLOR_H1_FG"\" size=\"200%\""
-#define MTX_STYLE_PANGO_H2         "fgcolor=\""MTX_COLOR_H2_FG"\" size=\"150%\""
-#define MTX_STYLE_PANGO_H3         "fgcolor=\""MTX_COLOR_H3_FG"\" size=\"117%\""
-#define MTX_STYLE_PANGO_H4         "fgcolor=\""MTX_COLOR_H4_FG"\" size=\"100%\" variant=\"smallcaps\""
-#define MTX_STYLE_PANGO_H5         "fgcolor=\""MTX_COLOR_H5_FG"\" size=\"83%\""
-#define MTX_STYLE_PANGO_H6         "fgcolor=\""MTX_COLOR_H6_FG"\" size=\"67%\""
-#define MTX_STYLE_PANGO_IMAGE      "underline=\"double\""
-#define MTX_STYLE_PANGO_URL        "fgcolor=\""MTX_COLOR_URL_FG"\" underline=\"single\""
-#define MTX_STYLE_PANGO_TABLE      "bgcolor=\""MTX_COLOR_TABLE_BG"\" fgcolor=\""MTX_COLOR_TABLE_FG"\" size=\"108%\""
-#define MTX_STYLE_PANGO_THEAD      "bgcolor=\""MTX_COLOR_THEAD_BG"\" fgcolor=\""MTX_COLOR_THEAD_FG"\""
-#define MTX_STYLE_PANGO_TH         "bgcolor=\""MTX_COLOR_TH_BG"\" fgcolor=\""MTX_COLOR_TH_FG"\" weight=\"bold\""
-#define MTX_STYLE_PANGO_TD         "bgcolor=\""MTX_COLOR_TD_BG"\" fgcolor=\""MTX_COLOR_TD_FG"\""
+        /*****************************************************/
+        /* This section is process by resources/make_css.awk */
+        /* Line continuation not allowed.                    */
+        /*****************************************************/
+
+#define MTX_STYLE_PANGO_BLOCKQUOTE    "fgcolor=\"silver\""
+#define MTX_STYLE_PANGO_CODE_SPAN     "fgcolor=\""MTX_COLOR_CODE_SPAN_FG"\""
+#define MTX_STYLE_PANGO_CODEBLOCK     "bgcolor=\""MTX_COLOR_CODEBLOCK_BG"\" fgcolor=\""MTX_COLOR_CODEBLOCK_FG"\""
+#define MTX_STYLE_PANGO_H1            "fgcolor=\""MTX_COLOR_H1_FG"\" size=\"200%\""
+#define MTX_STYLE_PANGO_H2            "fgcolor=\""MTX_COLOR_H2_FG"\" size=\"150%\""
+#define MTX_STYLE_PANGO_H3            "fgcolor=\""MTX_COLOR_H3_FG"\" size=\"117%\""
+#define MTX_STYLE_PANGO_H4            "fgcolor=\""MTX_COLOR_H4_FG"\" size=\"100%\" variant=\"smallcaps\""
+#define MTX_STYLE_PANGO_H5            "fgcolor=\""MTX_COLOR_H5_FG"\" size=\"83%\""
+#define MTX_STYLE_PANGO_H6            "fgcolor=\""MTX_COLOR_H6_FG"\" size=\"67%\""
+#define MTX_STYLE_PANGO_IMAGE         "underline=\"double\""
+#define MTX_STYLE_PANGO_URL           "fgcolor=\""MTX_COLOR_URL_FG"\" underline=\"single\""
+#define MTX_STYLE_PANGO_URL_HEADING   "fgcolor=\""MTX_COLOR_URL_HEADING_FG"\""
+#define MTX_STYLE_PANGO_TABLE         "bgcolor=\""MTX_COLOR_TABLE_BG"\" fgcolor=\""MTX_COLOR_TABLE_FG"\" size=\"108%\""
+#define MTX_STYLE_PANGO_THEAD         "bgcolor=\""MTX_COLOR_THEAD_BG"\" fgcolor=\""MTX_COLOR_THEAD_FG"\""
+#define MTX_STYLE_PANGO_TH            "bgcolor=\""MTX_COLOR_TH_BG"\" fgcolor=\""MTX_COLOR_TH_FG"\" weight=\"bold\""
+#define MTX_STYLE_PANGO_TD            "bgcolor=\""MTX_COLOR_TD_BG"\" fgcolor=\""MTX_COLOR_TD_FG"\""
 
 #endif /* __MTX_STYLE_PANGO_H */
 
