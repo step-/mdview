@@ -268,10 +268,12 @@ _is_text_and_markdown (const gchar *content_type,
 static gint
 _build_search_lists (MtxViewer *mvr,
                      GSList **markdown,
-                     GSList **text);
+                     GSList **text,
+                     gsize *base_length);
 
 static void
-_file_search (gpointer path, gpointer pod);
+_file_search (gpointer path,
+              gpointer pod);
 
 static gboolean
 mtx_viewer_search_files (MtxViewer *mvr,

@@ -1472,7 +1472,24 @@ preview_clicked (GtkWidget *widget,
         widget = mvr->btn_preview;
     }
     gtk_widget_set_sensitive (widget, FALSE);
-    gchar *base = g_path_get_basename (mvr->current_file);
+
+    const gchar *dir, *file;
+    gchar *base;
+    if G_LIKELY (g_strcmp0 (g_uri_peek_scheme (mvr->current_file), "search"))
+    {
+        dir = mvr->base_directory;
+        file = mvr->current_file;
+        base = g_path_get_basename (file);
+    }
+    else
+    {
+        dir = mvr->backing_file;
+        file = "";
+        base =
+        g_strdelimit (g_strdup (mvr->current_file + sizeof "search://" - 1),
+                      " \t" G_DIR_SEPARATOR_S, '_');
+    }
+
     gchar *p = g_build_filename (g_get_tmp_dir (), base, NULL);
     g_autofree gchar *outf = g_strconcat (p, ".html", NULL);
     g_free (p);
@@ -1491,7 +1508,7 @@ preview_clicked (GtkWidget *widget,
                          html_base ? html_base : "",
                          mvr->options->html_css < 0 ? 2 :
                          mvr->options->html_css, mvr->options->toc_level,
-                         outf, mvr->base_directory, mvr->current_file);
+                         outf, dir, file);
     if (g_shell_parse_argv (p, NULL, &argv, &error) && error == NULL)
     {
         g_spawn_async_with_pipes (NULL, argv, NULL, G_SPAWN_SEARCH_PATH |
@@ -1813,10 +1830,12 @@ Build two lists of searchable files in the homepage directory.  Only text files
 are considered. The list of searched files honors the auto_language extension
 feature (an existing File.$LANG.ext is preferred over File.ext).
 
-@markdown: address of a #GSList pointer that will received the list of markdown
-files in the directory.
-@text: address of a #GSList pointer that will received the list of other text
-files in the directory.
+@markdown: address of a #GSList pointer that receives the list of
+absolute pathnames of the matching markdown files in the directory.
+@text: address of a #GSList pointer that receives the list of
+absolute pathnames of the other matching text files in the directory.
+@base_length: pointer to a return location holding the byte length of the
+canonicalized homepage directory path including the trailing path separator.
 
 Return: the total number of elements in the two lists or -1 in case of error.
 List elements can be NULL. *@markdown and @text are NULL if a list is empty.
@@ -1825,7 +1844,8 @@ The caller owns the returned lists and should free them when done.
 static gint
 _build_search_lists (MtxViewer *mvr,
                      GSList **markdown,
-                     GSList **text)
+                     GSList **text,
+                     gsize *base_length)
 {
     GDir *dir;
     const gchar *name;
@@ -1870,14 +1890,22 @@ _build_search_lists (MtxViewer *mvr,
         }
     }
     g_dir_close (dir);
+    *base_length = strlen (abs_dirpath);
     return counter;
 }
 
 /**
 _file_search:
+Search file for matching terms and append a Markdown link if the match is found.
+
+@path: file to search.
+@pod: pointer to private POD structure containing in/out parameters.
+
+The link destination is a relative pathname.
 */
 static void
-_file_search (gpointer path, gpointer pod)
+_file_search (gpointer path,
+              gpointer pod)
 {
     typedef struct
     {
@@ -1887,6 +1915,7 @@ _file_search (gpointer path, gpointer pod)
         guint *ctr;
         GRegex *regex_astx;
         GtkEntry *entry;
+        gsize base_offset;
     } POD;
     POD *ppod = (POD *) pod;
     const gboolean is_text_markdown = ppod->is_text_markdown;
@@ -1964,7 +1993,8 @@ _file_search (gpointer path, gpointer pod)
                           (title->str, "\\\n\r", ' '));
         g_string_set_size (title, strlen (title->str));
         g_string_replace (title, "]", "\\]", -1);
-        dest = g_string_new (path);
+        /* destination path relative to the homepage directory */
+        dest = g_string_new (path + ppod->base_offset);
         g_string_replace (dest, ")", "\\)", -1);
 
         g_string_append_printf (retstr, "* [%s](%s)\n",
@@ -2002,6 +2032,7 @@ mtx_viewer_search_files (MtxViewer *mvr,
     GString *markdown = g_string_new (NULL);
     gchar *stripped, **terms;
     gint ctr_subjects, ctr_results = 0;
+    gsize base_offset;
     GSList *mkd = NULL, *txt = NULL;
     GtkEntry *entry = GTK_ENTRY (mvr->text_search);
     gint argc = 0;
@@ -2013,11 +2044,12 @@ mtx_viewer_search_files (MtxViewer *mvr,
         argc = g_strv_length (terms);
     }
     g_free (stripped);
-    ctr_subjects = _build_search_lists (mvr, &mkd, &txt);
+    ctr_subjects = _build_search_lists (mvr, &mkd, &txt, &base_offset);
     if (ctr_subjects < 0)
     {
         return FALSE;
     }
+    base_offset += sizeof G_DIR_SEPARATOR_S - 1;
 
     gtk_widget_set_sensitive (mvr->window, FALSE);
     gtk_entry_set_progress_fraction (entry, 1.0f / (ctr_subjects + 1));
@@ -2034,10 +2066,11 @@ mtx_viewer_search_files (MtxViewer *mvr,
         gint *ctr;
         const GRegex *regex_astx;
         GtkEntry *entry;
+        gsize base_offset;
     } POD;
     POD pod = { TRUE, markdown, terms, &ctr_results,
         mtx_text_view_get_regex_astx (mvr->text_view),
-        entry };
+        entry, base_offset };
 
     g_slist_foreach (mkd, (GFunc) _file_search, &pod);
     g_slist_free_full (mkd, g_free);
