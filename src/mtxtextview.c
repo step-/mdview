@@ -1492,7 +1492,7 @@ mtx_text_view_buffer_indent_li (MtxTextView *self,
     GSList *tags, *tagp;
     gint li_lvl = -1;
     gint ol_ul_lvl;
-    gint this_li_id, maybe_li_id;
+    gint this_li_id = 0, maybe_li_id = 0;
     gboolean cont;
     GString *fill = g_string_new ("                ");  /* 16 spaces */
 
