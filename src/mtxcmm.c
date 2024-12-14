@@ -2091,24 +2091,21 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
     }
     else                /* ATX */
     {
-        M = g_match_info_fetch_named (info, "MKD");
-        gchar *end = M;
-        for (; *end && *end == '#'; end++)
+        const gchar *S = g_match_info_get_string (info);
+        gint start, pos;
+        g_match_info_fetch_named_pos (info, "MKD", &start, NULL);
+        for (pos = start; S[pos] && S[pos] == ' '; pos++)
             ;
-        for (; *end == ' '; end++)
+        for (; S[pos] && S[pos] == '#'; pos++)
+            ++lvl;
+        for (; S[pos] && S[pos] == ' '; pos++)
             ;
-        *end = '\0';
-        g_string_append (res, M);
+        g_string_append_len (res, S + start, pos - start);
         g_string_append (res, T);
         g_string_append (res, anchors);
-        if (POD->toc_level > 0)
+        if (POD->toc_level == 0)
         {
-            gchar *p =
-            M[0] == '#' ? M : M[1] == '#' ? M + 1 : M[2] == '#' ? M + 2 : M + 3;
-            while (*p == '#')
-            {
-                ++lvl, p++;
-            }
+            lvl = 0;
         }
     }
 
