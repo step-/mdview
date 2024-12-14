@@ -874,8 +874,8 @@ mtx_cmm_linkbuilder_pango (MtxCmm *self,
     }
     else
     {
-        markup = g_string_new ("⯅⯅");
-        llen = 2;
+        markup = g_string_new (MTX_RENDER_PANGO_EMPTY_LINK_TEXT);
+        llen = sizeof MTX_RENDER_PANGO_EMPTY_LINK_TEXT - 1;
     }
     g_free (plain_text);
     mtx_dbg_errseq (-1, " [ markup %s ]", markup->str);

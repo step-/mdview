@@ -113,6 +113,8 @@ typedef struct _MtxCmmTocEntry
 #define SAFE_HTML "<!-- raw HTML omitted -->"
 #define MTX_MAX_LI_LEVEL 32 /* maximum OL/UL nesting depth */
 #define MTX_INSERT_HEADING_LINK_TEXT "\u200B"
+/* ASCII string rendering empty link text as in [](...) */
+#define MTX_RENDER_PANGO_EMPTY_LINK_TEXT "{-}"
 
 /*******************************************************************************
  * The parser temporarily replaces tokens with Unicode Private Use Area (PUA)  *
