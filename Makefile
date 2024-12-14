@@ -9,7 +9,7 @@
 # Read INSTALL.md for build instructions.
 
 export PACKAGE_NAME    = mdview
-export PACKAGE_VERSION = 2024.12.08
+export PACKAGE_VERSION = 2024.12.14
 export PACKAGE_URL     = http://github.com/step-/mdview
 
 export GETTEXT_PACKAGE = $(PACKAGE_NAME)
