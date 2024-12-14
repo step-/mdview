@@ -80,6 +80,7 @@ struct _MtxViewer
     GtkWidget *combo_toc;
     MtxTextView *text_view;
     GtkWidget *text_search;
+    GRegex *regex_emptiness;
     gchar *backing_file;      /* for search:// and resource:// URI */
     gint backing_fd;
     GtkProgressBar *progress_bar;

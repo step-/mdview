@@ -2926,7 +2926,7 @@ mtx_cmm_regex_astx (MtxCmm *self)
     GRegex **regex = &g_array_index (self->priv->regex_table, GRegex *,
                                      MTX_CMM_REGEX_ASTX);
 /*
-/(?|(?:^(?<MKD> {0,3}#{1,6} \h*(?<TITLE>\V*?)\h*#*[ \t]*))|(?:^(?<MKD>(?<TITLE>(?:(?:^ {0,3}[^-*\s\v`>0-9]\V*?)\R??){1,3})(?<!\v)\R(?<UNDER> {0,3}[-=]+[ \t]*))))$/gm
+/(?|(?:^(?<MKD> {0,3}#{1,6} \h*(?<TITLE>(?=[^\p{Zs}\p{Zp}\p{Zl}\v])\V*?)\h*#*[ \t]*))|(?:^(?<MKD>(?<TITLE>(?:(?:^ {0,3}[^-*\s\v`>0-9]\V*?)\R??){1,3})(?<!\v)\R(?<UNDER> {0,3}[-=]+[ \t]*))))$/gm
 /////////TEST-STRING-BEGIN/////////{{{
 SETEXT 0
 =======
@@ -2967,6 +2967,10 @@ setext 2
    SETEXT Z
 +SETEXT Z   
 ============
+
+#  
+# Fatdog64-903 FAQ title format
+#  
 /////////TEST-STRING-END/////////}}}
 */
     if (*regex == NULL)
@@ -2980,7 +2984,7 @@ setext 2
     /*                        */ "(?<MKD>"
     /* ATX heading signature  */ " {0,3}#{1,6} "
     /* optional leading space */ "\\h*"
-    /* trimmed title          */ "(?<TITLE>\\V*?)"
+    /* trimmed non-empty title*/ "(?<TITLE>(?=[^\\p{Zs}\\p{Zp}\\p{Zl}\\v])\\V*?)"
     /* optional trailing stuff*/ "\\h*#*[ \\t]*"
     /*                        */ ")"
     /*                        */ ")|"

@@ -1913,7 +1913,7 @@ _file_search (gpointer path,
         GString *retstr;
         gchar **terms;
         guint *ctr;
-        GRegex *regex_astx;
+        GRegex *regex_astx, *regex_emptiness;
         GtkEntry *entry;
         gsize base_offset;
     } POD;
@@ -1923,6 +1923,7 @@ _file_search (gpointer path,
     gchar **terms      = ppod->terms;
     guint *counter     = ppod->ctr;
     const GRegex *regex_astx = ppod->regex_astx;
+    const GRegex *emptiness = ppod->regex_emptiness;
     GtkEntry *entry    = ppod->entry;
     gboolean found = FALSE;
 
@@ -1970,9 +1971,20 @@ _file_search (gpointer path,
         if (is_text_markdown
             && g_regex_match (regex_astx, contents, 0, &minfo))
         {
-            g_autofree gchar *p =
-            g_match_info_fetch_named (minfo, "TITLE");
-            title = g_string_new (p);
+            g_autofree gchar *p = g_match_info_fetch_named (minfo, "TITLE");
+            GError *err = NULL;
+            if (p != NULL)
+            {
+                const gchar *t;
+                g_autofree gchar *r =
+                g_regex_replace_literal (emptiness, p, -1, 0, " ", 0, &err);
+                for (t = r; *t == ' '; t++)
+                    ;
+                if (*t)
+                {
+                    title = g_string_new (t);
+                }
+            }
         }
 
         /* Sanitize title and destination. */
@@ -1989,8 +2001,7 @@ _file_search (gpointer path,
             }
             title = g_string_new (p);
         }
-        title->str = g_strstrip (g_strdelimit
-                          (title->str, "\\\n\r", ' '));
+        title->str = g_strstrip (g_strdelimit (title->str, "\\\n\r", ' '));
         g_string_set_size (title, strlen (title->str));
         g_string_replace (title, "]", "\\]", -1);
         /* destination path relative to the homepage directory */
@@ -2064,13 +2075,26 @@ mtx_viewer_search_files (MtxViewer *mvr,
         GString *retstr;
         gchar **terms;
         gint *ctr;
-        const GRegex *regex_astx;
+        const GRegex *regex_astx, *regex_emptiness;
         GtkEntry *entry;
         gsize base_offset;
     } POD;
     POD pod = { TRUE, markdown, terms, &ctr_results,
         mtx_text_view_get_regex_astx (mvr->text_view),
-        entry, base_offset };
+        mvr->regex_emptiness, entry, base_offset };
+
+    if (mvr->regex_emptiness == NULL)
+    {
+        GError *err = NULL;
+        pod.regex_emptiness = mvr->regex_emptiness =
+        g_regex_new ("[\\p{Zs}\\p{Zp}\\p{Zl}\\v]+", 0, 0, &err);
+        if (err != NULL)
+        {
+            g_error ("uni_separator regex: %s", err->message);
+            g_error_free (err);
+            return FALSE;
+        }
+    }
 
     g_slist_foreach (mkd, (GFunc) _file_search, &pod);
     g_slist_free_full (mkd, g_free);
@@ -2658,6 +2682,10 @@ mtx_viewer_destroy (MtxViewer *mvr)
     if (mvr->progress_logger_q != NULL)
     {
         g_queue_free (mvr->progress_logger_q);
+    }
+    if (mvr->regex_emptiness != NULL)
+    {
+        g_regex_unref (mvr->regex_emptiness);
     }
     if (mvr->backing_fd >= 0)
     {
