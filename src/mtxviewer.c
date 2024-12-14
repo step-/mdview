@@ -2003,6 +2003,7 @@ _file_search (gpointer path,
         }
         title->str = g_strstrip (g_strdelimit (title->str, "\\\n\r", ' '));
         g_string_set_size (title, strlen (title->str));
+        g_string_replace (title, "[", "\\[", -1);
         g_string_replace (title, "]", "\\]", -1);
         /* destination path relative to the homepage directory */
         dest = g_string_new (path + ppod->base_offset);
