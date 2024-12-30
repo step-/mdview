@@ -106,6 +106,7 @@ typedef struct
     gchar **markdown;
     gsize markup_size;
     MtxCmmPageMeta *page_meta;
+    gchar *page_toc;
     gboolean clear_markdown;
     MtxTextView *tv;
     gchar *file;
@@ -1828,7 +1829,8 @@ mtx_text_view_load_markup_thread_cb (GTask *task,
         else
         {
             markup = mtx_cmm_mtx (data->tv->markdown, data->markdown,
-                                  &data->markup_size, &data->page_meta, TRUE,
+                                  &data->markup_size, &data->page_meta,
+                                  &data->page_toc, TRUE,
                                   data->tv->load_markup_cancellable);
         }
         g_free (data->markdown);
@@ -1950,11 +1952,14 @@ mtx_text_view_load_markup_loaded (GObject *object,
 
     if (ret)
     {
-        /* The instance stores page_meta until the next
-        successful call to mtx_text_view_load_markup_async. */
+        /* The instance stores page_meta and page_toc until the
+        next successful call to mtx_text_view_load_markup_async. */
         g_free (data->tv->page_meta);
         data->tv->page_meta = data->page_meta;
         data->page_meta = NULL;
+        g_free (data->tv->page_toc);
+        data->tv->page_toc = data->page_toc;
+        data->page_toc = NULL;
 
         ret =
         mtx_text_view_reset_buffer (data->tv) &&
@@ -2049,8 +2054,9 @@ Long-running operations run asynchronously.
 signal if async completion is successful; NULLABLE (unlikely).
 
 Return: FALSE on error otherwise return TRUE, emit signal "new-text-buffer",
-and overwrite @self->page_meta. The @self instance will change page_meta
-on the next successful call to #mtx_text_view_load_markup_async only.
+and overwrite @self->page_meta and @self->page_toc. The @self instance
+will change page_meta and page_toc only on the next successful call to
+#mtx_text_view_load_markup_async.
 
 {1} Passing NULL *@text is acceptable. A %GError will bubble up to the
 mtx_text_view_load_markup_loaded function, where the @completer
@@ -2316,6 +2322,20 @@ mtx_text_view_fetch_page_meta (MtxTextView *self)
     g_return_val_if_fail (IS_MTX_TEXT_VIEW (self), NULL);
 
     return self->page_meta;
+}
+
+/**
+mtx_text_view_fetch_page_toc_md:
+Get current page's ToC.
+
+Return: the ToC Markdown of the current page. The instance owns the data.
+*/
+const gchar *
+mtx_text_view_fetch_page_toc_md (MtxTextView *self)
+{
+    g_return_val_if_fail (IS_MTX_TEXT_VIEW (self), NULL);
+
+    return self->page_toc;
 }
 
 /*
@@ -2840,6 +2860,7 @@ mtx_text_view_finalize (GObject *gobject)
         g_object_unref (priv->load_markup_cancellable);
     }
     g_free (priv->page_meta);
+    g_free (priv->page_toc);
 
     G_OBJECT_CLASS (mtx_text_view_parent_class)->finalize (gobject);
 }

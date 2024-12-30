@@ -133,6 +133,7 @@ struct _MtxTextView {
     GtkTextMark *jumpoff_mark;
     GCancellable *load_markup_cancellable;
     MtxCmmPageMeta *page_meta;
+    gchar *page_toc;
     gint progress_fd;
 };
 
@@ -222,6 +223,9 @@ mtx_text_view_set_tweaks (MtxTextView *self,
 
 const MtxCmmPageMeta *
 mtx_text_view_fetch_page_meta (MtxTextView *self);
+
+const gchar *
+mtx_text_view_fetch_page_toc_md (MtxTextView *self);
 
 void
 mtx_text_view_clear_line_highlights (MtxTextView *self,

@@ -72,6 +72,9 @@ mtx_text_view_set_tweaks (MtxTextView *self,
 const MtxCmmPageMeta *
 mtx_text_view_fetch_page_meta (MtxTextView *self);
 
+const gchar *
+mtx_text_view_fetch_page_toc_md (MtxTextView *self);
+
 void
 mtx_text_view_clear_line_highlights (MtxTextView *self,
                                      GtkTextMark *mark);

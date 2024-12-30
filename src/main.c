@@ -144,7 +144,7 @@ fd_output (const gint out_fd,
 
             /* TODO allow cancelling text mode output. */
             textout =
-            mtx_cmm_mtx (markdown, &contents, &size, NULL, TRUE, NULL);
+            mtx_cmm_mtx (markdown, &contents, &size, NULL, NULL, TRUE, NULL);
             write (out_fd, textout, size);
             write (out_fd, "\n", 1);
 

@@ -96,6 +96,7 @@ mtx_cmm_mtx (MtxCmm *self,
              gchar **markdown,
              gsize *size,
              MtxCmmPageMeta **meta,
+             gchar **rtoc,
              const gboolean clear_markdown,
              GCancellable *cancellable);
 
@@ -303,6 +304,9 @@ mtx_cmm_string_delete_heading_links (MtxCmm *self,
 
 static void
 mtx_cmm_render_toc (MtxCmm *self);
+
+static gchar *
+mtx_cmm_make_toc_md (MtxCmm *self);
 
 static GRegex *
 mtx_cmm_regex_word_split (MtxCmm *self);

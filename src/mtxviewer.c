@@ -820,6 +820,7 @@ nav_fore_cb (gpointer *instance __attribute__((unused)),
     if (cond)
     {
         _nav_trail_fore (mvr);
+        mtx_viewer_write_toc_to_backing_file (mvr);
     }
     else
     {
@@ -847,6 +848,7 @@ nav_back_cb (gpointer *instance __attribute__((unused)),
     if (cond)
     {
         _nav_trail_back (mvr);
+        mtx_viewer_write_toc_to_backing_file (mvr);
     }
     else
     {
@@ -874,6 +876,7 @@ nav_home_clicked_cb (gpointer *instance __attribute__((unused)),
     {
         _nav_trail_fore_clear (mvr);
         mvr->current_curpos = 0;
+        mtx_viewer_write_toc_to_backing_file (mvr);
     }
     else
     {
@@ -902,6 +905,7 @@ on_link_clicked_cb (gpointer *instance __attribute__((unused)),
         _nav_trail_fore_clear (mvr);
         _nav_trail_insert (mvr, mvr->current_file, offset);
         mvr->current_curpos = 0;
+        mtx_viewer_write_toc_to_backing_file (mvr);
     }
     else
     {
@@ -976,6 +980,7 @@ do_insert_page_cb (gpointer *instance __attribute__((unused)),
         {
             _nav_trail_insert (mvr, page, offset);
         }
+        mtx_viewer_write_toc_to_backing_file (mvr);
         gtk_widget_set_sensitive (mvr->btn_preview, tracked);
     }
     else
@@ -1009,6 +1014,7 @@ present_page_cb (gpointer *instance __attribute__((unused)),
             _nav_trail_fore_clear (mvr);
             _nav_trail_insert (mvr, mvr->current_file, offset);
         }
+        mtx_viewer_write_toc_to_backing_file (mvr);
         gtk_widget_set_sensitive (mvr->btn_preview, tracked);
     }
     else
@@ -1058,6 +1064,19 @@ error_page_cb (gpointer *instance __attribute__((unused)),
     mtx_viewer_widgets_set_sensitive (mvr, TRUE);
 }
 
+/**
+mtx_viewer_write_toc_to_backing_file:
+Helper for completer callbacks.
+*/
+static void
+mtx_viewer_write_toc_to_backing_file (MtxViewer *mvr)
+{
+    const gchar *toc = mtx_text_view_fetch_page_toc_md (mvr->text_view);
+    if (toc != NULL)
+    {
+        mtx_viewer_save_backing_file (mvr, toc, strlen (toc));
+    }
+}
 
 /*************************************************************************}}}
 ****************************************************************************/
@@ -3007,7 +3026,7 @@ mtx_viewer_new (const gchar *base_dir,
     mvr->combo_toc = combo_toc;
     mvr->text_view = text_view;
     mvr->text_search = search_entry;
-    mvr->backing_fd = g_file_open_tmp (PROGNAME "_search_XXXXXX.md",
+    mvr->backing_fd = g_file_open_tmp (PROGNAME "_backing_XXXXXX.md",
                                        &mvr->backing_file, NULL);
     mvr->progress_bar = GTK_PROGRESS_BAR (progress_bar);
     mvr->progress_box = progress_box;

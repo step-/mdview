@@ -265,6 +265,7 @@ mtx_cmm_mtx (MtxCmm *self,
              gchar **markdown,
              gsize *size,
              MtxCmmPageMeta **meta,
+             gchar **rtoc,
              const gboolean clear_markdown,
              GCancellable *cancellable);
 

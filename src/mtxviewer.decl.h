@@ -147,6 +147,9 @@ error_page_cb (gpointer *instance,
                gpointer data[]);
 
 static void
+mtx_viewer_write_toc_to_backing_file (MtxViewer *mvr);
+
+static void
 mtx_viewer_insert_error_page (MtxViewer *mvr,
                               const gchar *page,
                               GError *error);

@@ -2007,7 +2007,7 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
     /* Remove surrounding markdown spans from title text (t). */
     /* Erases \n in multiline titles. */
     gsize tlen;
-    t = mtx_cmm_mtx (POD->render, &T, &tlen, NULL, FALSE, NULL);
+    t = mtx_cmm_mtx (POD->render, &T, &tlen, NULL, NULL, FALSE, NULL);
 
     if G_UNLIKELY(t == NULL || !*t)
     {
@@ -2042,7 +2042,7 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
 
     /* URI-encode title (e), that is, the link destination */
     e = g_strdup_printf ("[](<#%s>)", t); /* Dev: must leave [text] empty. */
-    e = mtx_cmm_mtx (POD->render, &e, NULL, NULL, TRUE, NULL);
+    e = mtx_cmm_mtx (POD->render, &e, NULL, NULL, NULL, TRUE, NULL);
     if (t == NULL || e == NULL)
     {
         goto reduced;
@@ -2346,6 +2346,31 @@ mtx_cmm_render_toc (MtxCmm *self)
         g_free (link);
         g_free (dest);
     }
+}
+
+/**
+mtx_cmm_make_toc_md:
+Return the ToC Markdown corresponding to the internally-stored ToC entry.
+
+Return: dynamically allocated Markdown string. The caller owns the memory.
+*/
+static gchar *
+mtx_cmm_make_toc_md (MtxCmm *self)
+{
+    GString *md = g_string_new ("");
+    gchar *ret;
+    g_assert (self->priv->output & MTX_CMM_OUTPUT_PANGO);
+
+    for (guint i = 0; i < self->priv->toc->len; i++)
+    {
+        MtxCmmTocEntry *te = g_ptr_array_index (self->priv->toc, i);
+        g_string_append_printf (md, "`%*s `- [%s](<%s>)  \n",
+                                (te->level - 1) * 4, "",
+                                te->text, te->dest ? te->dest : te->text);
+    }
+    ret = md->str;
+    g_string_free (md, FALSE);
+    return ret;
 }
 
 /**
@@ -3663,8 +3688,9 @@ Convert markdown to the desired output format.
 @self:
 @markdown: address of a pointer to the markdown string.
 @size: pointer to the size of the returned string. NULLABLE.
-@meta: pointer to #MtxCmmPageMeta pointer. Return location
-for the meta data contained in @markdown. NULLABLE.
+@meta: pointer to a return location for the #MtxCmmPageMeta
+meta data contained in @markdown. NULLABLE.
+@rtoc: pointer to a return location for the ToC Markdown string. NULLABLE.
 @clear_markdown: if TRUE, free *@markdown and set @markdown to NULL as early as
 possible during the conversion process.
 @cancellable: pointer to #GCancellable; NULLABLE.
@@ -3689,6 +3715,7 @@ mtx_cmm_mtx (MtxCmm *self,
              gchar **markdown,
              gsize *size,
              MtxCmmPageMeta **meta,
+             gchar **rtoc,
              const gboolean clear_markdown,
              GCancellable *cancellable)
 {
@@ -3714,6 +3741,10 @@ mtx_cmm_mtx (MtxCmm *self,
     mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_START);
     mtx_cmm_mtx_reset (self);
     mtx_dbg_tally_reset ();
+    if (rtoc != NULL)
+    {
+        *rtoc = NULL;
+    }
 
     if (!(*markdown && *markdown[0]))
     {
@@ -5125,6 +5156,11 @@ mtx_cmm_mtx (MtxCmm *self,
         g_string_append (toc, self->priv->tags.toc_end);
         i = g_string_replace (ret, sUNIPUA_TOC, toc->str, 1);
         g_assert (i == 1);
+        g_string_free (toc, TRUE);
+        if (rtoc != NULL)
+        {
+            *rtoc = mtx_cmm_make_toc_md (self);
+        }
         mtx_dbg_errout (ZC_(1), "ToC inserted %s\n", mtx_dbg_fmt_etime (-1));
         mtx_cmm_log_progress (self, MTX_CMM_PROGRESS_TOC);
     }
