@@ -289,6 +289,10 @@ mtx_cmm_string_insert_heading_links (MtxCmm *self,
                                      MtxCmm *render,
                                      GString *str);
 
+static gint
+mtx_cmm_toc_hash_cmp (gconstpointer a,
+                      gconstpointer b);
+
 static gboolean
 mtx_cmm_toc_entry_equal (gconstpointer *a,
                          gconstpointer *b);

@@ -82,6 +82,7 @@ typedef enum _MtxCmmTweaks
     MTX_CMM_TWEAK_RESERVED1             = 1 << 6, /* --pango */
     MTX_CMM_TWEAK_RESERVED2             = 1 << 7, /* --exit-test */
     MTX_CMM_TWEAK_RESERVED3             = 1 << 8, /* .md$ => .md.html href */
+    MTX_CMM_TWEAK_RESERVED4             = 1 << 9, /* --lint */
 } MtxCmmTweaks;
 
 typedef enum _MtxCmmTagInfo

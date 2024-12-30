@@ -298,7 +298,7 @@ main (int argc, char **argv)
     const gchar *html_base = NULL;
     gint html_css = -1;
     g_autofree gchar *dump_css = NULL;
-    guint tweaks = 0;
+    guint tweaks = MTX_CMM_TWEAK_NONE;
 #ifndef COMMONMARK_FENCED_CODEBLOCK_LINE_ENDING
     tweaks &= ~MTX_CMM_TWEAK_CM_BLOCK_END;
 #else
@@ -559,6 +559,11 @@ main (int argc, char **argv)
             continue;
         }
 #endif
+        else if (strcmp (arg, "--lint") == 0)
+        {
+            tweaks |= MTX_CMM_TWEAK_RESERVED4;
+            continue;
+        }
         else if (arg[0] == '-')
         {
             usage ();

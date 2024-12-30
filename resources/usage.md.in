@@ -75,6 +75,7 @@ Some formats can be tweaked (see section OUTPUT MODIFIERS). HBRK
 #ifdef OPT_EXIT_TEST
  `--exit-test        `Exit the viewer immediately after entering GTK main loop. HBRK
 #endif
+ `--lint             `Enable the linter. HBRK
  `--version          `Print version and license information and exit. HBRK
 <br> HBRK
 **ENVIRONMENT** HBRK

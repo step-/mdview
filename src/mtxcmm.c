@@ -39,6 +39,7 @@ Copyright (C) 2016, 2023 step
 #include <ctype.h>
 #include <pango/pango.h>
 #include <pango/pango-utils.h>
+#include <glib/gi18n.h> /* xgettext --keyword=_ --keyword=Q_:1g */
 
 #include "mtx.h"
 #include "mtxcmm.h"
@@ -185,6 +186,7 @@ toc_entry_free (MtxCmmTocEntry *e)
         g_free (e->dest);
         g_free (e->text);
         g_free (e->rendered);
+        g_free (e->hash);
         g_free (e);
     }
 }
@@ -1984,6 +1986,7 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
         GString *prologue;
         guint toc_level;
         GPtrArray *toc_entry;
+        const gboolean with_linter;
     }
      *POD = data;
 #define ANCHOR    "&#x200B;["MTX_INSERT_HEADING_LINK_TEXT"](<%s>)"
@@ -1997,6 +2000,7 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
     g_autofree gchar *k = NULL; /* kebab-case slug */
     g_autofree gchar *anchors = NULL;
     guint lvl = 0, n = 0;
+    const gchar *hash = NULL;
 
     if G_UNLIKELY(!*U && !*T)
     {
@@ -2077,6 +2081,26 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
         anchors = g_strdup_printf (ANCHOR ANCHORS ANCHORS, e, k, s);
     }
 
+    /* Hash anchors to be able to report when two anchors clash. */
+    if (POD->with_linter && POD->toc_level > 0)
+    {
+        GChecksum *checksum = g_checksum_new (G_CHECKSUM_MD5);
+        if (checksum != NULL)
+        {
+            /* use the most-commonly used anchor type */
+            if (*s != '\0')
+            {
+                g_checksum_update (checksum, (guchar *) s, strlen (s));
+            }
+            else
+            {
+                g_checksum_update (checksum, (guchar *) e, strlen (e));
+            }
+            hash = g_strdup (g_checksum_get_string (checksum));
+            g_checksum_free (checksum);
+        }
+    }
+
     /* Replace Title */
     if (U[0])           /* SETEXT */
     {
@@ -2120,6 +2144,7 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
         te->text = g_strdup (t);
         te->rendered = NULL;
         te->level = lvl;
+        te->hash = g_strdup (hash);
         g_ptr_array_add (POD->toc_entry, te);
     }
 
@@ -2180,15 +2205,18 @@ mtx_cmm_string_insert_heading_links (MtxCmm *self,
 {
     GRegex *regex = mtx_cmm_regex_astx (self);
     GError *err = NULL;
+    const gboolean with_linter = self->priv->tweaks & MTX_CMM_TWEAK_RESERVED4;
     struct
     {
         MtxCmm *render;
         GString *prologue;
         const guint toc_level;
         GPtrArray *toc;
+        const gboolean with_linter;
     }
     POD = {
         render, g_string_new (""), self->priv->toc_level, self->priv->toc,
+        with_linter,
     };
 
     g_autofree gchar *temp =
@@ -2199,6 +2227,31 @@ mtx_cmm_string_insert_heading_links (MtxCmm *self,
         g_error ("%s internal error:\t%s", __FUNCTION__, err->message);
         g_error_free (err);
         return;
+    }
+
+    /* Linter: report when two anchors clash. */
+    if (with_linter && POD.toc->len > 0)
+    {
+        MtxCmmTocEntry *prev = NULL;
+        GPtrArray *a = g_ptr_array_copy (POD.toc, NULL, NULL); /* shallow */
+
+        g_ptr_array_sort (a, mtx_cmm_toc_hash_cmp);
+        g_string_append (POD.prologue, "\n\n```\n");
+        for (guint i = 0; i < a->len; i++)
+        {
+            MtxCmmTocEntry *e =
+            (MtxCmmTocEntry *) g_ptr_array_index (a, i);
+            if (prev && e->hash && g_strcmp0 (prev->hash, e->hash) == 0)
+            {
+                g_string_append_printf (POD.prologue, _
+                                        ("% 3d. Same anchors: #%d(%s) and #%d(%s)\n"),
+                                        i + 1, prev->level, prev->text,
+                                        e->level, e->text);
+            }
+            prev = e;
+        }
+        g_string_append (POD.prologue, "```\n\n");
+        g_ptr_array_free (a, FALSE);
     }
 
     /* Link reference definitions. */
@@ -2224,6 +2277,18 @@ mtx_cmm_string_insert_heading_links (MtxCmm *self,
 
     g_string_append (str, temp);
     mtx_dbg_errout (ZC_(1), "end %s\n", mtx_dbg_fmt_etime (-1));
+}
+
+/**
+mtx_cmm_toc_hash_cmp:
+*/
+static gint
+mtx_cmm_toc_hash_cmp (gconstpointer a,
+                      gconstpointer b)
+{
+    MtxCmmTocEntry *A = *(MtxCmmTocEntry **) a;
+    MtxCmmTocEntry *B = *(MtxCmmTocEntry **) b;
+    return g_strcmp0 (A->hash, B->hash);
 }
 
 /**

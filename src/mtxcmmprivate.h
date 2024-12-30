@@ -101,9 +101,10 @@ typedef enum _MtxCmmRegexType
 typedef struct _MtxCmmTocEntry
 {
     gchar *dest;
-    gchar *text;
-    gchar *rendered;
-    guint level;
+    gchar *text;      /* heading's */
+    gchar *rendered;  /* ToC's full line */
+    guint level;      /* heading's */
+    gchar *hash;      /* most-common anchor's */
 } MtxCmmTocEntry;
 
 /*******************************************************************************
