@@ -2235,7 +2235,10 @@ mtx_viewer_load_resource (MtxViewer *mvr,
         {
             gchar **pptr = g_malloc (sizeof (gchar *));
             *pptr = g_strdup (contents);
-            mtx_viewer_save_backing_file (mvr, contents, strlen (contents));
+            if (contents != NULL)
+            {
+                mtx_viewer_save_backing_file (mvr, contents, strlen (contents));
+            }
             retval = mtx_text_view_set_text (mvr->text_view, pptr, "/", TRUE,
                                              file_complete, completer);
         }
