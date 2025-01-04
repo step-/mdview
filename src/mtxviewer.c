@@ -2631,7 +2631,9 @@ mtx_viewer_make_error_page (MtxViewer *mvr __attribute__((unused)),
             "</viewer>"
         "</mtx>\n"
         "<span size=\"x-large\">"
-        "\n\n~~~~\n%s\n~~~~\n\n%s</span>",
+        /* Ensure an empty line after </span> to satisfy the end
+        condition #6 of https://spec.commonmark.org/0.31.2/#html-block */
+        "\n\n~~~~\n%s\n~~~~\n\n%s</span>\n\n",
         message, link);
     /* *INDENT-ON* */
 }
