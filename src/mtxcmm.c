@@ -2228,6 +2228,10 @@ mtx_cmm_string_insert_heading_links (MtxCmm *self,
         g_error_free (err);
         return;
     }
+    if (POD.prologue->len > 0)
+    {
+        g_string_append_c (POD.prologue, '\n');
+    }
 
     /* Linter: report when two anchors clash. */
     if (with_linter && POD.toc->len > 0)
