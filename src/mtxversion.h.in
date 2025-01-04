@@ -2,7 +2,7 @@
 /*
 MDVIEW MTX
 
-Copyright (C) 2024 step, https://github.com/step-
+Copyright (C) 2024-2025 step, https://github.com/step-
 
 Licensed under the GNU General Public License Version 2
 
@@ -36,7 +36,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define MDVIEW_VERSION_TEXT "\
 %s " MDVIEW_VERSION "\n\
 %s GNU GPL v2\n\
-MDVIEW MTX (C) 2024 step, @PACKAGE_URL@\n\
+MDVIEW MTX (C) 2024-2025 step, @PACKAGE_URL@\n\
 MD4C       (C) 2016-2024 Martin Mitas\n\
 mdview3    (C) 2009 Leandro Pereira; (C) 2015,2016 James B; (C) 2016,2023 step"
 

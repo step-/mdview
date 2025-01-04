@@ -1,12 +1,13 @@
-# Copyright (C) 2024 step, http://github.com/step-/mdview
+# MDVIEW MTX French translation
+# Copyright (C) 2024-2025 step, http://github.com/step-/mdview
 # This file is distributed under the same license as the mdview package.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: mdview 2024.11.23\n"
+"Project-Id-Version: mdview 2025.01.04\n"
 "Report-Msgid-Bugs-To: http://github.com/step-/mdview/issues\n"
 "POT-Creation-Date: 2024-12-05 15:21+0100\n"
-"PO-Revision-Date: 2024-11-27 19:45+0100\n"
+"PO-Revision-Date: 2025-01-04 13:48+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: fr\n"
