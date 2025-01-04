@@ -1,0 +1,104 @@
+[1;36mDESCRIPTION[0m
+[1mVersion note:[0m
+New mdview versions do not support the code block table feature presented in the following examples.
+<!--
+https://www.markdownguide.org/extended-syntax/#tables
+-->
+mdview supports tables in a limited way: it can recognize table syntax, and it displays the table as an unstyled code block.  Therefore, if the original table text is aligned, the output table will look aligned.
+Inside the table block all characteristics of a code block apply. For instance, [1;94m_[0m, [1;94m*[0m, and [1;94m+++[0m represent themselves; quotes don't become smart quotes, and so on.
+[1;36mTESTS[0m
+ [93m-----[0m
+[1m1 TEST aligned table[0m
+│ Qty │ Food  │
+│ 1   │ mango │
+│ 12  │ eggs  │
+[1mRESULT[0m aligned table: “Qty/Food”, underlines, “1/mango”, “12/eggs”
+ [93m-----[0m
+[1m2 TEST aligned table, H3 before[0m
+[1;91mH3[0m
+│ Qty │ Food  │
+│ 1   │ mango │
+│ 12  │ eggs  │
+[1mRESULT[0m heading “H3”; aligned table: “Qty/Food” (thead), “1/mango”, “12/eggs”
+ [93m-----[0m
+[1m3 TEST aligned table (5 rows)[0m
+│ Qty   │ Food  │
+│ 1     │ mango │
+│ 12    │ eggs  │
+│ row 4 │       │
+│ row 5 │       │
+[1mRESULT[0m aligned table: “Qty/Food” (thead), “1/mango”, “12/eggs”, “row 4/”, “row 5/”
+ [93m-----[0m
+[1m4 TEST table head only[0m
+│ Qty │ Food │
+[1mRESULT[0m aligned table: “Qty/Food” (thead)
+ [93m-----[0m
+[1m5 TEST no table 1[0m
+| Qty | Food   | row 2
+[1mRESULT[0m paragraph “| Qty | Food   | row 2” because underlines are required
+ [93m-----[0m
+[1m6 TEST table with short underlines (2 rows)[0m
+│ Qty   │ Food │
+│ row 2 │      │
+[1mRESULT[0m aligned table: “Qty/Food” (thead), “row 2/”
+ [93m-----[0m
+[1m7 TEST alignment markers[0m
+│ Qty │ Food  │ Life │
+│   1 │ mango │  5d  │
+│  12 │ eggs  │  1w  │
+[1mRESULT[0m right/left/center aligned table: “Qty/Food/Life” (thead), “1/mango/5d”, “12/eggs/1w”
+ [93m-----[0m
+[1m8 TEST no need to align the Markdown table (3 rows)[0m
+│ Qty │ Food  │
+│ 1   │ mango │
+│ 12  │ eggs  │
+[1mRESULT[0m aligned rendered table
+ [93m-----[0m
+[1m9 TEST no left bar (3 rows)[0m
+│ Qty │ Food  │ Life │
+│   1 │ mango │  5d  │
+│  12 │ eggs  │  1w  │
+[1mRESULT[0m table
+ [93m-----[0m
+[1m10 TEST no left bar + indent 2 (3 rows)[0m
+│ Qty │ Food  │ Life │
+│   1 │ mango │  5d  │
+│  12 │ eggs  │  1w  │
+[1mRESULT[0m table
+ [93m-----[0m
+[1m11 TEST no right bar + two trailing spaces (3 rows)[0m
+│ Qty │ Food  │ Life │
+│   1 │ mango │  5d  │
+│  12 │ eggs  │  1w  │
+[1mRESULT[0m table
+ [93m-----[0m
+[1m12 TEST no side bars ...[0m
+│ Qty │ Food  │ Life │
+│ 1   │ mango │ 5d   │
+│ 12  │ eggs  │ 1w   │
+[1mRESULT[0m table
+ [93m-----[0m
+[1m13 TEST table preceded by fenced code block (2 rows)[0m
+[1;94mcode block[0m
+│ Qty   │ Food │
+│ row 2 │      │
+[1mRESULT[0m [1;94mcode block[0m; table
+ [93m-----[0m
+[1m14 TEST table, indented code block before, fenced code block after ...[0m
+[1;94m<-- 4 Spaces     code block line 1
+<-- Tab          code block line 2
+| there is an empty markdown line below |    code block line 3[0m
+│ Qty │ Food │
+[1;94mcode block[0m
+line 1
+[1mRESULT[0m three-line code block, table (thead), [1;94mcode block[0m, paragraph “line 1”
+[3mAn empty line is needed between the table and the fenced code block to keep the table from swallowing the code block.[0m
+ [93m-----[0m
+[1m15 TEST table, indented code block after ...[0m
+│ Qty │ Food │
+[1;94m<-- 4 Spaces     code block line 1
+<-- Tab          code block line 2[0m
+line 1
+[1mRESULT[0m table (thead), two-line code block, paragraph “line 1”
+ [93m-----[0m
+[1;36mTest passed if all preceding “RESULT” statements are true[0m

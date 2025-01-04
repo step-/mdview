@@ -1,0 +1,305 @@
+<h3>DESCRIPTION<a id="DESCRIPTION"></a><a id="description"></a></h3>
+<p><strong>Version note:</strong><br />
+New mdview versions do not support the code block table feature presented in the following examples.</p>
+<!--
+https://www.markdownguide.org/extended-syntax/#tables
+-->
+<p>mdview supports tables in a limited way: it can recognize table syntax, and it displays the table as an unstyled code block.  Therefore, if the original table text is aligned, the output table will look aligned.</p>
+<p>Inside the table block all characteristics of a code block apply. For instance, <code>_</code>, <code>*</code>, and <code>+++</code> represent themselves; quotes don't become smart quotes, and so on.</p>
+<h3>TESTS<a id="TESTS"></a><a id="tests"></a></h3>
+<hr />
+<p><strong>1 TEST aligned table</strong></p>
+<table>
+<thead>
+<tr>
+<th>Qty</th>
+<th>Food</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>mango</td>
+</tr>
+<tr>
+<td>12</td>
+<td>eggs</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RESULT</strong> aligned table: “Qty/Food”, underlines, “1/mango”, “12/eggs”</p>
+<hr />
+<p><strong>2 TEST aligned table, H3 before</strong></p>
+<h1>H3<a id="H3"></a><a id="h3"></a></h1>
+<table>
+<thead>
+<tr>
+<th>Qty</th>
+<th>Food</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>mango</td>
+</tr>
+<tr>
+<td>12</td>
+<td>eggs</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RESULT</strong> heading “H3”; aligned table: “Qty/Food” (thead), “1/mango”, “12/eggs”</p>
+<hr />
+<p><strong>3 TEST aligned table (5 rows)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Qty</th>
+<th>Food</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>mango</td>
+</tr>
+<tr>
+<td>12</td>
+<td>eggs</td>
+</tr>
+<tr>
+<td>row 4</td>
+<td></td>
+</tr>
+<tr>
+<td>row 5</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>RESULT</strong> aligned table: “Qty/Food” (thead), “1/mango”, “12/eggs”, “row 4/”, “row 5/”</p>
+<hr />
+<p><strong>4 TEST table head only</strong></p>
+<table>
+<thead>
+<tr>
+<th>Qty</th>
+<th>Food</th>
+</tr>
+</thead>
+</table>
+<p><strong>RESULT</strong> aligned table: “Qty/Food” (thead)</p>
+<hr />
+<p><strong>5 TEST no table 1</strong></p>
+<p>| Qty | Food   | row 2</p>
+<p><strong>RESULT</strong> paragraph “| Qty | Food   | row 2” because underlines are required</p>
+<hr />
+<p><strong>6 TEST table with short underlines (2 rows)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Qty</th>
+<th>Food</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>row 2</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>RESULT</strong> aligned table: “Qty/Food” (thead), “row 2/”</p>
+<hr />
+<p><strong>7 TEST alignment markers</strong></p>
+<table>
+<thead>
+<tr>
+<th align="right">Qty</th>
+<th align="left">Food</th>
+<th align="center">Life</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">1</td>
+<td align="left">mango</td>
+<td align="center">5d</td>
+</tr>
+<tr>
+<td align="right">12</td>
+<td align="left">eggs</td>
+<td align="center">1w</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RESULT</strong> right/left/center aligned table: “Qty/Food/Life” (thead), “1/mango/5d”, “12/eggs/1w”</p>
+<hr />
+<p><strong>8 TEST no need to align the Markdown table (3 rows)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Qty</th>
+<th>Food</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>mango</td>
+</tr>
+<tr>
+<td>12</td>
+<td>eggs</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RESULT</strong> aligned rendered table</p>
+<hr />
+<p><strong>9 TEST no left bar (3 rows)</strong></p>
+<table>
+<thead>
+<tr>
+<th align="right">Qty</th>
+<th align="left">Food</th>
+<th align="center">Life</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">1</td>
+<td align="left">mango</td>
+<td align="center">5d</td>
+</tr>
+<tr>
+<td align="right">12</td>
+<td align="left">eggs</td>
+<td align="center">1w</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RESULT</strong> table</p>
+<hr />
+<p><strong>10 TEST no left bar + indent 2 (3 rows)</strong></p>
+<table>
+<thead>
+<tr>
+<th align="right">Qty</th>
+<th align="left">Food</th>
+<th align="center">Life</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">1</td>
+<td align="left">mango</td>
+<td align="center">5d</td>
+</tr>
+<tr>
+<td align="right">12</td>
+<td align="left">eggs</td>
+<td align="center">1w</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RESULT</strong> table</p>
+<hr />
+<p><strong>11 TEST no right bar + two trailing spaces (3 rows)</strong></p>
+<table>
+<thead>
+<tr>
+<th align="right">Qty</th>
+<th align="left">Food</th>
+<th align="center">Life</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">1</td>
+<td align="left">mango</td>
+<td align="center">5d</td>
+</tr>
+<tr>
+<td align="right">12</td>
+<td align="left">eggs</td>
+<td align="center">1w</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RESULT</strong> table</p>
+<hr />
+<p><strong>12 TEST no side bars ...</strong></p>
+<table>
+<thead>
+<tr>
+<th>Qty</th>
+<th>Food</th>
+<th>Life</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>mango</td>
+<td>5d</td>
+</tr>
+<tr>
+<td>12</td>
+<td>eggs</td>
+<td>1w</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RESULT</strong> table</p>
+<hr />
+<p><strong>13 TEST table preceded by fenced code block (2 rows)</strong></p>
+<pre><code>code block</code></pre>
+<table>
+<thead>
+<tr>
+<th>Qty</th>
+<th>Food</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>row 2</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>RESULT</strong> <code>code block</code>; table</p>
+<hr />
+<p><strong>14 TEST table, indented code block before, fenced code block after ...</strong></p>
+<pre><code>&lt;-- 4 Spaces     code block line 1
+&lt;-- Tab          code block line 2
+| there is an empty markdown line below |    code block line 3</code></pre>
+<table>
+<thead>
+<tr>
+<th>Qty</th>
+<th>Food</th>
+</tr>
+</thead>
+</table>
+<pre><code>code block</code></pre>
+<p>line 1</p>
+<p><strong>RESULT</strong> three-line code block, table (thead), <code>code block</code>, paragraph “line 1”</p>
+<p><em>An empty line is needed between the table and the fenced code block to keep the table from swallowing the code block.</em></p>
+<hr />
+<p><strong>15 TEST table, indented code block after ...</strong></p>
+<table>
+<thead>
+<tr>
+<th>Qty</th>
+<th>Food</th>
+</tr>
+</thead>
+</table>
+<pre><code>&lt;-- 4 Spaces     code block line 1
+&lt;-- Tab          code block line 2</code></pre>
+<p>line 1</p>
+<p><strong>RESULT</strong> table (thead), two-line code block, paragraph “line 1”</p>
+<hr />
+<h3>Test passed if all preceding “RESULT” statements are true<a id="Test%20passed%20if%20all%20preceding%20%27RESULT%27%20statements%20are%20true"></a><a id="test-passed-if-all-preceding-result-statements-are-true"></a><a id="test_passed_if_all_preceding_result_statements_are_true"></a></h3>

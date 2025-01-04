@@ -1,0 +1,48 @@
+[7mEmphasis[27m
+[36m__a **b c__ d**[39m
+[1ma **b c[0m d**
+[36m**a *b**c***[39m
+[1ma *b[0mc***
+[1ma [1mb c[0m d[0m
+[1ma [4mb c[0m d[0m
+[1ma [4m[1mb c[0m[0m d[0m
+a>[1mx[0m<z
+a>[4m[1mx[0m[0m<z
+ -----
+[7mLink text container[27m
+[1mlink span in link span is invalid[21m
+[image 1 <linux3.png>
+and [36msome code[39m
+and link2 <http://link2.com>
+and autolink http://auto.com <http://auto.com>
+and permissive links http://www.perm1.com <http://www.perm1.com> www.perm2.com <http://www.perm2.com>
+in link1](http://link1.com <http://link1.com>)
+[1mimage and code spans in link spans are valid[21m
+image 1 <linux3.png>
+and [36msome code[39m
+in link1 <http://link1.com>
+image 1 <linux3.png>
+and
+image 2 <linux3.png>
+in link2 <http://link2.com>
+image "&1" <linux3.png>
+and
+image <2> <linux3.png>
+in link3 <http://link3.com>
+image 1 {linux3.png} (Image Title 1)
+[1mlink and code spans in image span text are valid[21m
+link1 and some code {linux3.png} (Image Title)
+[1mimage span nested in image span text is valid[21m
+outer image inner image {./linux3.png} (Outer Title)
+outer image middle image inner image {././linux3.png} (Outer Title)
+outer image middle image inner image {././linux3.png} (Outer Title)
+outer IMAGE middle IMAGE inner IMAGE {././linux3.png} (Outer TITLE)
+  * outer image middle image inner image {././linux3.png} (Outer Title)
+  * outer IMAGE middle IMAGE inner IMAGE {././linux3.png} (Outer TITLE)
+  * outer image middle image inner image {././linux3.png} (Outer Title)
+    - outer IMAGE middle IMAGE inner IMAGE {././linux3.png} (Outer TITLE)
+  * outer image middle image inner image {././linux3.png} (Outer Title)
+    - outer IMAGE middle IMAGE inner IMAGE {././linux3.png} (Outer TITLE)
+[1mhard break in image text[21m
+hard break <linux3.png>
+outer BR inner BR inner image outer image <./linux3.png>

@@ -1,0 +1,10 @@
+<span fgcolor="red">Limitation: Columns may be misaligned if some cells include wide characters (Unicode codepoints that represent larger glyphs), such as East Asian characters or certain emojis.</span>
+│ Wide Column 3 │
+│               │
+│  cen 🌑 ter   │
+ -----
+│ Column 1 │ Wide Column 2 │ Wide Column 3 │ Wide Column 4 │
+│ default  │ left          │               │         right │
+│ 🔴       │ 🌓 left       │  cen 🌑 ter   │      right 🌗 │
+ -----
+│ X │

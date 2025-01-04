@@ -1,0 +1,19 @@
+<b><span fgcolor="#444" size="200%">Auto-heading mitigations​<span font="@dest=Lu0dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu3dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu5dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+To mitigate the effects of <span font="@dest=Lu7dest=Tl10" fgcolor="#048" underline="single">issues 276</span> <span font="@dest=Lu10dest=Tl7" fgcolor="#048" underline="single">and 277</span>, auto-headings are not created for headings containing an odd number of asterisk, underscore, or tilde characters. As a result, these headings cannot be navigated using hotkeys.
+<b><span fgcolor="#444" size="200%">~</span></b>
+<b><span fgcolor="#444" size="200%">*</span></b>
+<b><span fgcolor="#444" size="200%">_</span></b>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="200%">Headings in code blocks​<span font="@dest=Lu13dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu15dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu17dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+As expected, heading syntax within code blocks is treated as regular text and does not trigger auto-heading creation.
+<tt><span bgcolor="#FFF" fgcolor="#B56"># all by itself</span></tt>
+<tt><span bgcolor="#FFF" fgcolor="#B56"># 
+# ▶◀
+# A
+# A B
+# Setext 1
+==========</span></tt>
+<tt><span bgcolor="#FFF" fgcolor="#B56">all by itself
+-------------</span></tt>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="200%">Table of Contents​<span font="@dest=Lu22dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu24dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu26dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>

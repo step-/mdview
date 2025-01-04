@@ -1,0 +1,118 @@
+<b><span fgcolor="#444" size="117%">DESCRIPTION​<span font="@dest=Lu0dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu3dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b>Version note:</b>
+New mdview versions do not support the code block table feature presented in the following examples.
+<!--
+https://www.markdownguide.org/extended-syntax/#tables
+-->
+mdview supports tables in a limited way: it can recognize table syntax, and it displays the table as an unstyled code block.  Therefore, if the original table text is aligned, the output table will look aligned.
+Inside the table block all characteristics of a code block apply. For instance, <tt><span fgcolor="#B56">_</span></tt>, <tt><span fgcolor="#B56">*</span></tt>, and <tt><span fgcolor="#B56">+++</span></tt> represent themselves; quotes don't become smart quotes, and so on.
+<b><span fgcolor="#444" size="117%">TESTS​<span font="@dest=Lu12dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu14dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>1 TEST aligned table</b>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food  </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> 1   </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> mango </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> 12  </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> eggs  </span>│
+</span></tt>
+<b>RESULT</b> aligned table: “Qty/Food”, underlines, “1/mango”, “12/eggs”
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>2 TEST aligned table, H3 before</b>
+<b><span fgcolor="#444" size="200%">H3​<span font="@dest=Lu16dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu18dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food  </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> 1   </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> mango </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> 12  </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> eggs  </span>│
+</span></tt>
+<b>RESULT</b> heading “H3”; aligned table: “Qty/Food” (thead), “1/mango”, “12/eggs”
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>3 TEST aligned table (5 rows)</b>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty   </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food  </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> 1     </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> mango </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> 12    </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> eggs  </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> row 4 </span>│<span bgcolor="#FBFBFB" fgcolor="#000">       </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> row 5 </span>│<span bgcolor="#FBFBFB" fgcolor="#000">       </span>│
+</span></tt>
+<b>RESULT</b> aligned table: “Qty/Food” (thead), “1/mango”, “12/eggs”, “row 4/”, “row 5/”
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>4 TEST table head only</b>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food </span>│
+</span></tt></span></tt>
+<b>RESULT</b> aligned table: “Qty/Food” (thead)
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>5 TEST no table 1</b>
+| Qty | Food   | row 2
+<b>RESULT</b> paragraph “| Qty | Food   | row 2” because underlines are required
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>6 TEST table with short underlines (2 rows)</b>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty   </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> row 2 </span>│<span bgcolor="#FBFBFB" fgcolor="#000">      </span>│
+</span></tt>
+<b>RESULT</b> aligned table: “Qty/Food” (thead), “row 2/”
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>7 TEST alignment markers</b>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food  </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Life </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000">   1 </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> mango </span>│<span bgcolor="#FBFBFB" fgcolor="#000">  5d  </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000">  12 </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> eggs  </span>│<span bgcolor="#FBFBFB" fgcolor="#000">  1w  </span>│
+</span></tt>
+<b>RESULT</b> right/left/center aligned table: “Qty/Food/Life” (thead), “1/mango/5d”, “12/eggs/1w”
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>8 TEST no need to align the Markdown table (3 rows)</b>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food  </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> 1   </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> mango </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> 12  </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> eggs  </span>│
+</span></tt>
+<b>RESULT</b> aligned rendered table
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>9 TEST no left bar (3 rows)</b>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food  </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Life </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000">   1 </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> mango </span>│<span bgcolor="#FBFBFB" fgcolor="#000">  5d  </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000">  12 </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> eggs  </span>│<span bgcolor="#FBFBFB" fgcolor="#000">  1w  </span>│
+</span></tt>
+<b>RESULT</b> table
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>10 TEST no left bar + indent 2 (3 rows)</b>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food  </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Life </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000">   1 </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> mango </span>│<span bgcolor="#FBFBFB" fgcolor="#000">  5d  </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000">  12 </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> eggs  </span>│<span bgcolor="#FBFBFB" fgcolor="#000">  1w  </span>│
+</span></tt>
+<b>RESULT</b> table
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>11 TEST no right bar + two trailing spaces (3 rows)</b>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food  </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Life </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000">   1 </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> mango </span>│<span bgcolor="#FBFBFB" fgcolor="#000">  5d  </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000">  12 </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> eggs  </span>│<span bgcolor="#FBFBFB" fgcolor="#000">  1w  </span>│
+</span></tt>
+<b>RESULT</b> table
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>12 TEST no side bars ...</b>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food  </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Life </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> 1   </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> mango </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> 5d   </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> 12  </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> eggs  </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> 1w   </span>│
+</span></tt>
+<b>RESULT</b> table
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>13 TEST table preceded by fenced code block (2 rows)</b>
+<tt><span bgcolor="#FFF" fgcolor="#B56">code block</span></tt>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty   </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> row 2 </span>│<span bgcolor="#FBFBFB" fgcolor="#000">      </span>│
+</span></tt>
+<b>RESULT</b> <tt><span fgcolor="#B56">code block</span></tt>; table
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>14 TEST table, indented code block before, fenced code block after ...</b>
+<tt><span bgcolor="#FFF" fgcolor="#B56">&lt;-- 4 Spaces     code block line 1
+&lt;-- Tab          code block line 2
+| there is an empty markdown line below |    code block line 3</span></tt>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food </span>│
+</span></tt></span></tt>
+<tt><span bgcolor="#FFF" fgcolor="#B56">code block</span></tt>
+line 1
+<b>RESULT</b> three-line code block, table (thead), <tt><span fgcolor="#B56">code block</span></tt>, paragraph “line 1”
+<i>An empty line is needed between the table and the fenced code block to keep the table from swallowing the code block.</i>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>15 TEST table, indented code block after ...</b>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Qty </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Food </span>│
+</span></tt></span></tt>
+<tt><span bgcolor="#FFF" fgcolor="#B56">&lt;-- 4 Spaces     code block line 1
+&lt;-- Tab          code block line 2</span></tt>
+line 1
+<b>RESULT</b> table (thead), two-line code block, paragraph “line 1”
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="117%">Test passed if all preceding “RESULT” statements are true​<span font="@dest=Lu24dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu26dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu28dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>

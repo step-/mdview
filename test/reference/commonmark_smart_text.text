@@ -1,0 +1,11 @@
+[Smart text]
+By design smart replacements are disabled for text output mode. If you do need smart text in such a case use ANSI output mode and pipe to ansifilter.
+Unlike cmark, by design mdview doesn't replace an apostrophe that is flanked by letters.
+  * It's “a ‘x’ b”.
+Like cmark, overlapping pairs are fully replaced.
+  * ‘a “x’ b”
+Replacing nested pairs near a hard-break.
+  * “a” “b”
+“c”
+Unpaired double and single quotes: " '
+a — z (em-dash “--”)

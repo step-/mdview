@@ -1,0 +1,36 @@
+[4mem[0m
+[1mstrong[0m
+[4m[1mem strong[0m[0m
+[36mcode span[39m
+[36mcodeblock[39m
+--strikethrough--
+[7;1mHeading 1[27;21m
+[7mHeading 2[27m
+[1mHeading 3[21m
+[1mHeading 4[21m
+[1mHeading 5[21m
+[1mHeading 6[21m
+  * bullet
+ -----
+paragraph
+BR
+link text <https://x.com>
+link text <https://x.com> (title)
+image of linux3 <linux3.png>
+image of linux3 {linux3.png} (title)
+ -----
+[36m-----------------------------------------------------------------------
+-                               MDVIEW MTX                            -
+-----------------------------------------------------------------------[39m
+Whether the path of an image, e.g. [36m![image path](tom&jerry.png)[39m (this path does not exist on purpose), is [4muri-escaped[0m depends on the output mode:
+--html escapes, --ansi, --text and --tty (the text modes) do not, and the GUI viewer does when it loads the image from the path but does not on cursor hover: image path <tom&jerry>.
+The [4muri-escaping[0m rules for a link like [36m[link](https://tom&jerry.com)[39m (OK, the URL isn't quite valid), also depend on the output mode: --html escapes, text modes do not, the GUI viewer does on clicking the link but does not on cursor hover: link <https://tom&jerry.com>.
+ -----
+MDVIEW4 supports nested and ordered lists (tight and loose):
+  1. e
+    1. f
+  2. g
+divider
+  1. e
+    1. f
+  2. g

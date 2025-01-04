@@ -1,0 +1,36 @@
+[3mem[0m
+[1mstrong[0m
+[3m[1mem strong[0m[0m
+[1;94mcode span[0m
+[1;94mcodeblock[0m
+--strikethrough--
+[1;91mHeading 1[0m
+[1;36mHeading 2[0m
+[1;36mHeading 3[0m
+[1;36mHeading 4[0m
+[1;36mHeading 5[0m
+[1;36mHeading 6[0m
+  [93m*[0m bullet
+ [93m-----[0m
+paragraph
+BR
+[1;93mlink text[0m [4;32m<https://x.com>[0m
+[1;93mlink text[0m [4;32m<https://x.com>[0m [37m(title)[0m
+[1;93mimage of linux3[0m [4;32m{linux3.png}[0m
+[1;93mimage of linux3[0m [4;32m{linux3.png}[0m [37m(title)[0m
+ [93m-----[0m
+[1;94m-----------------------------------------------------------------------
+-                               MDVIEW MTX                            -
+-----------------------------------------------------------------------[0m
+Whether the path of an image, e.g. [1;94m![image path](tom&jerry.png)[0m (this path does not exist on purpose), is [3muri-escaped[0m depends on the output mode:
+--html escapes, --ansi, --text and --tty (the text modes) do not, and the GUI viewer does when it loads the image from the path but does not on cursor hover: [1;93mimage path[0m [4;32m{tom&jerry}[0m.
+The [3muri-escaping[0m rules for a link like [1;94m[link](https://tom&jerry.com)[0m (OK, the URL isn't quite valid), also depend on the output mode: --html escapes, text modes do not, the GUI viewer does on clicking the link but does not on cursor hover: [1;93mlink[0m [4;32m<https://tom&jerry.com>[0m.
+ [93m-----[0m
+MDVIEW4 supports nested and ordered lists (tight and loose):
+  1. e
+    1. f
+  2. g
+divider
+  1. e
+    1. f
+  2. g

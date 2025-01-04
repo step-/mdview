@@ -1,0 +1,20 @@
+<h3>Link and image can embed each other</h3>
+<p>For an image inside link text, the image becomes the link:</p>
+<pre><code class="language-markdown">[![image of the sun](sun.png)](https://sun.stars.org)</code></pre>
+<p><a href="https://sun.stars.org"><img src="sun.png" alt="image of the sun" /></a>, and if the image file is missing: <a href="https://sun.stars.org"><img src="sun.png-MISSING" alt="image of the sun" /></a>.<br />
+<strong>html:</strong> <code>&lt;a href=&quot;https://sun.stars.org&quot;&gt;&lt;img src=&quot;sun.png&quot; alt=&quot;image of the sun&quot; /&gt;&lt;/a&gt;</code></p>
+<hr />
+<p>For a link inside image alt text, the image is retained and the link is flattened:</p>
+<pre><code class="language-markdown">![[link to the sun](https://sun.stars.org)](sun.png)</code></pre>
+<p><img src="sun.png" alt="link to the sun" />, and if the image file is missing: <img src="sun.png-MISSING" alt="link to the sun" />.<br />
+<strong>html:</strong> <code>&lt;img src=&quot;sun.png&quot; alt=&quot;link to the sun&quot; /&gt;</code></p>
+<hr />
+<p>For a link inside link text, only the interior link is retained.</p>
+<pre><code class="language-markdown">[a [link to the sun](https://sun.stars.org)](sun.md)</code></pre>
+<p>[a <a href="https://sun.stars.org">link to the sun</a>](sun.md).<br />
+<strong>html:</strong> <code>[a &lt;a href=&quot;https://sun.stars.org&quot;&gt;link to the sun&lt;/a&gt;](sun.md)</code></p>
+<hr />
+<p>For an image inside image alt text, only the exterior image is retained, and all texts are flattened.</p>
+<pre><code class="language-markdown">![image of an ![image of the sun](sun.png)'s corona](corona.png)</code></pre>
+<p><img src="corona.png" alt="image of an image of the sun&apos;s corona" />, and if the image file is missing: <img src="corona.png-MISSING" alt="image of an image of the sun&apos;s corona" />.<br />
+<strong>html:</strong> <code>&lt;img src=&quot;corona.png&quot; alt=&quot;image of an image of the sun&amp;apos;s corona&quot; /&gt;</code></p>

@@ -1,0 +1,4 @@
+<span fgcolor="red">Limitation: mdview cannot compute the image width in characters, therefore it cannot correctly align image columns.</span>
+│               │                                                             │                                  😎                                  │
+│ image         │ [1;94ma ![rainbow](rainbow.xpm) is here[0m                │        a [1;93mrainbow[0m [4;32m{rainbow.xpm}[0m is here         │
+│ missing image │ [1;94ma ![missing image](missing_image.png) isn't here[0m │ a [1;93mmissing image[0m [4;32m{missing_image.png}[0m isn't here │

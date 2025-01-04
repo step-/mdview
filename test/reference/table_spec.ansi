@@ -1,0 +1,58 @@
+│ Column 1 │ Column 2                           │
+│ [3mfoo[0m      │ bar                                │
+│ [1mbaz[0m      │ [1;93mqux[0m [4;32m</url>[0m   │
+│ quux     │ [1;93mquuz[0m [4;32m</url2>[0m │
+Basic table example of a table with two columns and three lines (when not counting the header) is as follows:
+│ Column 1 │ Column 2 │
+│ foo      │ bar      │
+│ baz      │ qux      │
+│ quux     │ quuz     │
+The leading and succeeding pipe characters ([1;94m|[0m) on each line are optional:
+│ Column 1 │ Column 2 │
+│ foo      │ bar      │
+│ baz      │ qux      │
+│ quux     │ quuz     │
+│ Column 1 │ Column 2 │
+│ foo      │ bar      │
+│ baz      │ qux      │
+│ quux     │ quuz     │
+│ Column 1 │ Column 2 │
+│ foo      │ bar      │
+│ baz      │ qux      │
+│ quux     │ quuz     │
+However for one-column table, at least one pipe has to be used in the table header underline, otherwise it would be parsed as a Setext title followed by a paragraph.
+[1;36mColumn 1 (SETEXT)[0m
+foo baz quux
+Leading and trailing whitespace in a table cell is ignored and the columns do not need to be aligned.
+│ Column 1 │ Column 2 │
+│ foo      │ bar      │
+│ baz      │ qux      │
+│ quux     │ quuz     │
+The table cannot interrupt a paragraph.
+[1mFAIL wrt cmark-gfm[0m
+Lorem ipsum dolor sit amet. | Column 1 | Column 2 | ---------|--------- | foo      | bar | baz      | qux | quux     | quuz
+Similarly, paragraph cannot interrupt a table:
+│ Column 1                    │ Column 2 │
+│ foo                         │ bar      │
+│ baz                         │ qux      │
+│ quux                        │ quuz     │
+│ Lorem ipsum dolor sit amet. │          │
+The first, the last or both the first and the last dash in each column underline can be replaced with a colon ([1;94m:[0m) to request left, right or middle alignment of the respective column:
+│ Column 1 │ Column 2 │ Column 3 │ Column 4 │
+│ default  │ left     │  center  │    right │
+To include a literal pipe character in any cell, it has to be escaped.
+│ Column 1 │ Column 2    │
+│ foo      │ bar         │
+│ baz      │ qux | xyzzy │
+│ quux     │ quuz        │
+Contents of each cell is parsed as an inline text which may contents any inline Markdown spans like emphasis, strong emphasis, links etc.
+│ Column 1 │ Column 2                           │
+│ [3mfoo[0m      │ bar                                │
+│ [1mbaz[0m      │ [1;93mqux[0m [4;32m</url>[0m   │
+│ quux     │ [1;93mquuz[0m [4;32m</url2>[0m │
+[1mFAIL wrt cmark-gfm[0m
+However pipes which are inside a code span are not recognized as cell boundaries.
+│ Column 1                 │ Column 2 │
+│ [1;94mfoo     | bar[0m │          │
+│ baz                      │ qux      │
+│ quux                     │ quuz     │

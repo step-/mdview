@@ -1,0 +1,16 @@
+[1;36mTight lists[0m
+[1;36mA[0m
+  [93m*[0m LI
+[1;94mPRE CODE in LI[0m
+INLINE in LI
+[1;36mB[0m
+  [93m*[0m LI
+[1;94mPRE CODE 1 in LI[0m
+[1;94mPRE CODE 2 in LI[0m
+
+[1;36mC[0m
+  [93m*[0m LI
+[1;94mPRE CODE in LI[0m
+    [93m-[0m L11 in LI
+[1;94mPRE CODE in LI11[0m
+

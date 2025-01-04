@@ -1,0 +1,95 @@
+This document introduces all supported features. Open the document on the side with a text editor to see commonmark source text.
+ -----
+-Heading-
+Level 1 through 6 headings comprise one to six leading # characters followed by space then the heading text.
+# Heading 1
+## Heading 2
+### Heading 3
+etc.
+
+An alternative notation for levels 1 and 2 is also available. Level 1 headings are specified by underlining the heading with a row of = characters. Level 2 headings are specified by underlining with a row of - characters.
+Heading 1
+===
+
+Heading 2
+---
+
+see all headings and read notes <heading.md>
+ -----
+-Rule-
+This is a rule
+ -----
+This one too
+ -----
+-Lists-
+Unordered list with * or -
+  * a
+  * b
+  * c
+Numbered lists with 1. (not in legacy mdview)
+  1. a
+  2. b
+Nested lists (not in legacy mdview)
+  * a
+    - b
+      1. c
+      2. d
+-Inline styles-
+italic1, italic2, bold1, bold2, inline code, and inline code again, then bold-italic1, bold-italic2, bold-italic3, bold-italic4.
+Non-standard strikethrough with ~~strikethrough~~, and strikethrough with ~strikethrough~, and em-dash — with --.
+~Extension: smart quotes~
+“Smart double-quoting” and ‘smart single-quoting’.
+This option is enabled by default. Disable with --no-smart.
+-Links-
+  * Link to another file <file.md>
+  * HTTP link with title <http://www.example.com> (A Link Title)
+  * HTTPS link <https://www.example.com>
+-Link References-
+The syntax [abc]: http://example.com is used for defining a link reference. This allows you to associate a label (in this case, “abc”) with a URL, which can then be used later in the document to create links.
+Here's how it works:
+  1. The label is enclosed in square brackets [abc].
+  2. A colon (:) follows the label.
+  3. The URL associated with the label is written after the colon.
+Once you have defined the link reference, you can use the label in your document to create links using the syntax [link text][abc]. The link text will be displayed as a clickable link that points to the URL defined in the reference. If [link text] is missing, abc will be displayed instead.
+a link reference <http://example.com> — abc <http://example.com>
+Link references are typically defined at the end of the document, but they can be placed anywhere.
+-Auto-links-
+  * markdown <http://example.com> becomes http://example.com <http://example.com>
+  * markdown <user@example.com> becomes user@example.com <mailto:user@example.com>
+-Extension: permissive auto-links-
+(Not in legacy mdview)
+  * markdown http://www.example.com becomes http://www.example.com <http://www.example.com>
+  * markdown www.example.com becomes www.example.com <http://www.example.com>
+  * markdown user@example.com becomes user@example.com <mailto:user@example.com>
+This option is enabled by default. Disable with --no-permlink.
+-Images-
+Local image files can be displayed inline using image syntax. A relative image path is resolved first with the base directory set to the home page directory[¹], then, if that fails, with the base directory set to the current file's directory. Note that symbolic links are never followed.
+Inline image support: You should be seeing a picture of Tux instead of this text. The image path is “linux3.png”. Either the validity of the image path depends on symbolic links, which are never followed, or mdview is at fault. <linux3.png>
+A link can embed an image. Learn more <link_embed_image.md>
+[¹] the home page directory can be specified on the command line. It defaults to the directory of the first file.
+-Paragraphs and line breaks-
+A paragraph is simply one or more consecutive lines of text, separated by one or more blank lines. A blank line consists of only white-space characters or no characters. To insert a hard line break after a line of text, you end the line with two or more spaces.
+This line ends with . This line ends with one space. This line joins the line above.
+This line ends with . This line ends with two spaces.
+This line does not join with the one above.
+Learn more <br_test.md> (test file)
+-Code blocks-
+Indented code block: each line starts with at least 4 spaces or 1 tab. An empty line is required before the indented code block:
+function a() {
+  b="*c*"
+}
+
+-Fenced code blocks-
+A fenced code block starts and ends with 3 backticks on separate lines.
+function a() {
+  b="*c*"
+}
+
+Fenced code block with syntax tag (append the syntax tag immediately after opening backticks):
+export DIALOG="<widget></widget>"
+
+-Extension: auto-code words-
+Selected words are automatically rendered as code if they aren't already marked as inline code.
+  * /usr/share/mdview/examples
+This option is enabled by default.
+Learn more <autocodes_test.md> (test file)

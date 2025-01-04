@@ -1,0 +1,45 @@
+<h1>Headings</h1>
+<p>mdview supports two heading styles:</p>
+<ul>
+<li>
+<p><strong>ATX-style headings</strong><br />
+The entire heading is on a single line. The heading starts with a run of one to six leading <code>#</code> characters followed by space then the <em>heading text</em> then an optional equal run of <code>#</code> characters. The number of leading <code>#</code> characters corresponds to the heading level.</p>
+</li>
+<li>
+<p><strong>setext-style headings</strong><br />
+The <em>heading text</em> can be span multiple lines. Level 1 headings end with a line of <code>=</code> characters. Level 2 headings end with a line of <code>-</code> characters. The line above the ending line cannot be empty Higher-level headings are not possible with this style.</p>
+</li>
+</ul>
+<p>Regardless of the heading style, only the <em>heading text</em> is rendered.</p>
+<hr />
+<p><strong>ATX-STYLE HEADING EXAMPLES</strong></p>
+<h1>Heading 1</h1>
+<p>Paragraph 1.</p>
+<h2>Heading 2</h2>
+<p>Paragraph 2.</p>
+<h3>Heading 3</h3>
+<p>Paragraph 3.</p>
+<h4>Heading 4</h4>
+<p><strong>Bold</strong> paragraph 4.</p>
+<h5>Heading 5</h5>
+<p>Paragraph 5.</p>
+<h6>Heading 6</h6>
+<p>Font size of heading levels 5 and 6 is smaller than the default size. Level 4 is at default font size. Levels 1 through 3 are larger than the default font size.</p>
+<hr />
+<p><strong>SETEXT-STYLE HEADING EXAMPLES</strong></p>
+<h1>Heading 1</h1>
+<p>Paragraph 1.</p>
+<h2>Heading 2</h2>
+<p>Paragraph 2.</p>
+<hr />
+<p><strong>SETEXT HEADINGS CAN SPAN MULTIPLE LINES</strong></p>
+<h1>A setext-style level-1 heading (spread on four lines)</h1>
+<p>Paragraph 1.</p>
+<h2>A setext-style<br />
+level-2<br />
+heading<br />
+(spread on four lines with embedded hard line-breaks)</h2>
+<p>Paragraph 2.</p>
+<hr />
+<p><strong>HEADINGS AND WHITE SPACE</strong></p>
+<p><strong>Markdown</strong> implementations differ in the way white space interacts with headings. For maximum compatibility, authors should add an empty line before and after the heading.</p>

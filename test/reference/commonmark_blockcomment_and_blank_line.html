@@ -1,0 +1,72 @@
+<h3>CM interaction between blank line and paragraph</h3>
+<p><strong>Blank line splits paragraph.</strong></p>
+<p>With blank line between <em>line 1</em> and <em>line 2</em>:<br />
+line 1;</p>
+<p>line 2.</p>
+<p>Without blank line between <em>line 1</em> and <em>line 2</em>:<br />
+line 1; line 2.</p>
+<h3>CM interaction between blockcomment and paragraph</h3>
+<p><strong>HTML blockcomment splits paragraph.</strong></p>
+<p>With HTML blockcomment between <em>line 1</em> and <em>line 2</em>:<br />
+line 1;</p>
+<!-- raw HTML omitted -->
+<p>line 2.</p>
+<p>Without HTML blockcomment between <em>line 1</em> and <em>line 2</em>:<br />
+line 1; line 2.</p>
+<hr />
+<h3>CM interaction between blank line and code span</h3>
+<p><strong>Blank line does not a code span make.</strong></p>
+<p>With blank line between <em>code</em> and <em>span</em>:<br />
+``code</p>
+<p>span``.</p>
+<p>Without blank line between <em>code</em> and <em>span</em>:<br />
+<code>code span</code>.</p>
+<h3>CM interaction between blockcomment and code span</h3>
+<p><strong>HTML blockcomment does not a code span make.</strong></p>
+<p>With HTML blockcomment between <em>code</em> and <em>span</em>:<br />
+``code</p>
+<!-- raw HTML omitted -->
+<p>span``</p>
+<p>Without HTML blockcomment between <em>code</em> and <em>span</em>:<br />
+<code>code span</code>.</p>
+<hr />
+<h3>CM interaction between blank line and bullet list</h3>
+<p><strong>tight list and loose list:</strong> mdview doesn't distinguish between the two kinds.</p>
+<ul>
+<li>tight 1</li>
+<li>tight 2</li>
+</ul>
+<p><strong>loose list</strong></p>
+<p>A blank line between <em>loose 2</em> and <em>loose a</em> doesn't split the list, nor add a line ending or start a new block.</p>
+<ul>
+<li>
+<p>loose 1</p>
+</li>
+<li>
+<p>loose 2 blank line next [BR]</p>
+</li>
+<li>
+<p>loose a</p>
+</li>
+<li>
+<p>loose b</p>
+</li>
+</ul>
+<p>loose list ended.</p>
+<h3>CM interaction between blockcomment and bullet list</h3>
+<ul>
+<li>loose 1,1</li>
+<li>loose 1,2 blockcomment next</li>
+</ul>
+<!-- raw HTML omitted -->
+<ul>
+<li>loose 2,1</li>
+<li>loose 2,2</li>
+</ul>
+<hr />
+<h3>A bee in my bonnet...</h3>
+<ul>
+<li>tight 1</li>
+<li>tight 2</li>
+</ul>
+<h3>H3</h3>

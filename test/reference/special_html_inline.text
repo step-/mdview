@@ -1,0 +1,5 @@
+~raw HTML support~
+Specification: https://spec.commonmark.org/0.30/#html-tag <https://spec.commonmark.org/0.30/#html-tag>.
+This is line 3 of the same comment block. CommonMark shows it - mdview does not.
+--> This line is outside the comment block for both.
+Angle brackets < and > are reproduced literally as long as they do not start or end valid HTML tags, comments, declarations, processing instructions or CDATA sections.

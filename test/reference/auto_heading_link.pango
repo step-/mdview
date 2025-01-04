@@ -1,0 +1,13 @@
+<tt><span fgcolor="#B56">[S-C-f]</span></tt> and <tt><span fgcolor="#B56">[S-C-b]</span></tt> or click to navigate the links, <tt><span fgcolor="#B56">[Enter]</span></tt> to activate.
+<b><span fgcolor="#444" size="117%">Feature description​<span font="@dest=Lu3dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu6dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu8dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=52">• </span><span font="@dest=Lu10dest=Tl25" fgcolor="#048" underline="single">auto_heading_link_feat.md</span><span font="@liId=52"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=47">• </span><span font="@dest=Lu13dest=Tl25" fgcolor="#048" underline="single">auto_heading_link_slug.md</span><span font="@liId=47"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=42">• </span><span font="@dest=Lu16dest=Tl24" fgcolor="#048" underline="single">auto_heading_link_toc.md</span><span font="@liId=42"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=37">• </span><span font="@dest=Lu19dest=Tl26" fgcolor="#048" underline="single">auto_heading_link_bogus.md</span><span font="@liId=37"></span>
+<span font="@olUlLvl=0"></span> 
+ 
+<span font="@dest=Lu22dest=Tl12" fgcolor="#048" underline="single">example link</span>
+<b><span fgcolor="#444" size="200%">TITLE <tt><span fgcolor="#B56">!</span></tt>​<span font="@dest=Lu26dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu28dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+Go to <span font="@dest=Lu3dest=Tl19" fgcolor="#048" underline="single">Feature description</span>
+Go to <span font="@dest=Lu26dest=Tl7" fgcolor="#048" underline="single">TITLE !</span>
+Go to <span font="@dest=Lu34dest=Tl5" fgcolor="#048" underline="single">title</span>

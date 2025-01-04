@@ -1,0 +1,7 @@
+<span fgcolor="red">Limitation: mdview does not apply auto-code spans inside table cells.</span>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold">                     </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold">      😎      </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> ?auto-code span? =&gt; </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> /auto/code/1 </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> ?auto-code span? =&gt; </span>│<span bgcolor="#FBFBFB" fgcolor="#000">     #abc     </span>│
+</span></tt>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Auto-code spans look like this: <tt><span fgcolor="#B56">/auto/code/1</span></tt>, <tt><span fgcolor="#B56">#abc</span></tt>.

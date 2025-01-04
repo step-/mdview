@@ -1,0 +1,122 @@
+<!-- raw HTML omitted -->
+<p>This document introduces all supported features. Open the document on the side with a text editor to see commonmark source text.</p>
+<hr />
+<h2>Heading</h2>
+<p>Level 1 through 6 headings comprise one to six leading # characters followed by space then the heading text.</p>
+<pre><code># Heading 1
+## Heading 2
+### Heading 3
+etc.
+</code></pre>
+<p>An alternative notation for levels 1 and 2 is also available. Level 1 headings are specified by underlining the heading with a row of <code>=</code> characters. Level 2 headings are specified by underlining with a row of <code>-</code> characters.</p>
+<pre><code>Heading 1
+===
+
+Heading 2
+---
+</code></pre>
+<p><a href="heading.md">see all headings and read notes</a></p>
+<hr />
+<h2>Rule</h2>
+<p>This is a rule</p>
+<hr />
+<p>This one too</p>
+<hr />
+<h2>Lists</h2>
+<p>Unordered list with <code>*</code> or <code>-</code></p>
+<ul>
+<li>a</li>
+<li>b</li>
+</ul>
+<ul>
+<li>c</li>
+</ul>
+<p>Numbered lists with <code>1.</code> (not in legacy mdview)</p>
+<ol>
+<li>a</li>
+<li>b</li>
+</ol>
+<p>Nested lists (not in legacy mdview)</p>
+<ul>
+<li>a
+<ul>
+<li>b
+<ol>
+<li>c</li>
+<li>d</li>
+</ol>
+</li>
+</ul>
+</li>
+</ul>
+<h2>Inline styles</h2>
+<p><em>italic1</em>, <em>italic2</em>, <strong>bold1</strong>, <strong>bold2</strong>, <code>inline code</code>, and <code>inline code again</code>, then <strong><em>bold-italic1</em></strong>, <strong><em>bold-italic2</em></strong>, <em><strong>bold-italic3</strong></em>, <em><strong>bold-italic4</strong></em>.</p>
+<p>Non-standard <del>strikethrough</del> with <code>~~strikethrough~~</code>, and <del>strikethrough</del> with <code>~strikethrough~</code>, and em-dash — with <code>--</code>.</p>
+<h3>Extension: smart quotes</h3>
+<p>“Smart double-quoting” and ‘smart single-quoting’.</p>
+<p>This option is enabled by default. Disable with <code>--no-smart</code>.</p>
+<h2>Links</h2>
+<ul>
+<li><a href="file.md">Link to another file</a></li>
+<li><a href="http://www.example.com" title="A Link Title">HTTP link with title</a></li>
+<li><a href="https://www.example.com">HTTPS link</a></li>
+</ul>
+<h2>Link References</h2>
+<p>The syntax <code>[abc]: http://example.com</code> is used for defining a link reference. This allows you to associate a label (in this case, “abc”) with a URL, which can then be used later in the document to create links.</p>
+<p>Here's how it works:</p>
+<ol>
+<li>The label is enclosed in square brackets <code>[abc]</code>.</li>
+<li>A colon (<code>:</code>) follows the label.</li>
+<li>The URL associated with the label is written after the colon.</li>
+</ol>
+<p>Once you have defined the link reference, you can use the label in your document to create links using the syntax <code>[link text][abc]</code>. The link text will be displayed as a clickable link that points to the URL defined in the reference. If <code>[link text]</code> is missing, <code>abc</code> will be displayed instead.</p>
+<p><a href="http://example.com">a link reference</a> — <a href="http://example.com">abc</a></p>
+<p>Link references are typically defined at the end of the document, but they can be placed anywhere.</p>
+<h2>Auto-links</h2>
+<ul>
+<li>markdown <code>&lt;http://example.com&gt;</code> becomes <a href="http://example.com">http://example.com</a></li>
+<li>markdown <code>&lt;user@example.com&gt;</code> becomes <a href="mailto:user@example.com">user@example.com</a></li>
+</ul>
+<h2>Extension: permissive auto-links</h2>
+<p>(Not in legacy mdview)</p>
+<ul>
+<li>markdown <code>http://www.example.com</code> becomes <a href="http://www.example.com">http://www.example.com</a></li>
+<li>markdown <code>www.example.com</code> becomes <a href="http://www.example.com">www.example.com</a></li>
+<li>markdown <code>user@example.com</code> becomes <a href="mailto:user@example.com">user@example.com</a></li>
+</ul>
+<p>This option is enabled by default. Disable with <code>--no-permlink</code>.</p>
+<h2>Images</h2>
+<p>Local image files can be displayed inline using image syntax. A relative image path is resolved first with the base directory set to the home page directory[¹], then, if that fails, with the base directory set to the current file's directory. Note that symbolic links are never followed.</p>
+<p>Inline image support: <img src="linux3.png" alt="You should be seeing a picture of Tux instead of this text. The image path is “linux3.png”. Either the validity of the image path depends on symbolic links, which are never followed, or mdview is at fault." /></p>
+<p>A link can embed an image. <a href="link_embed_image.md">Learn more</a></p>
+<p><em>[¹] the home page directory can be specified on the command line. It defaults to the directory of the first file.</em></p>
+<h2>Paragraphs and line breaks</h2>
+<p>A paragraph is simply one or more consecutive lines of text, separated by one or more blank lines. A blank line consists of only white-space characters or no characters. To insert a hard line break after a line of text, you end the line with two or more spaces.</p>
+<p>This line ends with . This line ends with one space. This line joins the line above.</p>
+<p>This line ends with . This line ends with two spaces.<br />
+This line does <strong>not</strong> join with the one above.</p>
+<p><a href="br_test.md">Learn more</a> (test file)</p>
+<h2>Code blocks</h2>
+<p>Indented code block: each line starts with at least 4 spaces or 1 tab. An empty line is required before the indented code block:</p>
+<pre><code>function a() {
+  b=&quot;*c*&quot;
+}
+</code></pre>
+<h2>Fenced code blocks</h2>
+<p>A fenced code block starts and ends with 3 backticks on separate lines.</p>
+<pre><code>function a() {
+  b=&quot;*c*&quot;
+}
+</code></pre>
+<p>Fenced code block with syntax tag (append the syntax tag immediately after opening backticks):</p>
+<pre><code class="language-sh">export DIALOG=&quot;&lt;widget&gt;&lt;/widget&gt;&quot;
+</code></pre>
+<h2>Extension: auto-code words</h2>
+<p>Selected words are automatically rendered as code if they aren't already marked as inline code.</p>
+<ul>
+<li><code>/usr/share/mdview/examples</code></li>
+</ul>
+<p>This option is enabled by default.</p>
+<p><a href="autocodes_test.md">Learn more</a> (test file)</p>
+<!-- raw HTML omitted -->
+<p><!-- raw HTML omitted --><!-- raw HTML omitted --></p>

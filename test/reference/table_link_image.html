@@ -1,0 +1,22 @@
+<p><span fgcolor="red">Limitation: mdview cannot compute the image width in characters, therefore it cannot correctly align image columns.</span></p>
+<table>
+<thead>
+<tr>
+<th align="left"></th>
+<th align="left"></th>
+<th align="center">😎</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">image</td>
+<td align="left"><code>a ![rainbow](rainbow.xpm) is here</code></td>
+<td align="center">a <img src="rainbow.xpm" alt="rainbow" /> is here</td>
+</tr>
+<tr>
+<td align="left">missing image</td>
+<td align="left"><code>a ![missing image](missing_image.png) isn't here</code></td>
+<td align="center">a <img src="missing_image.png" alt="missing image" /> isn't here</td>
+</tr>
+</tbody>
+</table>

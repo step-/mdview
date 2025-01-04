@@ -1,0 +1,35 @@
+This line must include two visible ** asterisks.
+fd64save*
+a <
+a < <link>
+a >" (we think mdview is correct in not curling a solitary double quote).
+<a name="">`
+foo               bar (http://1.com) http://2.com <http://2.com>	u@3.com <mailto:u@3.com>http://4.com <http://4.com>baz
+`foobar
+123 `foobar
+[not a link](/foo)
+a b
+ c d
+e f 
+x y z
+/root/spot? <spot.md>
+expect the following HTML markup: <pre><code>text in codeblock</code></pre>
+text in codeblock
+
+again, expect the following HTML markup: <pre><code>text in codeblock</code></pre>
+text in codeblock
+
+<a> </a>
+
+(http://1.com) http://2.com <http://2.com>
+user@example.com <mailto:user@example.com>
+[w <x> y <z> code span]
+-w <x> y <z> code span-
+  * w <x> y <z> code span
+w <x> y <z> code span
+`not code span in code block`
+
+`not code span in code block`
+
+  * this line ends with a single backslash \
+  * this line ends with two backslashes     \

@@ -1,0 +1,69 @@
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 1 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 2 </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> <i>foo</i>      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> bar      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> <b>baz</b>      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu0dest=Tl3" fgcolor="#048" underline="single">qux</span>      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> quux     </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu3dest=Tl4" fgcolor="#048" underline="single">quuz</span>     </span>│
+</span></tt>
+Basic table example of a table with two columns and three lines (when not counting the header) is as follows:
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 1 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 2 </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> foo      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> bar      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> baz      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> qux      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> quux     </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> quuz     </span>│
+</span></tt>
+The leading and succeeding pipe characters (<tt><span fgcolor="#B56">|</span></tt>) on each line are optional:
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 1 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 2 </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> foo      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> bar      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> baz      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> qux      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> quux     </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> quuz     </span>│
+</span></tt>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 1 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 2 </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> foo      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> bar      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> baz      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> qux      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> quux     </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> quuz     </span>│
+</span></tt>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 1 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 2 </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> foo      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> bar      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> baz      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> qux      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> quux     </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> quuz     </span>│
+</span></tt>
+However for one-column table, at least one pipe has to be used in the table header underline, otherwise it would be parsed as a Setext title followed by a paragraph.
+<b><span fgcolor="#444" size="150%">Column 1 (SETEXT)​<span font="@dest=Lu7dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu10dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu12dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+foo baz quux
+Leading and trailing whitespace in a table cell is ignored and the columns do not need to be aligned.
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 1 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 2 </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> foo      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> bar      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> baz      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> qux      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> quux     </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> quuz     </span>│
+</span></tt>
+The table cannot interrupt a paragraph.
+<b>FAIL wrt cmark-gfm</b>
+Lorem ipsum dolor sit amet. | Column 1 | Column 2 | ---------|--------- | foo      | bar | baz      | qux | quux     | quuz
+Similarly, paragraph cannot interrupt a table:
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 1                    </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 2 </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> foo                         </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> bar      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> baz                         </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> qux      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> quux                        </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> quuz     </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> Lorem ipsum dolor sit amet. </span>│<span bgcolor="#FBFBFB" fgcolor="#000">          </span>│
+</span></tt>
+The first, the last or both the first and the last dash in each column underline can be replaced with a colon (<tt><span fgcolor="#B56">:</span></tt>) to request left, right or middle alignment of the respective column:
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 1 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 2 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 3 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 4 </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> default  </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> left     </span>│<span bgcolor="#FBFBFB" fgcolor="#000">  center  </span>│<span bgcolor="#FBFBFB" fgcolor="#000">    right </span>│
+</span></tt>
+To include a literal pipe character in any cell, it has to be escaped.
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 1 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 2    </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> foo      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> bar         </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> baz      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> qux | xyzzy </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> quux     </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> quuz        </span>│
+</span></tt>
+Contents of each cell is parsed as an inline text which may contents any inline Markdown spans like emphasis, strong emphasis, links etc.
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 1 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 2 </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> <i>foo</i>      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> bar      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> <b>baz</b>      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu0dest=Tl3" fgcolor="#048" underline="single">qux</span>      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> quux     </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu3dest=Tl4" fgcolor="#048" underline="single">quuz</span>     </span>│
+</span></tt>
+<b>FAIL wrt cmark-gfm</b>
+However pipes which are inside a code span are not recognized as cell boundaries.
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 1      </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 2 </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">foo     | bar</span></tt> </span>│<span bgcolor="#FBFBFB" fgcolor="#000">          </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> baz           </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> qux      </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> quux          </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> quuz     </span>│
+</span></tt>

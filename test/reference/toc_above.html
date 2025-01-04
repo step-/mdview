@@ -1,0 +1,66 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TITLE</title>
+<base href="test/subject/" />
+<style type="text/css">
+.mtx-body blockquote {
+	margin: 0;
+	padding: 0 1em;
+	border-left: 0.25em solid silver;
+ }
+.mtx-body code { color:#B56; white-space: pre-wrap; }
+.mtx-body pre { background:#FFF; color:#B56; }
+.mtx-body h1 { color:#444; font-size:200%; }
+.mtx-body h2 { color:#444; font-size:150%; }
+.mtx-body h3 { color:#444; font-size:117%; }
+.mtx-body h4 { color:#000; font-size:100%; font-variant:small-caps; }
+.mtx-body h5 { color:#000; font-size:83%; }
+.mtx-body h6 { color:#000; font-size:67%; }
+.mtx-body img { text-decoration: underline double; }
+.mtx-body a { color:#048; text-decoration: underline; }
+.mtx-body a_heading { color:#FFF; }
+.mtx-body table {  color:#EBEBEB; font-size:108%; }
+.mtx-body thead { background:#F4F4FF; color:#E4E4E4; }
+.mtx-body th { background:#F4F4F4; color:#222; font-weight:bold; padding: 0.25em 0.5em; }
+.mtx-body td {  color:#000; padding: 0.25em 0.5em; }
+.mtx-toc code {
+	background-color: transparent;
+}
+
+</style>
+</head>
+<body>
+<div class="mtx-body">
+<p></p><div class="mtx-toc">
+<code>             </code>- <a href="#Title%20FOUR">Title FOUR</a><br />
+<code> </code>- <a href="#Title%201%20one">Title 1 one</a><br />
+<code>     </code>- <a href="#Title%202">Title 2</a><br />
+<code>         </code>- <a href="#Title%203">Title 3</a><br />
+</div><p>
+</p>
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<h4>Title <a href="http://four">FOUR</a><a id="Title%20FOUR"></a><a id="title-four"></a><a id="title_four"></a></h4>
+<h1>Title 1 <a href="One.md" title="with link title">one</a><a id="Title%201%20one"></a><a id="title-1-one"></a><a id="title_1_one"></a></h1>
+<h2>Title 2<a id="Title%202"></a><a id="title-2"></a><a id="title_2"></a></h2>
+<h3>Title <code>3</code><a id="Title%203"></a><a id="title-3"></a><a id="title_3"></a></h3>
+</div>
+<script id="mtx_js_1" type="text/javascript">
+// adjust internal link fragments
+(function() {
+var stem=document.location.origin+document.location.pathname;
+var base=document.getElementsByTagName('base');
+base=base[0].href;
+var links=document.getElementsByTagName('a');
+for(let i = 0; i < links.length; i++) {
+    if(links[i].href.indexOf(base+'#')==0) {
+        links[i].href=stem+links[i].href.slice(links[i].href.indexOf('#'));
+    }
+}
+})();
+</script>
+</body>
+</html>

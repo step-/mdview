@@ -1,0 +1,23 @@
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>ToC goes here</b>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="200%">H1​<span font="@dest=Lu0dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu3dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#444" size="150%">H2​<span font="@dest=Lu5dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu7dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#444" size="117%">H3​<span font="@dest=Lu9dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu11dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#000" size="100%" variant="smallcaps">H4​<span font="@dest=Lu13dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu15dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#000" size="83%">H5​<span font="@dest=Lu17dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu19dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#000" size="67%">H6​<span font="@dest=Lu21dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu23dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#000" size="67%">6H​<span font="@dest=Lu25dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu27dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#000" size="83%">5H​<span font="@dest=Lu29dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu27dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#000" size="100%" variant="smallcaps">4H​<span font="@dest=Lu31dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu27dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#444" size="117%">3H​<span font="@dest=Lu33dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu27dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#444" size="150%">2H​<span font="@dest=Lu35dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu27dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#444" size="200%">1H​<span font="@dest=Lu37dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu27dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#444" size="200%">SETEXT 1​<span font="@dest=Lu39dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu41dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu43dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<b><span fgcolor="#444" size="150%">SETEXT 2​<span font="@dest=Lu45dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu47dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu49dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="150%">MULTILINE SETEXT 2 HEADING​<span font="@dest=Lu51dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu53dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu55dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b>Fenced code block</b>
+<tt><span bgcolor="#FFF" fgcolor="#B56"># This shell comment isn't a heading therefore it shouldn't be in the ToC.</span></tt>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯

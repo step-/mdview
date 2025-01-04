@@ -1,0 +1,53 @@
+<b><span fgcolor="#444" size="150%">Auto-heading link anchor​<span font="@dest=Lu0dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu3dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu5dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+Given the heading “The heading”, the auto-heading link feature adds the following in-page anchors at the heading's line:
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Anchor       </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Referenced by         </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">#The heading</span></tt> </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> verbatim heading text </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">#the_heading</span></tt> </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> snake-case <span font="monospace @dest=Lu9dest=Tl4" fgcolor="#048" underline="single">slug</span>       </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">#the-heading</span></tt> </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> kebab-case <span font="monospace @dest=Lu9dest=Tl4" fgcolor="#048" underline="single">slug</span>       </span>│
+</span></tt>
+Therefore the linked heading can be reached equivalently as follows:
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Link             </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Markdown                         </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu13dest=Tl11" fgcolor="#048" underline="single">The heading</span>      </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">[The heading]</span></tt>                    </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu13dest=Tl14" fgcolor="#048" underline="single">To The heading</span>   </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">[To The heading][The heading]</span></tt>    </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu20dest=Tl14" fgcolor="#048" underline="single">To the_heading</span>   </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">[To the_heading](&lt;#the_heading&gt;)</span></tt> </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu24dest=Tl14" fgcolor="#048" underline="single">To the-heading</span>   </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">[To the-heading](&lt;#the-heading&gt;)</span></tt> </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu28dest=Tl14" fgcolor="#048" underline="single">To THE-Heading</span> ¹ </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">[To THE-heading](&lt;#THE-heading&gt;)</span></tt> </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu32dest=Tl14" fgcolor="#048" underline="single">To the-HEADing</span> ¹ </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">[To the-HEADing](&lt;#the-HeAdinG&gt;)</span></tt> </span>│
+</span></tt>
+Try each of the links above, they should jump to <b>The heading</b> below. Then click “back to section top” to clear the highlight and try another link.
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=1liBLen=3liId=199">1. </span><i>Note that the last two links in the table use mixed case. Technically, they should not work because slugs are required to be in lowercase. But mdview is forgiving!</i><span font="@liId=199"></span>
+<span font="@olUlLvl=0"></span><b><span fgcolor="#444" size="117%">The heading​<span font="@dest=Lu13dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu24dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu20dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<span font="@dest=Lu3dest=Tl19" fgcolor="#048" underline="single">back to section top</span>
+<b><span fgcolor="#444" size="150%">Slug compatibility​<span font="@dest=Lu41dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu43dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu45dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+Mdview implements kebab-case slugs according to <span font="@dest=Lu47dest=Tl6" fgcolor="#048" underline="single">pandoc</span>'s specification of <span font="@dest=Lu50dest=Tl16" fgcolor="#048" underline="single">auto_identifiers</span> and <span font="@dest=Lu53dest=Tl17" fgcolor="#048" underline="single">ascii_identifiers</span> extensions. To demonstrate such is the case, the Table of Contents below was created with pandoc, passing the 9 headings beneath the ToC as markdown input:
+<tt><span bgcolor="#FFF" fgcolor="#B56">pandoc -f markdown-smart+auto_identifiers+ascii_identifiers -t commonmark --toc -s &lt;&lt; \EOF | grep ^-
+    copy the headings here
+EOF</span></tt>
+Clicking on the heading links below should jump to their respective headings. However, items #2, #8, and #9 cannot be accessed this way. The slug creation rules for items 2 and 8 result in empty slugs, making them unreachable, while item 9 is affected by the mitigations described <span font="@dest=Lu57dest=Tl4" fgcolor="#048" underline="single">here</span>.
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=155">• </span><span font="@dest=Lu60dest=Tl19" fgcolor="#048" underline="single">1 Maître d'hôtel. !</span><span font="@liId=155"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=150">• </span><span font="@dest=Lu63dest=Tl9" fgcolor="#048" underline="single">2 中文标题. !</span><span font="@liId=150"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=145">• </span><span font="@dest=Lu66dest=Tl46" fgcolor="#048" underline="single">3 é è ê ë ç á à â ä í ì î ï ó ò ô ö ú ù û ü. !</span><span font="@liId=145"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=140">• </span><span font="@dest=Lu69dest=Tl12" fgcolor="#048" underline="single">4 ALLCAPS. !</span><span font="@liId=140"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=135">• </span><span font="@dest=Lu72dest=Tl16" fgcolor="#048" underline="single">5 ‘I ♥ Dogs’.; !</span><span font="@liId=135"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=130">• </span><span font="@dest=Lu75dest=Tl18" fgcolor="#048" underline="single">6 ‘ Déjà Vu! ’.; !</span><span font="@liId=130"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=125">• </span><span font="@dest=Lu78dest=Tl22" fgcolor="#048" underline="single">7 ‘fooBar 123 $#%’.; !</span><span font="@liId=125"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=120">• </span><span font="@dest=Lu81dest=Tl26" fgcolor="#048" underline="single">8 ‘я люблю единорогов’.; !</span><span font="@liId=120"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=115">• </span><span font="@dest=Lu84dest=Tl22" fgcolor="#048" underline="single">9 ‘a-b_c D--E__F’... !</span><span font="@liId=115"></span>
+<span font="@olUlLvl=0"></span><b><span fgcolor="#444" size="117%">1 Maître d'hôtel. !​<span font="@dest=Lu87dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu60dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu90dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<i>slug <tt><span fgcolor="#B56">maitre-dhotel.</span></tt></i>
+<b><span fgcolor="#444" size="117%">2 中文标题. !​<span font="@dest=Lu93dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<i>empty slug</i> — To jump to this heading use the reference link <span font="@dest=Lu93dest=Tl9" fgcolor="#048" underline="single">2 中文标题. !</span> syntax.
+<b><span fgcolor="#444" size="117%">3 é è ê ë ç á à â ä í ì î ï ó ò ô ö ú ù û ü. !​<span font="@dest=Lu96dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu66dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu99dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<i>slug <tt><span fgcolor="#B56">e-e-e-e-c-a-a-a-a-i-i-i-i-o-o-o-o-u-u-u-u.</span></tt></i>
+<b><span fgcolor="#444" size="117%">4 ALLCAPS. !​<span font="@dest=Lu102dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu69dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<i>slug <tt><span fgcolor="#B56">allcaps.</span></tt></i>
+<b><span fgcolor="#444" size="117%">5 I ♥ Dogs.; !​<span font="@dest=Lu106dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu72dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu109dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<i>slug <tt><span fgcolor="#B56">i-dogs.</span></tt></i>
+<b><span fgcolor="#444" size="117%">6   Déjà Vu!  .; !​<span font="@dest=Lu112dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu75dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu115dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<tt><span fgcolor="#B56">deja-vu-.</span></tt>_
+<b><span fgcolor="#444" size="117%">7 fooBar 123 $#%.; !​<span font="@dest=Lu118dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu78dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu121dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<i>slug <tt><span fgcolor="#B56">foobar-123-.</span></tt></i>
+<b><span fgcolor="#444" size="117%">8 я люблю единорогов.; !​<span font="@dest=Lu124dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
+<i>empty slug</i> — To jump to this heading use the reference link <span font="@dest=Lu124dest=Tl24" fgcolor="#048" underline="single">8 я люблю единорогов.; !</span> syntax.
+<b><span fgcolor="#444" size="117%">9 a-b_c D--E__F... !</span></b>
+<i>slug <tt><span fgcolor="#B56">a-b_c-d--e__f...</span></tt></i> — This heading cannot be jumped to due to the aforementioned mitigations.

@@ -1,0 +1,23 @@
+<span fgcolor="red">Limitation: mdview cannot compute column width in **visible characters**, therefore it cannot correctly align columns containing ANSI/TTY escape codes.</span>
+
+|Subject|Rendered|
+|:-|:-:|
+|link|this [website](http://example.com) is fast|
+|link no text|this [](http://example.com) is fast|
+|`[link reference]`|[link reference]
+|angular brackets|\<<http://a.com>>|
+|permissive autolink| https://www.example.com is fast
+
+---
+References:
+
+\[link reference]: /the/target  
+
+[link reference]: /the/target
+
+--------------------------------------------------------------------------------
+
+|Rendered|Markdown|
+|:-|:-:|
+|[this link reopens this file](gui_uri.md) |`` [this link re-opens this file](gui_uri.md) ``
+|[this `file://` link reopens this file ](file://gui_uri.md) |`` [this `file://` link reopens this file](file://gui_uri.md) ``

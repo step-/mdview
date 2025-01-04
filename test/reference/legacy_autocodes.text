@@ -1,0 +1,79 @@
+[DESCRIPTION]
+Auto-code is an mdview extension It is enabled by default, and it can be disabled with option --no-ext.
+An auto-code is a word that is rendered as a code span even though it isn't surrounded by grave accents. The word is at least 4 bytes long. Inner white space must be escaped with backslash.
+[SUPPORTED AUTO-CODES]
+absolute path — any word that starts with / and is at least four bytes long.
+  * 1 byte = 1 character for the ASCII and 8-bit character sets
+  * 2 to 4 bytes = 1 character for other unicode characters
+  * /123 /naïve /😃
+  * “/dir/file” ‘/dir/file’ /file.. “/file,” ‘/file:’ /file; /file! /file?
+  * /dir/ “/dir/” (a terminating slash is included)
+  * but not /12 /1 / /§ (too short: 3, 2, 1 and 2 bytes respectively)
+  * but not /12/ “/12/” (a terminating slash is not counted in the byte count)
+  * but not name: “/file name” (two words: «/file» and «name»; see [BACKSLASH TESTS] for a work-around).
+dot relative path — any word that starts with ./ or ../ and is at least four bytes long.
+  * ../file ../../dir/
+  * ./file ./dir/file
+  * ./.bashrc
+special file names
+file names ending with extensions “.patch” or “.diff”:
+  * file.patch f.diff “f.diff”
+  * f.diff, f.diff.
+  * but not .patch .diff “.diff” (need a file name, just the extension is not enough)
+  * but not f.diff.old (does not end with the right extension)
+  * Caveat: “f.diff.”
+URI
+The auto-code and permissive auto-link extensions contend for free-standing URIs. Permissive auto-link wins unless disabled with option --no-permlink.
+  * http:// https:// ftp://
+  * http://www https://www.example ftp://www.example.com
+  * wrapped: “http://example.com”, (https://www.example.com)
+  * http://a.com/ http://a.com? http://a.com?v= http://a.com?v=.
+Note that angle brackets indicate an auto-link instead of an auto-code. For example, <https://www.example.com> turns into https://www.example.com <https://www.example.com>.
+issue id (bugzilla, gh) — “#” followed by an ASCII word
+  * #123 #abc
+  * not #123 #abc (backslash escapes)
+function name — ASCII identifier that ends with “()”
+  * foo() foo(); foo_bar() f9()
+  * with backslash before underscore: _foo() - without: _foo()
+  * but not () “()” (no identifier)
+  * but not 32() (32 not an identifier)
+uppercase identifier — uppercase ASCII identifier that includes at least one underscore
+  * XDG_CONFIG_HOME and _Z_DATA
+  * $XDG_CONFIG_HOME also if it starts with “$”
+  * with all underscores escaped: _ABC _ABC_
+  * with the first but not the last underscore escaped: _ABC_
+  * but not DISPLAY (no underscore), $HOME (no underscore)
+  * but not HOME (italics)
+email address — ASCII word, must not start with “@” or “.”, must include one “@” and at least one interior “.”
+The auto-code and permissive auto-link extensions contend for free-standing email addresses. Permissive auto-link wins unless disabled with option --no-permlink.
+  * a@b.com
+  * not @ @ID macro@ @@@@@@@@@
+[FORMATTING]
+Exterior formatting - italics, bold, strikethrough - is applied to auto-codes.
+  * /root
+  * /italics /bold /strikethrough
+  * /3/star/bold-italics / / / / /3/under/bold-italics
+  * bold italics strikethrough
+  * #123 #abc #123 #abc
+  * http:// https:// ftp:// http:// https:// ftp://
+  * file.patch file.diff file.patch file.diff
+  * foo() foo()
+  * XDG_CONFIG_HOME _Z_DATA $XDG_CONFIG_HOME XDG_CONFIG_HOME _Z_DATA $XDG_CONFIG_HOME
+  * XDG_CONFIG_HOME _Z_DATA $XDG_CONFIG_HOME XDG_CONFIG_HOME _Z_DATA $XDG_CONFIG_HOME
+  * a@b.com a@b.com
+-BACKTICK TESTS-
+Below explicit backticks wrap code chunks therefore auto-code isn't applied.
+  * cp /tmp/a /tmp/b
+  * #123 and #456
+  * _ABC_, _DEF and _XYZ
+Exterior formatting is applied to explicit code chunks:
+  * two italics words and a bold URI: foo() user@email.com https://mdview.com
+Mixing code chunks, auto-codes and formatting works:
+  * cp /code /auto-code
+  * ln -s /auto-code
+-BACKSLASH TESTS-
+Note that quotes must be placed outside emphasis to enable smart quote replacement.
+  * Replaced: #123 #123x “#123_”
+  * Replaced including white space: /file name
+  * Not replaced (one backslash before foo) foo()
+  * Not replaced (special: double backslash before #): #123 #123 “#123”

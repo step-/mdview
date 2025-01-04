@@ -1,0 +1,16 @@
+<span fgcolor="red">Limitation: mdview cannot compute column width in <b>visible characters</b>, therefore it cannot correctly align columns containing ANSI/TTY escape codes.</span>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Subject             </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold">            Rendered             </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> link                </span>│<span bgcolor="#FBFBFB" fgcolor="#000">      this <span font="monospace @dest=Lu2dest=Tl7" fgcolor="#048" underline="single">website</span> is fast       </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> link no text        </span>│<span bgcolor="#FBFBFB" fgcolor="#000">        this <span font="monospace @dest=Lu2dest=Tl3" fgcolor="#048" underline="single">{-}</span> is fast         </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">[link reference]</span></tt>    </span>│<span bgcolor="#FBFBFB" fgcolor="#000">         <span font="monospace @dest=Lu7dest=Tl14" fgcolor="#048" underline="single">link reference</span>          </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> angular brackets    </span>│<span bgcolor="#FBFBFB" fgcolor="#000">         &lt;<span font="monospace @dest=Lu10dest=Tl12" fgcolor="#048" underline="single">http://a.com</span>&gt;          </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> permissive autolink </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu13dest=Tl23" fgcolor="#048" underline="single">https://www.example.com</span> is fast </span>│
+</span></tt>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+References:
+[link reference]: <tt><span fgcolor="#B56">/the/target</span></tt>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Rendered                             </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold">                          Markdown                          </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu16dest=Tl27" fgcolor="#048" underline="single">this link reopens this file</span>          </span>│<span bgcolor="#FBFBFB" fgcolor="#000">         <tt><span fgcolor="#B56">[this link re-opens this file](gui_uri.md)</span></tt>         </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu20dest=Tl36" fgcolor="#048" underline="single">this <tt><span fgcolor="#B56">file://</span></tt> link reopens this file </span> </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">[this `file://` link reopens this file](file://gui_uri.md)</span></tt> </span>│
+</span></tt>

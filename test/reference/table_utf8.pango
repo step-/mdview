@@ -1,0 +1,13 @@
+<span fgcolor="red">Limitation: Columns may be misaligned if some cells include wide characters (Unicode codepoints that represent larger glyphs), such as East Asian characters or certain emojis.</span>
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Wide Column 3 </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000">               </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000">  cen 🌑 ter   </span>│
+</span></tt>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Column 1 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Wide Column 2 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Wide Column 3 </span>│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> Wide Column 4 </span>│
+</span></tt>│<span bgcolor="#FBFBFB" fgcolor="#000"> default  </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> left          </span>│<span bgcolor="#FBFBFB" fgcolor="#000">               </span>│<span bgcolor="#FBFBFB" fgcolor="#000">         right </span>│
+│<span bgcolor="#FBFBFB" fgcolor="#000"> 🔴       </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> 🌓 left       </span>│<span bgcolor="#FBFBFB" fgcolor="#000">  cen 🌑 ter   </span>│<span bgcolor="#FBFBFB" fgcolor="#000">      right 🌗 </span>│
+</span></tt>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<tt><span bgcolor="#FBFBFB" fgcolor="#EBEBEB" size="108%"><tt><span bgcolor="#F4F4FF" fgcolor="#E4E4E4">│<span bgcolor="#F4F4F4" fgcolor="#222" weight="bold"> X </span>│
+</span></tt></span></tt>

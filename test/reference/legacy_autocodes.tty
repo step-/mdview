@@ -1,0 +1,79 @@
+[7;1mDESCRIPTION[27;21m
+[1mAuto-code is an mdview extension[0m It is enabled by default, and it can be disabled with option [36m--no-ext[39m.
+An [1mauto-code[0m is a word that is rendered as a code span even though it isn't surrounded by grave accents. The word is at least 4 bytes long. Inner white space must be escaped with backslash.
+[7;1mSUPPORTED AUTO-CODES[27;21m
+[1mabsolute path[0m — any word that starts with [36m/[39m and is at least four bytes long.
+  * [4m1 byte = 1 character for the ASCII and 8-bit character sets[0m
+  * [4m2 to 4 bytes = 1 character for other unicode characters[0m
+  * [36m/123[39m [36m/naïve[39m [36m/😃[39m
+  * “/dir/file” ‘[36m/dir/file[39m’ [36m/file[39m.. “/file,” ‘[36m/file[39m:’ [36m/file[39m; [36m/file[39m! [36m/file[39m?
+  * [36m/dir/[39m “/dir/” (a terminating slash is included)
+  * but not /12 /1 / /§ (too short: 3, 2, 1 and 2 bytes respectively)
+  * but not /12/ “/12/” (a terminating slash is [4mnot[0m counted in the byte count)
+  * but not name: “/file name” (two words: «/file» and «name»; see [BACKSLASH TESTS] for a work-around).
+[1mdot relative path[0m — any word that starts with [36m./[39m or [36m../[39m and is at least four bytes long.
+  * [36m../file[39m [36m../../dir/[39m
+  * [36m./file[39m [36m./dir/file[39m
+  * [36m./.bashrc[39m
+[1mspecial file names[0m
+file names ending with extensions “.patch” or “.diff”:
+  * [36mfile.patch[39m [36mf.diff[39m “[36mf.diff[39m”
+  * [36mf.diff[39m, [36mf.diff[39m.
+  * but not .patch .diff “.diff” (need a file [4mname[0m, just the extension is not enough)
+  * but not f.diff.old (does not end with the right extension)
+  * Caveat: “[36mf.diff[39m.”
+[1mURI[0m
+The auto-code and permissive auto-link extensions contend for free-standing URIs. Permissive auto-link wins unless disabled with option [36m--no-permlink[39m.
+  * [36mhttp://[39m [36mhttps://[39m [36mftp://[39m
+  * [36mhttp://www[39m [36mhttps://www.example[39m [36mftp://www.example.com[39m
+  * wrapped: “http://example.com”, ([36mhttps://www.example.com[39m)
+  * [36mhttp://a.com/[39m [36mhttp://a.com?[39m [36mhttp://a.com?v=[39m [36mhttp://a.com?v=.[39m
+Note that angle brackets indicate an [1mauto-link[0m instead of an auto-code. For example, [36m<[39mhttps://www.example.com[36m>[39m turns into https://www.example.com <https://www.example.com>.
+[1missue id (bugzilla, gh)[0m — “#” followed by an ASCII word
+  * [36m#123[39m [36m#abc[39m
+  * not #123 #abc (backslash escapes)
+[1mfunction name[0m — ASCII identifier that ends with “()”
+  * [36mfoo()[39m [36mfoo()[39m; [36mfoo_bar()[39m [36mf9()[39m
+  * with backslash before underscore: [36m_foo()[39m - without: [36m_foo()[39m
+  * but not () “()” (no identifier)
+  * but not 32() (32 not an identifier)
+[1muppercase identifier[0m — uppercase ASCII identifier that includes at least one underscore
+  * [36mXDG_CONFIG_HOME[39m and [36m_Z_DATA[39m
+  * [36m$XDG_CONFIG_HOME[39m also if it starts with “$”
+  * with all underscores escaped: [36m_ABC[39m [36m_ABC_[39m
+  * with the first but not the last underscore escaped: [36m_ABC_[39m
+  * but not DISPLAY (no underscore), $HOME (no underscore)
+  * but not [4mHOME[0m (italics)
+[1memail address[0m — ASCII word, must not start with “@” or “.”, must include one “@” and at least one interior “.”
+The auto-code and permissive auto-link extensions contend for free-standing email addresses. Permissive auto-link wins unless disabled with option [36m--no-permlink[39m.
+  * [36ma@b.com[39m
+  * not @ @ID macro@ @@@@@@@@@
+[7;1mFORMATTING[27;21m
+Exterior formatting - italics, bold, strikethrough - is applied to auto-codes.
+  * [4m[36m/root[39m[0m
+  * [4m[36m/italics[39m[0m [1m[36m/bold[39m[0m --/strikethrough--
+  * [4m[1m[36m/3/star/bold-italics[39m / /[0m[0m [4m[1m/ / [36m/3/under/bold-italics[39m[0m[0m
+  * [4m[1m--bold italics strikethrough--[0m[0m
+  * [4m[36m#123[39m[0m [4m[36m#abc[39m[0m [1m[36m#123[39m[0m [1m[36m#abc[39m[0m
+  * [4m[36mhttp://[39m [36mhttps://[39m [36mftp://[39m[0m [1m[36mhttp://[39m [36mhttps://[39m [36mftp://[39m[0m
+  * [4m[36mfile.patch[39m[0m [4m[36mfile.diff[39m[0m [1m[36mfile.patch[39m[0m [1m[36mfile.diff[39m[0m
+  * [4m[36mfoo()[39m[0m [1m[36mfoo()[39m[0m
+  * [4m[36mXDG_CONFIG_HOME[39m[0m [4m[36m_Z_DATA[39m[0m [4m[36m$XDG_CONFIG_HOME[39m[0m [1m[36mXDG_CONFIG_HOME[39m[0m [1m[36m_Z_DATA[39m[0m [1m[36m$XDG_CONFIG_HOME[39m[0m
+  * [4m[36mXDG_CONFIG_HOME[39m [36m_Z_DATA[39m [36m$XDG_CONFIG_HOME[39m[0m [1m[36mXDG_CONFIG_HOME[39m [36m_Z_DATA[39m [36m$XDG_CONFIG_HOME[39m[0m
+  * [4m[36ma@b.com[39m[0m [1m[36ma@b.com[39m[0m
+[7mBACKTICK TESTS[27m
+Below explicit backticks wrap code chunks therefore auto-code isn't applied.
+  * [36mcp /tmp/a /tmp/b[39m
+  * [36m#123 and #456[39m
+  * [36m_ABC_, _DEF and _XYZ[39m
+Exterior formatting is applied to explicit code chunks:
+  * two italics words and a bold URI: [4m[36mfoo() user@email.com[39m[0m [1m[36mhttps://mdview.com[39m[0m
+Mixing code chunks, auto-codes and formatting works:
+  * [36mcp /code[39m [36m/auto-code[39m
+  * [4m[36mln -s[39m[0m [4m[1m[36m/auto-code[39m[0m[0m
+[7mBACKSLASH TESTS[27m
+Note that quotes must be placed outside emphasis to enable smart quote replacement.
+  * Replaced: [36m#123[39m [4m[36m#123x[39m “[0m[36m#123_[39m”
+  * Replaced including white space: [36m/file name[39m
+  * Not replaced (one backslash before foo) foo()
+  * Not replaced (special: double backslash before #): #123 [4m#123[0m “[4m#123[0m”

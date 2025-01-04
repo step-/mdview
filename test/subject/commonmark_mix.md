@@ -1,0 +1,84 @@
+## Emphasis
+
+`__a **b c__ d**`
+__a **b c__ d**
+
+`**a *b**c***`
+**a *b**c***
+
+**a **b c** d**
+
+**a *b c* d**
+
+**a ***b c*** d**
+
+a>**x**<z
+
+a>***x***<z
+
+----
+
+## Link text container
+
+### link span in link span is invalid
+
+[image ![1](linux3.png)
+and `some code`
+and [link2](http://link2.com)
+and autolink <http://auto.com>
+and permissive links http://www.perm1.com www.perm2.com
+in link1](http://link1.com)
+
+### image and code spans in link spans are valid
+
+[image ![1](linux3.png)
+and `some code`
+in link1](http://link1.com)
+
+[image ![1](linux3.png)
+and
+image ![2](linux3.png)
+in link2](http://link2.com)
+
+[image !["&1"](linux3.png)
+and
+image ![<2>](linux3.png)
+in link3](http://link3.com)
+
+[![image 1](linux3.png "Image Title 1")
+and
+![image 2](linux3.png '"Image Title 2"')
+in link3](http://link3.com)
+
+### link and code spans in image span text are valid
+
+![[link1](http://link1.com) and `some code`](linux3.png "Image Title")
+
+### image span nested in image span text is valid
+
+![outer image ![inner image](linux3.png "Inner Title")](./linux3.png "Outer Title")
+
+![outer image ![middle image ![inner image](linux3.png "Inner Title")](./linux3.png "Middle Title")](././linux3.png "Outer Title")
+
+![outer image ![middle image ![inner image](linux3.png "Inner Title")](./linux3.png "Middle Title")](././linux3.png "Outer Title")
+![outer IMAGE ![middle IMAGE ![inner IMAGE](linux3.png "Inner TITLE")](./linux3.png "Middle TITLE")](././linux3.png "Outer TITLE")
+
+* ![outer image ![middle image ![inner image](linux3.png "Inner Title")](./linux3.png "Middle Title")](././linux3.png "Outer Title")
+* ![outer IMAGE ![middle IMAGE ![inner IMAGE](linux3.png "Inner TITLE")](./linux3.png "Middle TITLE")](././linux3.png "Outer TITLE")
+
+* ![outer image ![middle image ![inner image](linux3.png "Inner Title")](./linux3.png "Middle Title")](././linux3.png "Outer Title")
+  * ![outer IMAGE ![middle IMAGE ![inner IMAGE](linux3.png "Inner TITLE")](./linux3.png "Middle TITLE")](././linux3.png "Outer TITLE")
+
+* ![outer image ![middle image ![inner image](linux3.png "Inner Title")](./linux3.png "Middle Title")](././linux3.png "Outer Title")
+
+  * ![outer IMAGE ![middle IMAGE ![inner IMAGE](linux3.png "Inner TITLE")](./linux3.png "Middle TITLE")](././linux3.png "Outer TITLE")
+
+### hard break in image text
+
+![hard  
+break](linux3.png)
+
+![outer BR  
+![inner BR  
+inner image](linux3.png)  
+outer image](./linux3.png)

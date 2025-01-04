@@ -1,0 +1,49 @@
+<p><span fgcolor="red">Limitation: Columns may be misaligned if some cells include wide characters (Unicode codepoints that represent larger glyphs), such as East Asian characters or certain emojis.</span></p>
+<table>
+<thead>
+<tr>
+<th align="center">Wide Column 3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">cen 🌑 ter</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<table>
+<thead>
+<tr>
+<th>Column 1</th>
+<th align="left">Wide Column 2</th>
+<th align="center">Wide Column 3</th>
+<th align="right">Wide Column 4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>default</td>
+<td align="left">left</td>
+<td align="center"></td>
+<td align="right">right</td>
+</tr>
+<tr>
+<td>🔴</td>
+<td align="left">🌓 left</td>
+<td align="center">cen 🌑 ter</td>
+<td align="right">right 🌗</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<table>
+<thead>
+<tr>
+<th>X</th>
+</tr>
+</thead>
+</table>

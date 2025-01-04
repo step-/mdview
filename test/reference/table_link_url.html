@@ -1,0 +1,53 @@
+<p><span fgcolor="red">Limitation: mdview cannot compute column width in <strong>visible characters</strong>, therefore it cannot correctly align columns containing ANSI/TTY escape codes.</span></p>
+<table>
+<thead>
+<tr>
+<th align="left">Subject</th>
+<th align="center">Rendered</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">link</td>
+<td align="center">this <a href="http://example.com">website</a> is fast</td>
+</tr>
+<tr>
+<td align="left">link no text</td>
+<td align="center">this <a href="http://example.com"></a> is fast</td>
+</tr>
+<tr>
+<td align="left"><code>[link reference]</code></td>
+<td align="center"><a href="/the/target">link reference</a></td>
+</tr>
+<tr>
+<td align="left">angular brackets</td>
+<td align="center">&lt;<a href="http://a.com">http://a.com</a>&gt;</td>
+</tr>
+<tr>
+<td align="left">permissive autolink</td>
+<td align="center"><a href="https://www.example.com">https://www.example.com</a> is fast</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>References:</p>
+<p>[link reference]: <code>/the/target</code></p>
+<hr />
+<table>
+<thead>
+<tr>
+<th align="left">Rendered</th>
+<th align="center">Markdown</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><a href="gui_uri.md">this link reopens this file</a></td>
+<td align="center"><code>[this link re-opens this file](gui_uri.md)</code></td>
+</tr>
+<tr>
+<td align="left"><a href="file://gui_uri.md">this <code>file://</code> link reopens this file </a></td>
+<td align="center"><code>[this `file://` link reopens this file](file://gui_uri.md)</code></td>
+</tr>
+</tbody>
+</table>

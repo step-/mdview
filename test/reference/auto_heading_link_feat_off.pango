@@ -1,0 +1,85 @@
+<b><span fgcolor="#444" size="200%">Auto-heading links</span></b>
+The auto-heading link feature automatically constructs a CommonMark link reference definition for the display text of each heading in the document. Then authors can add a <i>regular link</i> to jump to the heading. The link destination must start with <tt><span fgcolor="#B56">#</span></tt> (same as the in-page links of HTML documents). If the title includes spaces, wrap the destination with matching pointed brackets.
+Example of a regular link:
+<tt><span bgcolor="#FFF" fgcolor="#B56"># This heading title
+                           ┌── destination ──┐
+[Jump to &quot;Heading Title&quot;](&lt;#This heading title&gt;)</span></tt>
+In addition to jumping to the heading with a regular link, one can jump with a <i>reference link</i> as the <span font="@dest=Lu2dest=Tl13" fgcolor="#048" underline="single">specification</span> explains.
+Examples of reference links:
+<tt><span bgcolor="#FFF" fgcolor="#B56">[This heading title]
+[Jump to title][This heading title]</span></tt>
+The reference link destination must exactly match the heading text, omitting any leading <tt><span fgcolor="#B56">#</span></tt>.
+<b>Important:</b> Heading text collisions are not managed. If two headings share the same display text, all reference links to that text will direct to the first matching heading in the document.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="150%">Auto-heading link tests</span></b>
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=206">• </span><span font="@dest=Lu6dest=Tl28" fgcolor="#048" underline="single">Jump to “Auto-heading links”</span><span font="@liId=206"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=201">• </span>[Jump to “TITLE”][TITLE]<span font="@liId=201"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=198">• </span>[Jump to “ATX 1”][ATX 1]<span font="@liId=198"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=195">• </span><span font="@dest=Lu9dest=Tl17" fgcolor="#048" underline="single">Jump to “ATX 2 🙂”</span><span font="@liId=195"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=190">• </span>[Jump to “ATX 2 🙂 🙂”][ATX 2 🙂 🙂]<span font="@liId=190"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=187">• </span><span font="@dest=Lu12dest=Tl20" fgcolor="#048" underline="single">Jump to “SETEXT 1 !”</span><span font="@liId=187"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=182">• </span>[Jump to “SETEXT 2”][SETEXT 2]<span font="@liId=182"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=179">• </span>[Jump to “<i><b>Strong Emphasis</b></i>”][Strong Emphasis]<span font="@liId=179"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=176">• </span><span font="@dest=Lu15dest=Tl45" fgcolor="#048" underline="single">Jump to “# this title starts and ends with #”</span><span font="@liId=176"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=171">• </span>[Jump to “SETEXT Z +SETEXT Z 🙂”][SETEXT Z +SETEXT Z 🙂] (multiline title)<span font="@liId=171"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liId=168">• </span>[Jump to “SETEXT BR+SETEXT”][SETEXT BR+SETEXT] (multiline title with a hard line break)<span font="@liId=168"></span>
+<span font="@olUlLvl=0"></span>⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="200%">TITLE</span></b>
+atx 1 title above.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="200%">ATX 1</span></b>
+atx 1 title above.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="150%">ATX 2 🙂</span></b>
+atx 2 title above - written as <tt><span fgcolor="#B56">ATX 2 &amp;#x1F642;</span></tt>.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="150%">ATX 2 🙂 🙂</span></b>
+atx 2 title above - written as <tt><span fgcolor="#B56">ATX 2 🙂 🙂</span></tt>.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="200%">SETEXT 1 !</span></b>
+setext 1 title above.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="150%">SETEXT 2</span></b>
+setext 2 title above - written as ␣␣<tt><span fgcolor="#B56">SETEXT 2</span></tt>␣␣␣␣
+<i>Leading (up to three) and trailing spaces are stripped from the title.</i>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#000" size="100%" variant="smallcaps"><i><b>Strong Emphasis</b></i></span></b>
+atx 4 title above - written as <tt><span fgcolor="#B56">*** Strong Emphasis***</span></tt>.
+<i>The small-caps font variant and the bold, italics text styles do not affect how one writes the link destination: <tt><span fgcolor="#B56">[Strong Emphasis]</span></tt>.</i> [Try][Strong Emphasis].
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="200%">Corner cases</span></b>
+The following titles can be processed for heading links but be mindful of the necessary Markdown syntax.
+<b><span fgcolor="#444" size="117%"># this title starts and ends with #</span></b>
+<b><span fgcolor="#444" size="117%">(brackets are <tt><span fgcolor="#B56">OK()</span></tt></span></b>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="200%">Unfriendly corner cases</span></b>
+Titles that include, <tt><span fgcolor="#B56">[</span></tt>, <tt><span fgcolor="#B56">&lt;</span></tt>, <tt><span fgcolor="#B56">&gt;</span></tt>, <tt><span fgcolor="#B56">]</span></tt>, <tt><span fgcolor="#B56">\\</span></tt> and <tt><span fgcolor="#B56">&amp;</span></tt> are not processed for heading links. This measure avoids generating invalid Markdown link reference syntax.
+<b><span fgcolor="#444" size="117%">b [</span></b>
+<b><span fgcolor="#444" size="117%">c &lt;</span></b>
+<b><span fgcolor="#444" size="117%">d &gt;</span></b>
+<b><span fgcolor="#444" size="117%">e ]</span></b>
+<b><span fgcolor="#444" size="117%">g \</span></b>
+<b><span fgcolor="#444" size="117%">h &amp;</span></b>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="150%">The section below isn't supposed to contain titles!</span></b>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<span font="@blckqtLvl=1blckqtOpn=1"><span fgcolor="silver">┌   </span></span>quote isn't a title ===========
+<span font="@blckqtLvl=1blckqtOpn=0"><span fgcolor="silver">└</span></span>
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=38">• </span>list item isn't a title ===========<span font="@liId=38"></span>
+<span font="@olUlLvl=0"></span><span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=33">• </span>list item isn't a title ===========<span font="@liId=33"></span>
+<span font="@olUlLvl=0"></span><span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=1liBLen=3liId=28">1. </span>ordered list item isn't a title ====================<span font="@liId=28"></span>
+<span font="@olUlLvl=0"></span><tt><span bgcolor="#FFF" fgcolor="#B56"># code block isn't a title</span></tt>
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+<b><span fgcolor="#444" size="150%">Even links to multiline SETEXT headings are supported!</span></b>
+<i>like</i>
+<tt><span bgcolor="#FFF" fgcolor="#B56">    SETEXT Z
+    +SETEXT Z 🙂
+    ============</span></tt>
+<b><span fgcolor="#444" size="200%">SETEXT Z +SETEXT Z 🙂</span></b>
+<i>and</i>
+<tt><span bgcolor="#FFF" fgcolor="#B56">    SETEXT BR  
+    +SETEXT
+    -----------</span></tt>
+<b><span fgcolor="#444" size="150%">SETEXT BR
++SETEXT</span></b>
+Note that the link to the title <b>will not</b> contain the hard line break.

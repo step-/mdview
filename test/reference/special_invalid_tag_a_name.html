@@ -1,0 +1,30 @@
+<!--
+white space in this file matters for the test
+-->
+<h3>DESCRIPTION</h3>
+<p>This test is about excluding HTML &quot;anchors&quot; from output, that is, all and only markdown lines that consist of validly-formed HTML tag <code>&lt;a name=&quot;some name&quot;&gt;</code>.</p>
+<p><em>Note that this file includes invalid HTML tags.</em></p>
+<h3>TESTS</h3>
+<hr />
+<p><strong>TEST INVALID TAGS...</strong></p>
+<p>&lt;a name=&gt;</a> &lt;a name= &gt;</a></p>
+<p><strong>RESULT</strong> The &quot;TEST ...&quot; heading followed by a line with two invalid <code>&lt;a&gt;</code> tags.</p>
+<hr />
+<p><strong>TEST <code>&lt;a&gt;</code> tag without <code>name</code> attribute...</strong></p>
+<p><a></a> <a ></a> <a href=""></a></p>
+<p><strong>RESULT</strong> Just a line consisting of the &quot;TEST ...&quot; heading.</p>
+<hr />
+<p><strong>TEST <code>&lt;a&gt;</code> tags that are followed by non-white space...</strong></p>
+<p><a name></a>suffix <a name > </a>suffix <a name> </a> suffix</p>
+<p><strong>RESULT</strong> A line consisting of the &quot;TEST ...&quot; heading followed by a line consisting of &quot;suffix&quot; repeated three times.</p>
+<hr />
+<p><strong>TEST valid anchors: show nothing until the next RESULT</strong></p>
+<p><a name></a> <a name=""></a> <a name="n"></a> <a name="sp" > </a> <a name=""></a> <a name="n"></a> <a name="sp" > </a> <a name=""></a> <a name="n"></a> <a name="sp"></a> <a name=""></a> <a name="n"></a> <a name="sp" > </a></p>
+<p><strong>RESULT</strong> A line consisting of the &quot;TEST ...&quot; heading</p>
+<hr />
+<p><strong>TEST anchors in code blocks: show them as code</strong></p>
+<pre><code>    &lt;a name=&quot;show me&quot;&gt;&lt;/a&gt;</code></pre>
+<pre><code>&lt;a name=&quot;show me&quot;&gt;&lt;/a&gt;</code></pre>
+<p><strong>RESULT</strong> two lines each consisting of <code>&lt;a name=&quot;show me&quot;&gt;&lt;/a&gt;</code>.</p>
+<hr />
+<h3>Test passed if all preceding &quot;RESULT&quot; statements are true</h3>

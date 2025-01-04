@@ -1,0 +1,65 @@
+<h2>Emphasis</h2>
+<p><code>__a **b c__ d**</code>
+<strong>a **b c</strong> d**</p>
+<p><code>**a *b**c***</code>
+<strong>a *b</strong>c***</p>
+<p><strong>a <strong>b c</strong> d</strong></p>
+<p><strong>a <em>b c</em> d</strong></p>
+<p><strong>a <em><strong>b c</strong></em> d</strong></p>
+<p>a&gt;<strong>x</strong>&lt;z</p>
+<p>a&gt;<em><strong>x</strong></em>&lt;z</p>
+<hr />
+<h2>Link text container</h2>
+<h3>link span in link span is invalid</h3>
+<p>[image <img src="linux3.png" alt="1" />
+and <code>some code</code>
+and <a href="http://link2.com">link2</a>
+and autolink <a href="http://auto.com">http://auto.com</a>
+and permissive links <a href="http://www.perm1.com">http://www.perm1.com</a> <a href="http://www.perm2.com">www.perm2.com</a>
+in link1](<a href="http://link1.com">http://link1.com</a>)</p>
+<h3>image and code spans in link spans are valid</h3>
+<p><a href="http://link1.com">image <img src="linux3.png" alt="1" />
+and <code>some code</code>
+in link1</a></p>
+<p><a href="http://link2.com">image <img src="linux3.png" alt="1" />
+and
+image <img src="linux3.png" alt="2" />
+in link2</a></p>
+<p><a href="http://link3.com">image <img src="linux3.png" alt="&quot;&amp;1&quot;" />
+and
+image <img src="linux3.png" alt="&lt;2&gt;" />
+in link3</a></p>
+<p><a href="http://link3.com"><img src="linux3.png" alt="image 1" title="Image Title 1" />
+and
+<img src="linux3.png" alt="image 2" title="&quot;Image Title 2&quot;" />
+in link3</a></p>
+<h3>link and code spans in image span text are valid</h3>
+<p><img src="linux3.png" alt="link1 and some code" title="Image Title" /></p>
+<h3>image span nested in image span text is valid</h3>
+<p><img src="./linux3.png" alt="outer image inner image" title="Outer Title" /></p>
+<p><img src="././linux3.png" alt="outer image middle image inner image" title="Outer Title" /></p>
+<p><img src="././linux3.png" alt="outer image middle image inner image" title="Outer Title" />
+<img src="././linux3.png" alt="outer IMAGE middle IMAGE inner IMAGE" title="Outer TITLE" /></p>
+<ul>
+<li>
+<p><img src="././linux3.png" alt="outer image middle image inner image" title="Outer Title" /></p>
+</li>
+<li>
+<p><img src="././linux3.png" alt="outer IMAGE middle IMAGE inner IMAGE" title="Outer TITLE" /></p>
+</li>
+<li>
+<p><img src="././linux3.png" alt="outer image middle image inner image" title="Outer Title" /></p>
+<ul>
+<li><img src="././linux3.png" alt="outer IMAGE middle IMAGE inner IMAGE" title="Outer TITLE" /></li>
+</ul>
+</li>
+<li>
+<p><img src="././linux3.png" alt="outer image middle image inner image" title="Outer Title" /></p>
+<ul>
+<li><img src="././linux3.png" alt="outer IMAGE middle IMAGE inner IMAGE" title="Outer TITLE" /></li>
+</ul>
+</li>
+</ul>
+<h3>hard break in image text</h3>
+<p><img src="linux3.png" alt="hard break" /></p>
+<p><img src="./linux3.png" alt="outer BR inner BR inner image outer image" /></p>

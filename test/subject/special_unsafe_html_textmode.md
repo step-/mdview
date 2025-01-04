@@ -1,0 +1,110 @@
+
+<!--
+white space in this file matters for the test
+-->
+### DESCRIPTION
+
+This test is about showing HTML tags in text output mode.
+
+_Note that this file includes invalid HTML tags._
+
+### TESTS
+
+-------------------------------------------------------------------------------
+
+**TEST INVALID TAGS...**
+
+<a name=></a>
+<a name= ></a>
+
+**RESULT** The "TEST ..." heading followed by a line with two invalid `<a>` tags.
+
+-------------------------------------------------------------------------------
+
+**TEST `<a>` tag without `name` attribute...**
+
+<a></a>
+<a ></a>
+<a href=""></a>
+
+**RESULT** Just a line consisting of the "TEST ..." heading.
+
+-------------------------------------------------------------------------------
+
+**TEST `<a>` tags that are followed by non-white space...**
+
+<a name></a>suffix
+<a name > </a>suffix
+<a name> </a> suffix
+
+**RESULT** A line consisting of the "TEST ..." heading
+followed by a line consisting of "suffix" repeated three times.
+
+-------------------------------------------------------------------------------
+
+**TEST valid anchors: show nothing until the next RESULT**
+
+<a name></a>
+<a name=""></a>
+<a name="n"></a>
+<a name="sp" > </a>
+  	 <a name=""></a>
+  	 <a name="n"></a>
+  	 <a name="sp" > </a>
+<a name=""></a>  	 
+<a name="n"></a>  	 
+<a name="sp"></a>  	 
+  	 <a name=""></a>  	 
+  	 <a name="n"></a>  	 
+  	 <a name="sp" > </a>  	 
+
+**RESULT** A line consisting of the "TEST ..." heading
+
+-------------------------------------------------------------------------------
+
+**TEST anchors in code blocks: show them as code**
+
+        <a name="show me"></a>
+
+```
+<a name="show me"></a>
+```
+
+**RESULT** two lines each consisting of `<a name="show me"></a>`.
+
+-------------------------------------------------------------------------------
+
+### PART1: Test passed if all preceding "RESULT" statements are true
+
+-------------------------------------------------------------------------------
+
+### PART 2:raw HTML support
+
+Specification: <https://spec.commonmark.org/0.30/#html-tag>.
+
+<a>
+<a x="1">
+<a x="1" y='2'>
+<a x="1" y='2' z=3>
+<open xX="10" yY='20' zZ=30>
+  text between **non-paired** open/close tags ends here.
+</close> <!-- 1 -->
+<!-- this comment will disappear because it is specially parsed as a block comment -->
+  <!-- 2 this comment remains because white space before it makes it an inline -->
+3: <!-- 3 -->
+4: <!-- 4 <TAG> -->
+5: <!--5-->
+<? processing instruction ?>
+<!DOCTYPE html>
+<![CDATA[ CDATA section ]]>
+
+<a name="x">
+<a name="x"></a>
+<!--
+This is line 1 of a comment block, followed by empty line 2, which means "end of block" to CommonMark but not to mdview.
+
+This is line 3 of the same comment block. CommonMark shows it - mdview does not.  
+-->
+This line is outside the comment block for both.
+
+Angle brackets < and > are reproduced literally as long as they do not start or end valid HTML tags, comments, declarations, processing instructions or CDATA sections.

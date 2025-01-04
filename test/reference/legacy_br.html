@@ -1,0 +1,52 @@
+<h3>DESCRIPTION</h3>
+<!-- raw HTML omitted -->
+<p>Topic: match paragraph lines that end with at least two spaces, and insert a hard line-break after such lines.</p>
+<p>Paragraph lines are text lines that include at least one non-white-space character, and that aren't headings or ruler or within code blocks.</p>
+<p>When a hard line-break is found, the current paragraph remains current, and it doesn't give rise to a new paragraph as it happens instead when an empty line is encountered in a paragraph. A hard line-break can also be used with elements inside the paragraph, and it will not split the element.  For instance, a bullet list item, in which the hard line-break occurs, does not split the sequential list in two, and does not split the current paragraph.</p>
+<p><strong>Version note:</strong><br />
+What happens to a hard-line at the end of a paragraph (or other text block) depends on the mdview version. New versions that conform to the CommonMark specification don't render the breaks while legacy mdview does.</p>
+<h3>TESTS</h3>
+<!-- raw HTML omitted -->
+<hr />
+<p><strong>TEST paragraph 1 ...</strong></p>
+<p>line 1 line 2 line 3</p>
+<p><strong>RESULT</strong> one text line: “line 1 line 2 line 3”</p>
+<hr />
+<p><strong>TEST paragraph 2 ...</strong></p>
+<p>line 1 line 2<br />
+line 3</p>
+<p><strong>RESULT</strong> two text lines (same paragraph): “line 1 line 2”, “line 3”</p>
+<p>By contrast, these are two text lines and <em>two</em> paragraphs:</p>
+<p>line 1 line 2</p>
+<p>line 3</p>
+<hr />
+<p><strong>TEST - with smart quotes ...</strong></p>
+<p>“1” “2”<br />
+“3”</p>
+<p><strong>RESULT</strong> two text lines (same paragraph): <code>“1” “2”</code>, <code>“3”</code></p>
+<hr />
+<p><strong>TEST - bullets ...</strong></p>
+<p>1 br<br />
+2</p>
+<ul>
+<li>3 (bullet, does not join 2)</li>
+<li>10 11 (joins with 10)</li>
+<li>20<br />
+21 (below 20)</li>
+<li>30<br />
+31 (below 30)</li>
+</ul>
+<p><strong>RESULT</strong> HTML:</p>
+<pre><code class="language-html">&lt;p&gt;1&lt;br /&gt;
+2
+&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;3 (bullet, does not join 2)&lt;/li&gt;
+&lt;li&gt;10 11 (joins with 10)&lt;/li&gt;
+&lt;li&gt;20&lt;br /&gt;
+21 (below 20)&lt;/li&gt;
+&lt;li&gt;30&lt;br /&gt;
+31 (below 30)&lt;/li&gt;
+&lt;/ul&gt;</code></pre>
+<hr />
+<h3>Test passed if above all “RESULT” statements are true</h3>

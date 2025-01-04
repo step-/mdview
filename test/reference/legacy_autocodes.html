@@ -1,0 +1,115 @@
+<h1>DESCRIPTION</h1>
+<p><strong>Auto-code is an mdview extension</strong> It is enabled by default, and it can be disabled with option <code>--no-ext</code>.</p>
+<p>An <strong>auto-code</strong> is a word that is rendered as a code span even though it isn't surrounded by grave accents. The word is at least 4 bytes long. Inner white space must be escaped with backslash.</p>
+<h1>SUPPORTED AUTO-CODES</h1>
+<p><strong>absolute path</strong> — any word that starts with <code>/</code> and is at least four bytes long.</p>
+<ul>
+<li><em>1 byte = 1 character for the ASCII and 8-bit character sets</em></li>
+<li><em>2 to 4 bytes = 1 character for other unicode characters</em></li>
+</ul>
+<ul>
+<li><code>/123</code> <code>/naïve</code> <code>/😃</code></li>
+<li>“<code>/dir/file</code>” ‘<code>/dir/file</code>’ <code>/file</code>.. “<code>/file</code>,” ‘<code>/file</code>:’ <code>/file</code>; <code>/file</code>! <code>/file</code>?</li>
+<li><code>/dir/</code> “<code>/dir/</code>” (a terminating slash is included)</li>
+<li>but not /12 /1 / /§ (too short: 3, 2, 1 and 2 bytes respectively)</li>
+<li>but not /12/ “/12/” (a terminating slash is <em>not</em> counted in the byte count)</li>
+<li>but not name: “<code>/file</code> name” (two words: «/file» and «name»; see [BACKSLASH TESTS] for a work-around).</li>
+</ul>
+<p><strong>dot relative path</strong> — any word that starts with <code>./</code> or <code>../</code> and is at least four bytes long.</p>
+<ul>
+<li><code>../file</code> <code>../../dir/</code></li>
+<li><code>./file</code> <code>./dir/file</code></li>
+<li><code>./.bashrc</code></li>
+</ul>
+<p><strong>special file names</strong></p>
+<p>file names ending with extensions “.patch” or “.diff”:</p>
+<ul>
+<li><code>file.patch</code> <code>f.diff</code> “<code>f.diff</code>”</li>
+<li><code>f.diff</code>, <code>f.diff</code>.</li>
+<li>but not .patch .diff “.diff” (need a file <em>name</em>, just the extension is not enough)</li>
+<li>but not f.diff.old (does not end with the right extension)</li>
+<li>Caveat: “<code>f.diff</code>.”</li>
+</ul>
+<p><strong>URI</strong></p>
+<p>The auto-code and permissive auto-link extensions contend for free-standing URIs. Permissive auto-link wins unless disabled with option <code>--no-permlink</code>.</p>
+<ul>
+<li><code>http://</code> <code>https://</code> <code>ftp://</code></li>
+<li><code>http://www</code> <code>https://www.example</code> <code>ftp://www.example.com</code></li>
+<li>wrapped: “<code>http://example.com</code>”, (<code>https://www.example.com</code>)</li>
+<li><code>http://a.com/</code> <code>http://a.com?</code> <code>http://a.com?v=</code> <code>http://a.com?v=.</code></li>
+</ul>
+<p>Note that angle brackets indicate an <strong>auto-link</strong> instead of an auto-code. For example, <code>&lt;</code>https://www.example.com<code>&gt;</code> turns into <a href="https://www.example.com">https://www.example.com</a>.</p>
+<p><strong>issue id (bugzilla, gh)</strong> — “#” followed by an ASCII word</p>
+<ul>
+<li><code>#123</code> <code>#abc</code></li>
+<li>not #123 #abc (backslash escapes)</li>
+</ul>
+<p><strong>function name</strong> — ASCII identifier that ends with “()”</p>
+<ul>
+<li><code>foo()</code> <code>foo()</code>; <code>foo_bar()</code> <code>f9()</code></li>
+<li>with backslash before underscore: <code>_foo()</code> - without: <code>_foo()</code></li>
+<li>but not () “()” (no identifier)</li>
+<li>but not 32() (32 not an identifier)</li>
+</ul>
+<p><strong>uppercase identifier</strong> — uppercase ASCII identifier that includes at least one underscore</p>
+<ul>
+<li><code>XDG_CONFIG_HOME</code> and <code>_Z_DATA</code></li>
+<li><code>$XDG_CONFIG_HOME</code> also if it starts with “$”</li>
+<li>with all underscores escaped: <code>_ABC</code> <code>_ABC_</code></li>
+<li>with the first but not the last underscore escaped: <code>_ABC_</code></li>
+<li>but not DISPLAY (no underscore), $HOME (no underscore)</li>
+<li>but not <em>HOME</em> (italics)</li>
+</ul>
+<p><strong>email address</strong> — ASCII word, must not start with “@” or “.”, must include one “@” and at least one interior “.”</p>
+<p>The auto-code and permissive auto-link extensions contend for free-standing email addresses. Permissive auto-link wins unless disabled with option <code>--no-permlink</code>.</p>
+<ul>
+<li><code>a@b.com</code></li>
+<li>not @ @ID macro@ @@@@@@@@@</li>
+</ul>
+<h1>FORMATTING</h1>
+<p>Exterior formatting - italics, bold, strikethrough - is applied to auto-codes.</p>
+<ul>
+<li><em><code>/root</code></em></li>
+<li><em><code>/italics</code></em> <strong><code>/bold</code></strong> <del>/strikethrough</del></li>
+<li><em><strong><code>/3/star/bold-italics</code> / /</strong></em> <em><strong>/ / <code>/3/under/bold-italics</code></strong></em></li>
+<li><em><strong><del>bold italics strikethrough</del></strong></em></li>
+<li><em><code>#123</code></em> <em><code>#abc</code></em> <strong><code>#123</code></strong> <strong><code>#abc</code></strong></li>
+<li><em><code>http://</code> <code>https://</code> <code>ftp://</code></em> <strong><code>http://</code> <code>https://</code> <code>ftp://</code></strong></li>
+<li><em><code>file.patch</code></em> <em><code>file.diff</code></em> <strong><code>file.patch</code></strong> <strong><code>file.diff</code></strong></li>
+<li><em><code>foo()</code></em> <strong><code>foo()</code></strong></li>
+<li><em><code>XDG_CONFIG_HOME</code></em> <em><code>_Z_DATA</code></em> <em><code>$XDG_CONFIG_HOME</code></em> <strong><code>XDG_CONFIG_HOME</code></strong> <strong><code>_Z_DATA</code></strong> <strong><code>$XDG_CONFIG_HOME</code></strong></li>
+<li><em><code>XDG_CONFIG_HOME</code> <code>_Z_DATA</code> <code>$XDG_CONFIG_HOME</code></em> <strong><code>XDG_CONFIG_HOME</code> <code>_Z_DATA</code> <code>$XDG_CONFIG_HOME</code></strong></li>
+<li><em><code>a@b.com</code></em> <strong><code>a@b.com</code></strong></li>
+</ul>
+<h2>BACKTICK TESTS</h2>
+<p>Below explicit backticks wrap code chunks therefore auto-code isn't applied.</p>
+<ul>
+<li><code>cp /tmp/a /tmp/b</code></li>
+<li><code>#123 and #456</code></li>
+<li><code>_ABC_, _DEF and _XYZ</code></li>
+</ul>
+<p>Exterior formatting is applied to explicit code chunks:</p>
+<ul>
+<li>two italics words and a bold URI: <em><code>foo() user@email.com</code></em> <strong><code>https://mdview.com</code></strong></li>
+</ul>
+<p>Mixing code chunks, auto-codes and formatting works:</p>
+<ul>
+<li><code>cp /code</code> <code>/auto-code</code></li>
+<li><em><code>ln -s</code></em> <em><strong><code>/auto-code</code></strong></em></li>
+</ul>
+<h2>BACKSLASH TESTS</h2>
+<p>Note that quotes must be placed outside emphasis to enable smart quote replacement.</p>
+<ul>
+<li>
+<p>Replaced: <code>#123</code> <em><code>#123x</code> “</em><code>#123_</code>”</p>
+</li>
+<li>
+<p>Replaced including white space: <code>/file name</code></p>
+</li>
+<li>
+<p>Not replaced (one backslash before foo) foo()</p>
+</li>
+<li>
+<p>Not replaced (special: double backslash before #): #123 <em>#123</em> “<em>#123</em>”</p>
+</li>
+</ul>

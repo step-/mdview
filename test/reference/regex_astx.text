@@ -1,0 +1,18 @@
+[SETEXT 0]
+[ATX 1]
+atx 1
+-ATX 2-
+atx 2
+[SETEXT 1 !]
+setext 1
+-SETEXT 2 +SETEXT 2-
+setext 2
+ -----
+>quote ====================
+  * UL list item ====================
+  * UL list item ====================
+  1. OL list item ====================
+[SETEXT Z +SETEXT Z]
+[ ]
+[Fatdog64-903 FAQ title format]
+[ ]

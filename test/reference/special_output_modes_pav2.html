@@ -1,0 +1,51 @@
+<p><em>em</em><br />
+<strong>strong</strong><br />
+<em><strong>em strong</strong></em><br />
+<code>code span</code></p>
+<pre><code>codeblock</code></pre>
+<p><del>strikethrough</del></p>
+<h1>Heading 1<a id="Heading%201"></a><a id="heading-1"></a><a id="heading_1"></a></h1>
+<h2>Heading 2<a id="Heading%202"></a><a id="heading-2"></a><a id="heading_2"></a></h2>
+<h3>Heading 3<a id="Heading%203"></a><a id="heading-3"></a><a id="heading_3"></a></h3>
+<h4>Heading 4<a id="Heading%204"></a><a id="heading-4"></a><a id="heading_4"></a></h4>
+<h5>Heading 5<a id="Heading%205"></a><a id="heading-5"></a><a id="heading_5"></a></h5>
+<h6>Heading 6<a id="Heading%206"></a><a id="heading-6"></a><a id="heading_6"></a></h6>
+<ul>
+<li>bullet</li>
+</ul>
+<hr />
+<p>paragraph</p>
+<p>BR</p>
+<p><a href="https://x.com">link text</a></p>
+<p><a href="https://x.com" title="title">link text</a></p>
+<p><img src="linux3.png" alt="image of linux3" /></p>
+<p><img src="linux3.png" alt="image of linux3" title="title" /></p>
+<hr />
+<pre><code>-----------------------------------------------------------------------
+-                               MDVIEW MTX                            -
+-----------------------------------------------------------------------</code></pre>
+<p>Whether the path of an image, e.g. <code>![image path](tom&amp;jerry.png)</code> (this path does not exist on purpose), is <em>uri-escaped</em> depends on the output mode:</p>
+<p>--html escapes, --ansi, --text and --tty (the text modes) do not, and the GUI viewer does when it loads the image from the path but does not on cursor hover: <img src="tom&amp;jerry" alt="image path" />.</p>
+<p>The <em>uri-escaping</em> rules for a link like <code>[link](https://tom&amp;jerry.com)</code> (OK, the URL isn't quite valid), also depend on the output mode: --html escapes, text modes do not, the GUI viewer does on clicking the link but does not on cursor hover: <a href="https://tom&amp;jerry.com">link</a>.</p>
+<hr />
+<p>MDVIEW4 supports nested and ordered lists (tight and loose):</p>
+<ol>
+<li>
+<p>e</p>
+<ol>
+<li>f</li>
+</ol>
+</li>
+<li>
+<p>g</p>
+</li>
+</ol>
+<p>divider</p>
+<ol>
+<li>e
+<ol>
+<li>f</li>
+</ol>
+</li>
+<li>g</li>
+</ol>

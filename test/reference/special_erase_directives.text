@@ -1,0 +1,4 @@
+%%nopot X
+%%nopotX Y
+%%textdomain
+print me

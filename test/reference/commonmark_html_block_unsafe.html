@@ -1,0 +1,671 @@
+<h1>DESCRIPTION</h1>
+<p>Commonmark 0.30 20230916<br />
+Test &quot;commonmark_html_block_unsafe&quot; prepared on 2024-01-09.</p>
+<p>148 DEVIATING</p>
+<!--
+<table><tr><td>
+<pre>
+**Hello**,
+
+_world_.
+</pre>
+</td></tr></table>
+<table><tr><td>
+<pre>
+**Hello**,
+<p><em>world</em>.
+</pre></p>
+</td></tr></table>
+-->
+<table><tr><td>
+<pre>
+**Hello**,
+<p><em>world</em>. </pre></p>
+</td></tr></table>
+<p>149 CONFORMING</p>
+<!--
+<table>
+  <tr>
+    <td>
+           hi
+    </td>
+  </tr>
+</table>
+
+okay.
+<table>
+  <tr>
+    <td>
+           hi
+    </td>
+  </tr>
+</table>
+<p>okay.</p>
+-->
+<table>
+  <tr>
+    <td>
+           hi
+    </td>
+  </tr>
+</table>
+<p>okay.</p>
+<p>150 CONFORMING</p>
+<!--
+ <div>
+  *hello*
+         <foo><a>
+ <div>
+  *hello*
+         <foo><a>
+-->
+ <div>
+  *hello*
+         <foo><a>
+<p>151 CONFORMING</p>
+<!--
+</div>
+*foo*
+</div>
+*foo*
+-->
+</div>
+*foo*
+<p>152 CONFORMING</p>
+<!--
+<DIV CLASS="foo">
+
+*Markdown*
+
+</DIV>
+<DIV CLASS="foo">
+<p><em>Markdown</em></p>
+</DIV>
+-->
+<DIV CLASS="foo">
+<p><em>Markdown</em></p>
+</DIV>
+<p>153 CONFORMING</p>
+<!--
+<div id="foo"
+  class="bar">
+</div>
+<div id="foo"
+  class="bar">
+</div>
+-->
+<div id="foo"
+  class="bar">
+</div>
+<p>154 CONFORMING</p>
+<!--
+<div id="foo" class="bar
+  baz">
+</div>
+<div id="foo" class="bar
+  baz">
+</div>
+-->
+<div id="foo" class="bar
+  baz">
+</div>
+<p>155 CONFORMING</p>
+<!--
+<div>
+*foo*
+
+*bar*
+<div>
+*foo*
+<p><em>bar</em></p>
+-->
+<div>
+*foo*
+<p><em>bar</em></p>
+<p>156 CONFORMING</p>
+<!--
+<div id="foo"
+*hi*
+<div id="foo"
+*hi*
+-->
+<div id="foo"
+*hi*
+<p>157 CONFORMING</p>
+<!--
+<div class
+foo
+<div class
+foo
+-->
+<div class
+foo
+<p>158 CONFORMING</p>
+<!--
+<div *???-&&&-<---
+*foo*
+<div *???-&&&-<---
+*foo*
+-->
+<div *???-&&&-<---
+*foo*
+<p>159 CONFORMING</p>
+<!--
+<div><a href="bar">*foo*</a></div>
+<div><a href="bar">*foo*</a></div>
+-->
+<div><a href="bar">*foo*</a></div>
+<p>160 CONFORMING</p>
+<!--
+<table><tr><td>
+foo
+</td></tr></table>
+<table><tr><td>
+foo
+</td></tr></table>
+-->
+<table><tr><td>
+foo
+</td></tr></table>
+<p>161 CONFORMING</p>
+<!--
+<div></div>
+``` c
+int x = 33;
+```
+<div></div>
+``` c
+int x = 33;
+```
+-->
+<div></div>
+``` c
+int x = 33;
+```
+<p>162 CONFORMING</p>
+<!--
+<a href="foo">
+*bar*
+</a>
+<a href="foo">
+*bar*
+</a>
+-->
+<a href="foo">
+*bar*
+</a>
+<p>163 CONFORMING</p>
+<!--
+<Warning>
+*bar*
+</Warning>
+<Warning>
+*bar*
+</Warning>
+-->
+<Warning>
+*bar*
+</Warning>
+<p>164 CONFORMING</p>
+<!--
+<i class="foo">
+*bar*
+</i>
+<i class="foo">
+*bar*
+</i>
+-->
+<i class="foo">
+*bar*
+</i>
+<p>165 CONFORMING</p>
+<!--
+</ins>
+*bar*
+</ins>
+*bar*
+-->
+</ins>
+*bar*
+<p>166 CONFORMING</p>
+<!--
+<del>
+*foo*
+</del>
+<del>
+*foo*
+</del>
+-->
+<del>
+*foo*
+</del>
+<p>167 CONFORMING</p>
+<!--
+<del>
+
+*foo*
+
+</del>
+<del>
+<p><em>foo</em></p>
+</del>
+-->
+<del>
+<p><em>foo</em></p>
+</del>
+<p>168 CONFORMING</p>
+<!--
+<del>*foo*</del>
+<p><del><em>foo</em></del></p>
+-->
+<p><del><em>foo</em></del></p>
+<p>169 CONFORMING</p>
+<!--
+<pre language="haskell"><code>
+import Text.HTML.TagSoup
+
+main :: IO ()
+main = print $ parseTags tags
+</code></pre>
+okay
+<pre language="haskell"><code>
+import Text.HTML.TagSoup
+
+main :: IO ()
+main = print $ parseTags tags
+</code></pre>
+<p>okay</p>
+-->
+<pre language="haskell"><code>
+import Text.HTML.TagSoup
+
+main :: IO ()
+main = print $ parseTags tags
+</code></pre>
+<p>okay</p>
+<p>170 CONFORMING</p>
+<!--
+<script type="text/javascript">
+// JavaScript example
+
+document.getElementById("demo").innerHTML = "Hello JavaScript!";
+</script>
+okay
+<script type="text/javascript">
+// JavaScript example
+
+document.getElementById("demo").innerHTML = "Hello JavaScript!";
+</script>
+<p>okay</p>
+-->
+<script type="text/javascript">
+// JavaScript example
+
+document.getElementById("demo").innerHTML = "Hello JavaScript!";
+</script>
+<p>okay</p>
+<p>171 CONFORMING</p>
+<!--
+<textarea>
+
+*foo*
+
+_bar_
+
+</textarea>
+<textarea>
+
+*foo*
+
+_bar_
+
+</textarea>
+-->
+<textarea>
+
+*foo*
+
+_bar_
+
+</textarea>
+<p>172 CONFORMING</p>
+<!--
+<style
+  type="text/css">
+h1 {color:red;}
+
+p {color:blue;}
+</style>
+okay
+<style
+  type="text/css">
+h1 {color:red;}
+
+p {color:blue;}
+</style>
+<p>okay</p>
+-->
+<style
+  type="text/css">
+h1 {color:red;}
+
+p {color:blue;}
+</style>
+<p>okay</p>
+<p>173 CONFORMING</p>
+<!--
+<style
+  type="text/css">
+
+foo
+<style
+  type="text/css">
+
+foo
+-->
+<style
+  type="text/css">
+
+foo
+
+174 CONFORMING
+
+<!--
+> <div>
+> foo
+
+bar
+<blockquote>
+<div>
+foo
+</blockquote>
+<p>bar</p>
+-->
+
+> <div>
+> foo
+
+bar
+
+175 CONFORMING
+
+<!--
+- <div>
+- foo
+<ul>
+<li>
+<div>
+</li>
+<li>foo</li>
+</ul>
+-->
+
+- <div>
+- foo
+
+176 CONFORMING
+
+<!--
+<style>p{color:red;}</style>
+<p><em>foo</em></p>
+<style>p{color:red;}</style>
+<p><em>foo</em></p>
+-->
+<style>p{color:red;}</style>
+<p><em>foo</em></p>
+<p>177 CONFORMING</p>
+<!--
+<!-- foo -->*bar*
+<p><em>baz</em></p>
+<!-- foo -->*bar*
+<p><em>baz</em></p>
+-->
+<!-- foo -->*bar*
+<p><em>baz</em></p>
+<p>178 CONFORMING</p>
+<!--
+<script>
+foo
+</script>1. *bar*
+<script>
+foo
+</script>1. *bar*
+-->
+<script>
+foo
+</script>1. *bar*
+<p>179 CONFORMING</p>
+<!--
+<!-- Foo
+
+bar
+   baz -->
+<p>okay</p>
+<!-- Foo
+
+bar
+   baz -->
+<p>okay</p>
+-->
+<!-- Foo
+
+bar
+   baz -->
+<p>okay</p>
+<p>180 CONFORMING</p>
+<!--
+<?php
+
+  echo '>';
+
+?>
+okay
+<?php
+
+  echo '>';
+
+?>
+<p>okay</p>
+-->
+<?php
+
+  echo '>';
+
+?>
+<p>okay</p>
+<p>181 CONFORMING</p>
+<!--
+<!DOCTYPE html>
+<!DOCTYPE html>
+-->
+<!DOCTYPE html>
+<p>182 CONFORMING</p>
+<!--
+<![CDATA[
+function matchwo(a,b)
+{
+  if (a < b && a < 0) then {
+    return 1;
+
+  } else {
+
+    return 0;
+  }
+}
+]]>
+okay
+<![CDATA[
+function matchwo(a,b)
+{
+  if (a < b && a < 0) then {
+    return 1;
+
+  } else {
+
+    return 0;
+  }
+}
+]]>
+<p>okay</p>
+-->
+<![CDATA[
+function matchwo(a,b)
+{
+  if (a < b && a < 0) then {
+    return 1;
+
+  } else {
+
+    return 0;
+  }
+}
+]]>
+<p>okay</p>
+<p>183 CONFORMING</p>
+<!--
+  <!-- foo -->
+<pre><code>&lt;!-- foo --&gt;
+</code></pre>
+  <!-- foo -->
+<pre><code>&lt;!-- foo --&gt;
+</code></pre>
+<p>--&gt;</p>
+  <!-- foo -->
+<pre><code>&lt;!-- foo --&gt;
+</code></pre>
+<p>184 CONFORMING</p>
+<!--
+  <div>
+
+    <div>
+  <div>
+<pre><code>&lt;div&gt;
+</code></pre>
+-->
+  <div>
+<pre><code>&lt;div&gt;
+</code></pre>
+<p>185 CONFORMING</p>
+<!--
+Foo
+<div>
+bar
+</div>
+<p>Foo</p>
+<div>
+bar
+</div>
+-->
+<p>Foo</p>
+<div>
+bar
+</div>
+<p>186 CONFORMING</p>
+<!--
+<div>
+bar
+</div>
+*foo*
+<div>
+bar
+</div>
+*foo*
+-->
+<div>
+bar
+</div>
+*foo*
+<p>187 DEVIATING</p>
+<!--
+Foo
+<a href="bar">
+baz
+<p>Foo
+<a href="bar">
+baz</p>
+-->
+<p>Foo <a href="bar"> baz</p>
+<p>188 CONFORMING</p>
+<!--
+<div>
+
+*Emphasized* text.
+
+</div>
+<div>
+<p><em>Emphasized</em> text.</p>
+</div>
+-->
+<div>
+<p><em>Emphasized</em> text.</p>
+</div>
+<p>189 CONFORMING</p>
+<!--
+<div>
+*Emphasized* text.
+</div>
+<div>
+*Emphasized* text.
+</div>
+-->
+<div>
+*Emphasized* text.
+</div>
+<p>190 CONFORMING</p>
+<!--
+<table>
+
+<tr>
+
+<td>
+Hi
+</td>
+
+</tr>
+
+</table>
+<table>
+<tr>
+<td>
+Hi
+</td>
+</tr>
+</table>
+-->
+<table>
+<tr>
+<td>
+Hi
+</td>
+</tr>
+</table>
+<p>191 CONFORMING</p>
+<!--
+<table>
+
+  <tr>
+
+    <td>
+      Hi
+    </td>
+
+  </tr>
+
+</table>
+<table>
+  <tr>
+<pre><code>&lt;td&gt;
+  Hi
+&lt;/td&gt;
+</code></pre>
+  </tr>
+</table>
+-->
+<table>
+  <tr>
+<pre><code>&lt;td&gt;
+  Hi
+&lt;/td&gt;
+</code></pre>
+  </tr>
+</table>
