@@ -7,32 +7,32 @@
   </viewer>
 </mtx>
 **USAGE** HBRK
-`    mdview [OPTIONS] HOMEPATH [HOMEPAGE [TITLE]]` HBRK
-<br> HBRK
+`    mdview [OPTIONS] HOMEPATH [HOMEPAGE [TITLE]]`
+ATX1 
 Press `[F1]` in the GUI viewer to open the Welcome Page and get more help. HBRK
 `HOMEPATH` is the file or directory to open. `HOMEPAGE` is the file to open if HBRK
 `HOMEPATH` is a directory. If `HOMEPAGE` is empty, DEFAULT_INDEX is used instead. HBRK
 If `TITLE` is empty, DEFAULT_WINDOW_TITLE is used for the window title. HBRK
 In Markdown, relative paths are based on the directory of the currently viewed HBRK
-file. If this fails, the directory of the `HOMEPAGE` file is used. HBRK
-<br> HBRK
+file. If this fails, the directory of the `HOMEPAGE` file is used.
+ATX1 
 **OUTPUT FORMATS** HBRK
 If an output format is not specified the file is opened in the GUI viewer. HBRK
-Some formats can be tweaked (see section OUTPUT MODIFIERS). HBRK
-<br> HBRK
+Some formats can be tweaked (see section OUTPUT MODIFIERS).
+ATX1 
  `--ansi             `Text with ANSI escape codes. HBRK
  `--html             `HTML fragment. HBRK
  `--text             `Plain text. HBRK
  `--tty              `Text with vt100 codes. HBRK
 #ifdef OPT_PANGO
- `--pango            `Raw Pango markup (debug). HBRK
+ `--pango            `Raw Pango markup (debug).
 #endif
 #ifdef OPT_MARKUP
-<br> HBRK
+ATX1 
 **INPUT MODIFIERS** HBRK
- `--markup=FILE      `Skip the parser and load Pango markup from FILE (debug). HBRK
+ `--markup=FILE      `Skip the parser and load Pango markup from FILE (debug).
 #endif
-<br> HBRK
+ATX1 
 **OUTPUT MODIFIERS** HBRK
 #ifndef COMMONMARK_FENCED_CODEBLOCK_LINE_ENDING
  `--cm-block-end     `Add an empty line at code block end. HBRK
@@ -50,8 +50,8 @@ Some formats can be tweaked (see section OUTPUT MODIFIERS). HBRK
  `                   `each soft break (line ending inside a Markdown paragraph). HBRK
  `                   `Soft breaks can inhibit some smart text replacements. HBRK
  `--soft-break-br    `Append a hard break after a soft break in HTML output. HBRK
- `--unsafe-html      `Include raw HTML in all output formats. HBRK
-<br> HBRK
+ `--unsafe-html      `Include raw HTML in all output formats.
+ATX1 
 **EXTENSIONS** HBRK
  `--auto-lang        `If a link targets "File.ext", and "File`.$LANG`.ext" exists, HBRK
  `                   `open the latter. This feature allows automatic linking to HBRK
@@ -68,16 +68,16 @@ Some formats can be tweaked (see section OUTPUT MODIFIERS). HBRK
  `--toc-level=LEVEL  `Replace the Table of Contents for the first occurrence of HBRK
  `                   `"`<!--[toc]-->`" in the document. If the pattern is not HBRK
  `                   `found place the ToC at the top. This feature needs heading HBRK
- `                   `link anchors, and either the Viewer or HTML output. HBRK
-<br> HBRK
+ `                   `link anchors, and either the Viewer or HTML output.
+ATX1 
 **MISCELLANEOUS** HBRK
  `--dump-css=N       `Output CSS style-sheet N and exit. HBRK
 #ifdef OPT_EXIT_TEST
  `--exit-test        `Exit the viewer immediately after entering GTK main loop. HBRK
 #endif
  `--lint             `Enable the linter. HBRK
- `--version          `Print version and license information and exit. HBRK
-<br> HBRK
+ `--version          `Print version and license information and exit.
+ATX1 
 **ENVIRONMENT** HBRK
 Program options can also be set using the environment variable `MDVIEW_OPTIONS`. HBRK
 A command-line option will override any option with the same name set through HBRK
@@ -88,18 +88,18 @@ this variable. However, if `MDVIEW_OPTIONS` specifies `HOMEPATH`, `HOMEPAGE`, or
 #ifdef OPT_PANGO
 
 **DEPRECATED** HBRK
-These options will go away. HBRK
-<br> HBRK
+These options will go away.
+ATX1 
  `--no-ext           `Combine `--no-auto-code`, `--no-permlink`, `--no-shebang` HBRK
- `                   `and `--no-table`. HBRK
-<br> HBRK
+ `                   `and `--no-table`.
+ATX1 
 **UNDOCUMENTED** HBRK
-Read the source code. HBRK
-<br> HBRK
+Read the source code.
+ATX1 
  `--emask=EMASK      ` HBRK
  `--tmask=TMASK      ` HBRK
- `--soft-breaks      ` HBRK
-<br> HBRK
+ `--soft-breaks      `
+ATX1 
  ` `
 /*
 Smart text works better without soft breaks because the absence of line

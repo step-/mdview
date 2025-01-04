@@ -57,21 +57,20 @@ Symbols: `               ` `A`=`[Alt]` `C`=`[Control]` `S`=`[Shift]`
 Shortcut   | Description
 -----------|----------------------------------------------------
 `[A-s]`    | Set focus on the search field to enter terms
-`[Enter]`¹ | Activate searching in the home page's folder
+`[Enter]`¹ | Activate search within the home page folder
 `[Tab]`¹   | Move focus out of the search field
- <br>      | <br>
-`[C-f]`    | Activate search in the page
-`[C-f]`    | Find the next match in the page
+ &nbsp;    | &nbsp;
+`[C-f]`    | Activate search or find the next match in the page
 `[C-b]`    | Find the previous match in the page
- <br>      | <br>
+&nbsp;     | &nbsp;
 `[A-b]`    | Navigate back to the previous page
 `[A-f]`    | Navigate forward to the next page
 `[A-h]`    | Reload the home page
- <br>      | <br>
+ &nbsp;    | &nbsp;
 `[S-C-b]`  | Find the previous link in the page
 `[S-C-f]`  | Find the next link in the page
 `[Enter]`² | Open the link at the current cursor location
- <br>      | <br>
+ &nbsp;    | &nbsp;
 `[C-e]`    | Open the current page in the default text editor
 `[A-p]`³   | Preview the current page in the default browser
 
