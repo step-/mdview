@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mdview 2025.01.04\n"
 "Report-Msgid-Bugs-To: http://github.com/step-/mdview/issues\n"
-"POT-Creation-Date: 2024-12-05 15:21+0100\n"
+"POT-Creation-Date: 2025-01-04 14:28+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -30,15 +30,20 @@ msgstr ""
 msgid "License:"
 msgstr ""
 
-#: src/main.c:565
+#: src/main.c:570
 msgid "invalid option:"
 msgstr ""
 
-#: src/mtxtextview.c:1825
+#: src/mtxcmm.c:2251
+#, c-format
+msgid "% 3d. Same anchors: #%d(%s) and #%d(%s)\n"
+msgstr ""
+
+#: src/mtxtextview.c:1826
 msgid "Error: No markdown input"
 msgstr ""
 
-#: src/mtxtextview.c:1842
+#: src/mtxtextview.c:1844
 msgid "Error: Cannot render markdown"
 msgstr ""
 
@@ -163,7 +168,7 @@ msgstr ""
 msgid "::: Action not allowed while the page is loading :::"
 msgstr ""
 
-#: src/mtxviewer.c:1084
+#: src/mtxviewer.c:1103
 #, c-format
 msgctxt "1=path:2=error"
 msgid ""
@@ -171,79 +176,79 @@ msgid ""
 "%2$s."
 msgstr ""
 
-#: src/mtxviewer.c:1134
+#: src/mtxviewer.c:1153
 msgid "Searching ..."
 msgstr ""
 
-#: src/mtxviewer.c:1144
+#: src/mtxviewer.c:1163
 msgid "Loading ..."
 msgstr ""
 
-#: src/mtxviewer.c:1154
+#: src/mtxviewer.c:1173
 #, c-format
 msgid "Loading %s ..."
 msgstr ""
 
-#: src/mtxviewer.c:1413
+#: src/mtxviewer.c:1432
 msgid "Cancelling..."
 msgstr ""
 
-#: src/mtxviewer.c:1504
+#: src/mtxviewer.c:1540
 #, c-format
 msgid "%s: Error: %s\n"
 msgstr ""
 
-#: src/mtxviewer.c:1625
+#: src/mtxviewer.c:1661
 msgid "Search complete."
 msgstr ""
 
-#: src/mtxviewer.c:1629
+#: src/mtxviewer.c:1665
 msgid "Loaded."
 msgstr ""
 
-#: src/mtxviewer.c:1634
+#: src/mtxviewer.c:1670
 #, c-format
 msgid "%1$s loaded."
 msgstr ""
 
-#: src/mtxviewer.c:1700
+#: src/mtxviewer.c:1736
 #, c-format
 msgid "Link to %s"
 msgstr ""
 
-#: src/mtxviewer.c:2057
+#: src/mtxviewer.c:2134
 #, c-format
 msgid "%d document examined"
 msgstr ""
 
-#: src/mtxviewer.c:2058
+#: src/mtxviewer.c:2135
 #, c-format
 msgid "%d documents examined"
 msgstr ""
 
-#: src/mtxviewer.c:2063
+#: src/mtxviewer.c:2140
 #, c-format
 msgid "%d document found"
 msgstr ""
 
-#: src/mtxviewer.c:2064
+#: src/mtxviewer.c:2141
 #, c-format
 msgid "%d documents found"
 msgstr ""
 
-#: src/mtxviewer.c:2068
+#: src/mtxviewer.c:2145
 #, c-format
 msgctxt "search:1=#terms:2=terms:3=```"
 msgid "%1$d search term %3$s %2$s %3$s"
 msgstr ""
 
-#: src/mtxviewer.c:2069
+#: src/mtxviewer.c:2146
 #, c-format
 msgctxt "search:1=#terms:2=terms:3=```"
 msgid "%1$d search terms %3$s %2$s %3$s"
 msgstr ""
 
-#: src/mtxviewer.c:2072
+#: src/mtxviewer.c:2149
 #, c-format
 msgctxt "search:1=ctr_subjects,2=ctr_results:3=terms"
 msgid ""
@@ -251,68 +256,68 @@ msgid ""
 "# \n"
 msgstr ""
 
-#: src/mtxviewer.c:2541
+#: src/mtxviewer.c:2621
 msgctxt "error page back-link label"
 msgid "Back"
 msgstr ""
 
-#: src/mtxviewer.c:2773
+#: src/mtxviewer.c:2859
 msgid "Home"
 msgstr ""
 
-#: src/mtxviewer.c:2776
+#: src/mtxviewer.c:2862
 msgid "(Alt-H) Reload the home page"
 msgstr ""
 
-#: src/mtxviewer.c:2786
+#: src/mtxviewer.c:2872
 msgid "Back"
 msgstr ""
 
-#: src/mtxviewer.c:2789
+#: src/mtxviewer.c:2875
 msgid "(Alt-B) Navigate back to the previous page"
 msgstr ""
 
-#: src/mtxviewer.c:2801
+#: src/mtxviewer.c:2887
 msgid "Forward"
 msgstr ""
 
-#: src/mtxviewer.c:2804
+#: src/mtxviewer.c:2890
 msgid "(Alt-F) Navigate forward to the next page"
 msgstr ""
 
-#: src/mtxviewer.c:2814
+#: src/mtxviewer.c:2900
 msgid "HTML Preview"
 msgstr ""
 
-#: src/mtxviewer.c:2816
+#: src/mtxviewer.c:2902
 msgid "(Alt-P) Preview the page in the browser"
 msgstr ""
 
-#: src/mtxviewer.c:2822
+#: src/mtxviewer.c:2908
 msgid "(Alt-T) Change Table of Contents depth"
 msgstr ""
 
-#: src/mtxviewer.c:2864
+#: src/mtxviewer.c:2950
 msgid ""
 "(Alt-S) Set focus on the search field to enter terms\n"
 "(Enter) Search through all documents"
 msgstr ""
 
-#: src/mtxviewer.c:2869
+#: src/mtxviewer.c:2955
 msgid ""
 "(Ctrl-F) Search forward in this page (also by primary button click)\n"
 "(Ctrl-B) Search backward (also by opposite button click)"
 msgstr ""
 
-#: src/mtxviewer.c:2911
+#: src/mtxviewer.c:2997
 msgid "Cancel page loading"
 msgstr ""
 
-#: src/mtxviewer.c:2914
+#: src/mtxviewer.c:3000
 msgid "(Alt-X) Cancel loading this page"
 msgstr ""
 
-#: src/mtxviewer.c:3120
+#: src/mtxviewer.c:3206
 #, c-format
 msgid "%s: generic error.\n"
 msgstr ""
