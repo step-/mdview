@@ -1072,7 +1072,7 @@ static void
 mtx_viewer_write_toc_to_backing_file (MtxViewer *mvr)
 {
     const gchar *toc = mtx_text_view_fetch_page_toc_md (mvr->text_view);
-    if (toc != NULL)
+    if (toc != NULL && *toc)
     {
         mtx_viewer_save_backing_file (mvr, toc, strlen (toc));
     }
