@@ -2038,6 +2038,7 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
 {
     struct
     {
+        MtxCmm *self;
         MtxCmm *render;
         GString *prologue;
         guint toc_level;
@@ -2196,8 +2197,9 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
     if (POD->toc_level > 0 && lvl <= POD->toc_level)
     {
         MtxCmmTocEntry *te = g_malloc (sizeof (MtxCmmTocEntry));
+        te->self = POD->self;
         te->dest = g_strdup (e);
-        te->text = g_strdup (t);
+        te->text = g_strdup (t); /* link's */
         te->rendered = NULL;
         te->level = lvl;
         te->hash = g_strdup (hash);
@@ -2264,6 +2266,7 @@ mtx_cmm_string_insert_heading_links (MtxCmm *self,
     const gboolean with_linter = self->priv->tweaks & MTX_CMM_TWEAK_RESERVED4;
     struct
     {
+        MtxCmm *self;
         MtxCmm *render;
         GString *prologue;
         const guint toc_level;
@@ -2271,7 +2274,7 @@ mtx_cmm_string_insert_heading_links (MtxCmm *self,
         const gboolean with_linter;
     }
     POD = {
-        render, g_string_new (""), self->priv->toc_level, self->priv->toc,
+        self, render, g_string_new (""), self->priv->toc_level, self->priv->toc,
         with_linter,
     };
 
@@ -2353,6 +2356,14 @@ mtx_cmm_toc_hash_cmp (gconstpointer a,
 
 /**
 mtx_cmm_toc_entry_equal:
+Compare two Table of Contents entries for equality.
+
+Two entries are considered equal if their heading texts are equal. This
+may result in false positives for documents with repeated headings.
+*/
+/*
+This function is only used to compare erroreous entries that
+arise from matching heading-like text within code blocks.
 */
 static gboolean
 mtx_cmm_toc_entry_equal (gconstpointer *a,
@@ -2360,13 +2371,35 @@ mtx_cmm_toc_entry_equal (gconstpointer *a,
 {
     MtxCmmTocEntry *A = (MtxCmmTocEntry *) a;
     MtxCmmTocEntry *B = (MtxCmmTocEntry *) b;
-    return g_str_equal (A->text, B->text);
+    const gchar *p = strchr (A->text, cUNIPUA0);
+    const gchar *q = strchr (B->text, cUNIPUA0);
+
+    if G_LIKELY (p == NULL && q == NULL)
+    {
+        return g_str_equal (A->text, B->text);
+    }
+
+    GString *ps = g_string_new (A->text);
+    GString *qs = g_string_new (B->text);
+    if (p)
+    {
+        mtx_cmm_string_release_unipua ((MtxCmm *) A->self, ps);
+    }
+    if (q)
+    {
+        mtx_cmm_string_release_unipua ((MtxCmm *) B->self, qs);
+    }
+    gboolean ret = g_str_equal (ps->str, qs->str);
+    g_string_free (ps, TRUE);
+    g_string_free (qs, TRUE);
+    return ret;
 }
 
 /**
 mtx_delete_heading_link_cb:
-Delete anchors and ToC entry data for a bogus heading.
-Heading:
+Delete anchors and Table of Contents entry for an erroneous heading match.
+
+Heading (more comments in mtx_cmm_toc_entry_equal):
     # TITLE ANCHORS
 */
 static gboolean
@@ -2394,7 +2427,8 @@ mtx_delete_heading_link_cb (const GMatchInfo *info,
         if (g_match_info_fetch_pos (info, 3, &s3, NULL))
         {
             guint idx;
-            MtxCmmTocEntry te;
+            MtxCmmTocEntry te = {0};
+            te.self = self;
             te.text = g_strndup (subject + s3, e2 - s3);
             if (g_ptr_array_find_with_equal_func (self->priv->toc, &te,
                                                   (GEqualFunc)
@@ -2411,17 +2445,22 @@ mtx_delete_heading_link_cb (const GMatchInfo *info,
 
 /**
 mtx_cmm_string_delete_heading_links:
-Delete bogus heading links, see `mtx_cmm_string_insert_heading_links`.
+Delete erroneous heading links, see `mtx_cmm_string_insert_heading_links`.
 
 @self: MtxCmm instance.
 @str: (GString) Pango-rendered code block fragment.
 */
 /*
-Because `mtx_cmm_regex_astx` regex ignores the existence of code blocks, it
-can mistake a shell comment in a code block for a markdown heading, leading
-to `mtx_cmm_string_insert_heading_links` inserting bogus anchor links into
-the code block, and a bogus ToC entry for the shell comment. This function
-remedies the mess.
+This implementation assumes that the original headings do not contain
+the HTML entities found in the hash table self->priv->unipua_ht_esc.
+*/
+/*
+Motivation:
+The `mtx_cmm_regex_astx` regex ignores code blocks, leading to erroneous
+matches by interpreting shell comments within code blocks as Markdown headings.
+Consequently, the function `mtx_cmm_string_insert_heading_links` adds incorrect
+anchor links to the code block and generates a misleading Table of Contents
+(ToC) entry for the shell comment. This function undoes these errors.
 */
 static void
 mtx_cmm_string_delete_heading_links (MtxCmm *self,
@@ -2429,10 +2468,20 @@ mtx_cmm_string_delete_heading_links (MtxCmm *self,
 {
     GRegex *regex = mtx_cmm_regex_heading_link (self);
     GError *err = NULL;
+    gboolean saved = self->priv->escaping;
 
+    /*
+    Since we assume that the original headings do not contain the HTML
+    entities found in self->priv->unipua_ht_esc, we temporarily disable
+    escaping mode. This establishes a baseline for mtx_cmm_toc_entry_equal
+    to compare its arguments without interference from entities.
+    */
+    self->priv->escaping = FALSE;
     g_autofree gchar *temp =
     g_regex_replace_eval (regex, str->str, -1, 0, 0,
                           mtx_delete_heading_link_cb, (gpointer) self, &err);
+    self->priv->escaping = saved;
+
     if (err != NULL)
     {
         g_error ("%s internal error:\t%s", __FUNCTION__, err->message);

@@ -100,6 +100,7 @@ typedef enum _MtxCmmRegexType
 
 typedef struct _MtxCmmTocEntry
 {
+    gpointer self;
     gchar *dest;
     gchar *text;      /* heading's */
     gchar *rendered;  /* ToC's full line */
