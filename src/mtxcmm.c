@@ -5208,23 +5208,26 @@ mtx_cmm_mtx (MtxCmm *self,
     didn't remove. At this stage we do not need to, but still can, protect
     output tags because all text transformations have already taken place.
     */
-    if (with_heading_link && self->priv->toc->len
-        && !self->priv->meta.renderer_skip_toc)
+    if (with_heading_link && !self->priv->meta.renderer_skip_toc)
     {
         mtx_cmm_render_toc (self);
         /*
         Replace the ToC for sUNIPUA_TOC and wrap the replacement with
         `toc_start`/`toc_end` output tags for future use.
         */
-        GString *toc = g_string_new (self->priv->tags.toc_start);
+        GString *toc = g_string_new ("");
         for (guint j = 0; j < self->priv->toc->len; j++)
         {
             MtxCmmTocEntry *te = g_ptr_array_index (self->priv->toc, j);
             g_string_append (toc, te->rendered);
         }
-        g_string_append (toc, self->priv->tags.toc_end);
+        if (toc->len > 0)
+        {
+            g_string_insert (toc, 0, self->priv->tags.toc_start);
+            g_string_append (toc, self->priv->tags.toc_end);
+        }
         i = g_string_replace (ret, sUNIPUA_TOC, toc->str, 1);
-        g_assert (i == 1);
+        g_assert (i <= 1);
         g_string_free (toc, TRUE);
         if (rtoc != NULL)
         {
