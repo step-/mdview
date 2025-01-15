@@ -62,6 +62,8 @@ struct _MtxCmmPrivate
     MtxCmm             *caller;
     MtxCmmPageMeta     meta;             /* set with mtx_markup_parse */
     GString            *mkdin;           /* mtx_cmm_mtx's input markdown */
+    GHashTable         *unipua_ht;       /* UNIPUA replacement map */
+    GHashTable         *unipua_ht_esc;   /* ditto HTML-escaped */
 
     /* With public getters and setters */
     /* (see also seen_unit_types's getters mtx_cmm_got_*) */
@@ -125,6 +127,15 @@ mtx_cmm_finalize (GObject *object)
     g_clear_pointer (&priv->unitq, g_queue_free);  /* NOLINT(bugprone-sizeof-expression) */
     g_clear_pointer (&priv->junkq, g_queue_free);  /* NOLINT(bugprone-sizeof-expression) */
 
+    if (priv->unipua_ht != NULL)
+    {
+        g_hash_table_destroy (priv->unipua_ht);
+    }
+    if (priv->unipua_ht_esc != NULL)
+    {
+        g_hash_table_destroy (priv->unipua_ht_esc);
+    }
+
     G_OBJECT_CLASS (mtx_cmm_parent_class)->finalize (object);
 }
 
@@ -160,6 +171,51 @@ mtx_cmm_init (MtxCmm *self)
     self->priv->code_table = g_ptr_array_new_with_free_func (g_free);
     self->priv->toc =
     g_ptr_array_new_with_free_func ((GDestroyNotify) toc_entry_free);
+
+    /* Delay initialization of unipua_ht and unipua_ht_esc,
+    see function mtx_cmm_string_release_unipua. */
+    ;
+
+}
+
+/**
+mtx_hash_table_new_unipua:
+Return a new hash table suitable for performing MTX UNIPUA token replacements.
+
+@self:
+@escape: whether to HTML escape the hash table values.
+
+Return: %GHashTable pointer. The caller owns the memory.
+*/
+static GHashTable *
+mtx_cmm_hash_table_new_unipua (MtxCmm *self,
+                               const gboolean escape)
+{
+    GHashTable *h = g_hash_table_new (g_str_hash, g_str_equal);
+
+    g_hash_table_insert (h, sUNIPUA_BR, (gchar *) self->priv->tags.br);
+    g_hash_table_insert (h, sUNIPUA_E1, (gchar *) self->priv->tags.em_start);
+    g_hash_table_insert (h, sUNIPUA_E0, (gchar *) self->priv->tags.em_end);
+    g_hash_table_insert (h, sUNIPUA_B1,
+                         (gchar *) self->priv->tags.strong_start);
+    g_hash_table_insert (h, sUNIPUA_B0, (gchar *) self->priv->tags.strong_end);
+
+    /* render_html_escaped */
+    if (escape)
+    {
+        g_hash_table_insert (h, sUNIPUA_AMP, "&amp;");
+        g_hash_table_insert (h, sUNIPUA_LT, "&lt;");
+        g_hash_table_insert (h, sUNIPUA_GT, "&gt;");
+        g_hash_table_insert (h, sUNIPUA_QUOT, "&quot;");
+    }
+    else
+    {
+        g_hash_table_insert (h, sUNIPUA_AMP, "&");
+        g_hash_table_insert (h, sUNIPUA_LT, "<");
+        g_hash_table_insert (h, sUNIPUA_GT, ">");
+        g_hash_table_insert (h, sUNIPUA_QUOT, "\"");
+    }
+    return h;
 }
 
 /*< private >********************************************************/
@@ -2904,38 +2960,19 @@ mtx_cmm_string_release_unipua (MtxCmm *self,
 {
     GRegex *regex = mtx_cmm_regex_unipua (self);
     GError *err = NULL;
+    GHashTable **hptr =
+    self->priv->escaping ? &self->priv->unipua_ht_esc : &self->priv->unipua_ht;
 
-    GHashTable *h = g_hash_table_new (g_str_hash, g_str_equal);
-
-    g_hash_table_insert (h, sUNIPUA_BR, (gchar *) self->priv->tags.br);
-    g_hash_table_insert (h, sUNIPUA_E1, (gchar *) self->priv->tags.em_start);
-    g_hash_table_insert (h, sUNIPUA_E0, (gchar *) self->priv->tags.em_end);
-    g_hash_table_insert (h, sUNIPUA_B1,
-                         (gchar *) self->priv->tags.strong_start);
-    g_hash_table_insert (h, sUNIPUA_B0, (gchar *) self->priv->tags.strong_end);
-
-    /* render_html_escaped */
-    if (self->priv->escaping)
+    if (*hptr == NULL)
     {
-        g_hash_table_insert (h, sUNIPUA_AMP, "&amp;");
-        g_hash_table_insert (h, sUNIPUA_LT, "&lt;");
-        g_hash_table_insert (h, sUNIPUA_GT, "&gt;");
-        g_hash_table_insert (h, sUNIPUA_QUOT, "&quot;");
-    }
-    else
-    {
-        g_hash_table_insert (h, sUNIPUA_AMP, "&");
-        g_hash_table_insert (h, sUNIPUA_LT, "<");
-        g_hash_table_insert (h, sUNIPUA_GT, ">");
-        g_hash_table_insert (h, sUNIPUA_QUOT, "\"");
+        *hptr = mtx_cmm_hash_table_new_unipua (self, self->priv->escaping);
     }
     g_autofree gchar *temp =
-    g_regex_replace_eval (regex, str->str, -1, 0, 0,
-                          mtx_replace_unipua_cb, h, &err);
-    g_hash_table_destroy (h);
+    g_regex_replace_eval (regex, str->str, -1, 0, 0, mtx_replace_unipua_cb,
+                          *hptr, &err);
     if (err)
     {
-        g_error ("%s internal error:\t%s", __FUNCTION__, err->message);
+        g_error ("%s internal error: %s", __FUNCTION__, err->message);
         g_error_free (err);
         return;
     }

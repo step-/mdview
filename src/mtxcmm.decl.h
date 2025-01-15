@@ -111,6 +111,10 @@ mtx_cmm_class_init (MtxCmmClass *klass);
 static void
 mtx_cmm_init (MtxCmm *self);
 
+static GHashTable *
+mtx_cmm_hash_table_new_unipua (MtxCmm *self,
+                               const gboolean escape);
+
 static void
 regex_table_el_destroy (GRegex **e);
 
