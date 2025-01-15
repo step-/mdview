@@ -472,7 +472,8 @@ main (int argc, char **argv)
         else if (strncmp (arg, "--toc-level=", sizeof "--toc-level=" - 1)
                  == 0)
         {
-            toc_level = atoi (arg + sizeof "--toc-level=" - 1);
+            toc_level =
+            MAX (MIN (atoi (arg + sizeof "--toc-level=" - 1) , 6), 0);
             continue;
 #ifndef COMMONMARK_FENCED_CODEBLOCK_LINE_ENDING
         }
