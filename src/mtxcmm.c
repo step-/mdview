@@ -2927,7 +2927,7 @@ mtx_cmm_string_release_unipua (MtxCmm *self,
         g_hash_table_insert (h, sUNIPUA_AMP, "&");
         g_hash_table_insert (h, sUNIPUA_LT, "<");
         g_hash_table_insert (h, sUNIPUA_GT, ">");
-        g_hash_table_insert (h, sUNIPUA_QUOT, "'");
+        g_hash_table_insert (h, sUNIPUA_QUOT, "\"");
     }
     g_autofree gchar *temp =
     g_regex_replace_eval (regex, str->str, -1, 0, 0,
