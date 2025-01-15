@@ -536,7 +536,7 @@ set_cursor_and_signal_on_hover (MtxTextView *self,
     if (hovering != self->hovering_over_link)
     {
         self->hovering_over_link = hovering;
-        if (self->hovering_over_link)
+        if (self->hovering_over_link && self->link_dests != NULL)
         {
             const gchar *link_dest = g_hash_table_lookup (self->link_dests,
                                                           GINT_TO_POINTER
@@ -628,7 +628,7 @@ follow_if_link (MtxTextView *self,
     g_autofree MtxTextViewLinkTag *link_tag =
     mtx_text_view_get_link_tag_at_iter (self, iter);
 
-    if (link_tag != NULL)
+    if (link_tag != NULL && self->link_dests != NULL)
     {
         const gchar *link_dest = g_hash_table_lookup (self->link_dests,
                                                       GINT_TO_POINTER
