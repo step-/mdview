@@ -1852,6 +1852,7 @@ mtx_text_view_load_markup_thread_cb (GTask *task,
     ***************************/
     GtkTextIter iter;
     GError *error = NULL;
+    gboolean is_placed;
 
     data->buffer = gtk_text_buffer_new (NULL);
     gtk_text_buffer_set_text (data->buffer, "\n", 1);
@@ -1860,13 +1861,16 @@ mtx_text_view_load_markup_thread_cb (GTask *task,
         goto out;
     }
     gtk_text_buffer_get_start_iter (data->buffer, &iter);
-    if (!mtx_text_view_buffer_insert_markup
-        (data->buffer, &iter, markup, &error))
+    is_placed =
+    mtx_text_view_buffer_insert_markup (data->buffer, &iter, markup, &error);
+    g_free (markup);
+    if (!is_placed)
     {
+        g_free (data->page_meta);
+        g_free (data->page_toc);
         g_task_return_error (task, error);
         return;
     }
-    g_free (markup);
     mtx_text_view_log_progress (data->tv,
                                 MTX_TEXT_VIEW_PROGRESS_MARKUP_INSERTED);
 
