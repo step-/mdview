@@ -88,6 +88,17 @@ typedef struct
     int id;
 } progress_logger_update_data;
 
+typedef struct
+{
+    gboolean is_text_markdown;
+    GString *retstr;
+    gchar **terms;
+    guint *ctr;
+    const GRegex *regex_astx, *regex_emptiness;
+    GtkEntry *entry;
+    gsize base_offset;
+} file_search_pod;
+
 #include "mtxviewer.decl.h"
 
 #ifdef VIEWER_DEBUG
@@ -1926,17 +1937,7 @@ static void
 _file_search (gpointer path,
               gpointer pod)
 {
-    typedef struct
-    {
-        gboolean is_text_markdown;
-        GString *retstr;
-        gchar **terms;
-        guint *ctr;
-        GRegex *regex_astx, *regex_emptiness;
-        GtkEntry *entry;
-        gsize base_offset;
-    } POD;
-    POD *ppod = (POD *) pod;
+    file_search_pod *ppod = (file_search_pod *) pod;
     const gboolean is_text_markdown = ppod->is_text_markdown;
     GString *retstr    = ppod->retstr;
     gchar **terms      = ppod->terms;
@@ -2062,7 +2063,8 @@ mtx_viewer_search_files (MtxViewer *mvr,
 
     GString *markdown = g_string_new (NULL);
     gchar *stripped, **terms;
-    gint ctr_subjects, ctr_results = 0;
+    gint ctr_subjects;
+    guint ctr_results = 0;
     gsize base_offset;
     GSList *mkd = NULL, *txt = NULL;
     GtkEntry *entry = GTK_ENTRY (mvr->text_search);
@@ -2089,19 +2091,10 @@ mtx_viewer_search_files (MtxViewer *mvr,
     mkd = g_slist_sort (mkd, (GCompareFunc) g_strcmp0);
     txt = g_slist_sort (txt, (GCompareFunc) g_strcmp0);
 
-    typedef struct
-    {
-        gboolean is_text_markdown;
-        GString *retstr;
-        gchar **terms;
-        gint *ctr;
-        const GRegex *regex_astx, *regex_emptiness;
-        GtkEntry *entry;
-        gsize base_offset;
-    } POD;
-    POD pod = { TRUE, markdown, terms, &ctr_results,
+    file_search_pod pod = { TRUE, markdown, terms, &ctr_results,
         mtx_text_view_get_regex_astx (mvr->text_view),
-        mvr->regex_emptiness, entry, base_offset };
+        mvr->regex_emptiness, entry, base_offset
+    };
 
     if (mvr->regex_emptiness == NULL)
     {
