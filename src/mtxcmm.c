@@ -48,6 +48,17 @@ Copyright (C) 2016, 2023 step
 #include "mtxdbg.h"
 #include "mtxmarkup.h"
 #include "mtxrender.h"
+
+typedef struct _heading_link_pod
+{
+    MtxCmm *self;
+    MtxCmm *render;
+    GString *prologue;
+    guint toc_level;
+    GPtrArray *toc;
+    GPtrArray *lint;
+} heading_link_pod;
+
 #include "mtxcmm.decl.h"
 
 /* Used to skip printing with mtx_dbg_errout in internal MTX_CMM instances. */
@@ -104,16 +115,6 @@ G_DEFINE_TYPE_WITH_PRIVATE (MtxCmm, mtx_cmm, G_TYPE_OBJECT)
 /**********************************************************************/
 
 /*< private >**********************************************************/
-
-struct heading_link_pod
-{
-    MtxCmm *self;
-    MtxCmm *render;
-    GString *prologue;
-    guint toc_level;
-    GPtrArray *toc;
-    const gboolean with_linter;
-};
 
 #ifdef MTX_DEBUG
 static void
@@ -2051,7 +2052,7 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
     */
 #define ANCHOR    "&#x200B;["MTX_INSERT_HEADING_LINK_TEXT"](<%s>)"
 #define ANCHORS   "&#x200B;["MTX_INSERT_HEADING_LINK_TEXT"](<#%s>)"
-    struct heading_link_pod *POD = data;
+    heading_link_pod *POD = data;
     g_autofree gchar *e = NULL;
     g_autofree gchar *t = NULL;
     g_autofree gchar *T = g_strstrip (g_match_info_fetch_named (info, "TITLE"));
@@ -2143,7 +2144,7 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
     }
 
     /* Hash anchors to be able to report when two anchors clash. */
-    if (POD->with_linter && POD->toc_level > 0)
+    if (POD->lint != NULL && POD->toc_level > 0)
     {
         GChecksum *checksum = g_checksum_new (G_CHECKSUM_MD5);
         if (checksum != NULL)
@@ -2267,10 +2268,12 @@ mtx_cmm_string_insert_heading_links (MtxCmm *self,
 {
     GRegex *regex = mtx_cmm_regex_astx (self);
     GError *err = NULL;
-    const gboolean with_linter = self->priv->tweaks & MTX_CMM_TWEAK_RESERVED4;
-    struct heading_link_pod POD = {
+    g_autoptr (GPtrArray) lint = (self->priv->tweaks & MTX_CMM_TWEAK_RESERVED4 ?
+                                  lint = g_ptr_array_new_with_free_func
+                                  (g_free) : NULL);
+    heading_link_pod POD = {
         self, render, g_string_new (""), self->priv->toc_level, self->priv->toc,
-        with_linter,
+        lint,
     };
 
     g_autofree gchar *temp =
@@ -2287,29 +2290,9 @@ mtx_cmm_string_insert_heading_links (MtxCmm *self,
         g_string_append_c (POD.prologue, '\n');
     }
 
-    /* Linter: report when two anchors clash. */
-    if (with_linter && POD.toc->len > 0)
+    if (lint != NULL)
     {
-        MtxCmmTocEntry *prev = NULL;
-        GPtrArray *a = g_ptr_array_copy (POD.toc, NULL, NULL); /* shallow */
-
-        g_ptr_array_sort (a, mtx_cmm_toc_hash_cmp);
-        g_string_append (POD.prologue, "\n\n```\n");
-        for (guint i = 0; i < a->len; i++)
-        {
-            MtxCmmTocEntry *e =
-            (MtxCmmTocEntry *) g_ptr_array_index (a, i);
-            if (prev && e->hash && g_strcmp0 (prev->hash, e->hash) == 0)
-            {
-                g_string_append_printf (POD.prologue, _
-                                        ("% 3d. Same anchors: #%d(%s) and #%d(%s)\n"),
-                                        i + 1, prev->level, prev->text,
-                                        e->level, e->text);
-            }
-            prev = e;
-        }
-        g_string_append (POD.prologue, "```\n\n");
-        g_ptr_array_free (a, FALSE);
+        mtx_cmm_string_append_lint_report (self, POD.prologue, &POD);
     }
 
     /* Link reference definitions. */
@@ -2335,6 +2318,52 @@ mtx_cmm_string_insert_heading_links (MtxCmm *self,
 
     g_string_append (str, temp);
     mtx_dbg_errout (ZC_(1), "end %s\n", mtx_dbg_fmt_etime (-1));
+}
+
+/**
+mtx_cmm_string_append_lint_report:
+Analyze linter results, and make a Markdown report.
+
+@self: %MtxCmm instance.
+@report: %GString to append to.
+@pod: pointer to %heading_link_pod holding the partial lint report.
+*/
+static void
+mtx_cmm_string_append_lint_report (MtxCmm *self __attribute__((unused)),
+                                   GString *report,
+                                   heading_link_pod *pod)
+{
+    guint i, n = 0;
+
+    g_string_append (report, "\n\n```\n");
+    for (i = 0; i < pod->lint->len; i++)
+    {
+        gchar *p = g_ptr_array_index (pod->lint, i);
+        g_string_append_printf (report, "% 3d. %s\n", ++n, p);
+    }
+    if (pod->toc->len > 0)
+    {
+        /* Report when two anchors clash. */
+
+        MtxCmmTocEntry *prev = NULL;
+        const gchar *fmt =
+        _("% 3d. Headings have the same anchors: #%d(%s) and #%d(%s)\n");
+        g_autoptr (GPtrArray) a = g_ptr_array_copy (pod->toc, NULL, NULL);
+        g_ptr_array_set_free_func (a, NULL);
+        g_ptr_array_sort (a, mtx_cmm_toc_hash_cmp);
+        for (i = 0; i < a->len; i++)
+        {
+            MtxCmmTocEntry *e =
+            (MtxCmmTocEntry *) g_ptr_array_index (a, i);
+            if (prev && e->hash && g_strcmp0 (prev->hash, e->hash) == 0)
+            {
+                g_string_append_printf (report, fmt, ++n, prev->level,
+                                        prev->text, e->level, e->text);
+            }
+            prev = e;
+        }
+    }
+    g_string_append (report, "```\n\n");
 }
 
 /**

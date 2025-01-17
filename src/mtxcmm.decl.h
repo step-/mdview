@@ -294,6 +294,11 @@ mtx_cmm_string_insert_heading_links (MtxCmm *self,
                                      MtxCmm *render,
                                      GString *str);
 
+static void
+mtx_cmm_string_append_lint_report (MtxCmm *self,
+                                   GString *report,
+                                   heading_link_pod *pod);
+
 static gint
 mtx_cmm_toc_hash_cmp (gconstpointer a,
                       gconstpointer b);
