@@ -1,8 +1,9 @@
 #ifdef MTX_DEBUG
-static void mtx_dump_queue (gpointer instance,
-                            int fd,
-                            GQueue* queue,
-                            gboolean print_junk);
+static void
+mtx_dump_queue (gpointer instance,
+                int fd,
+                GQueue* queue,
+                gboolean print_junk);
 #endif
 
 void

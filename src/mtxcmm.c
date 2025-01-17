@@ -105,11 +105,22 @@ G_DEFINE_TYPE_WITH_PRIVATE (MtxCmm, mtx_cmm, G_TYPE_OBJECT)
 
 /*< private >**********************************************************/
 
+struct heading_link_pod
+{
+    MtxCmm *self;
+    MtxCmm *render;
+    GString *prologue;
+    guint toc_level;
+    GPtrArray *toc;
+    const gboolean with_linter;
+};
+
 #ifdef MTX_DEBUG
-static void mtx_dump_queue (gpointer instance,
-                            int fd,
-                            GQueue* queue,
-                            gboolean print_junk);
+static void
+mtx_dump_queue (gpointer instance,
+                int fd,
+                GQueue* queue,
+                gboolean print_junk);
 #endif
 
 static void
@@ -2038,18 +2049,9 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
     removes any surrounding markdown span (such as emphasis) from the `<TITLE
     text>`. The second run generates the URI-encoded `<TITLE text>`.
     */
-    struct
-    {
-        MtxCmm *self;
-        MtxCmm *render;
-        GString *prologue;
-        guint toc_level;
-        GPtrArray *toc_entry;
-        const gboolean with_linter;
-    }
-     *POD = data;
 #define ANCHOR    "&#x200B;["MTX_INSERT_HEADING_LINK_TEXT"](<%s>)"
 #define ANCHORS   "&#x200B;["MTX_INSERT_HEADING_LINK_TEXT"](<#%s>)"
+    struct heading_link_pod *POD = data;
     g_autofree gchar *e = NULL;
     g_autofree gchar *t = NULL;
     g_autofree gchar *T = g_strstrip (g_match_info_fetch_named (info, "TITLE"));
@@ -2205,7 +2207,7 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
         te->rendered = NULL;
         te->level = lvl;
         te->hash = g_strdup (hash);
-        g_ptr_array_add (POD->toc_entry, te);
+        g_ptr_array_add (POD->toc, te);
     }
 
     return FALSE;
@@ -2236,7 +2238,7 @@ reduced:
         MtxCmmTocEntry *te = g_new0 (MtxCmmTocEntry, 1);
         te->text = g_markup_escape_text (t, -1);
         te->level = lvl;
-        g_ptr_array_add (POD->toc_entry, te);
+        g_ptr_array_add (POD->toc, te);
     }
 
 unchanged:
@@ -2266,16 +2268,7 @@ mtx_cmm_string_insert_heading_links (MtxCmm *self,
     GRegex *regex = mtx_cmm_regex_astx (self);
     GError *err = NULL;
     const gboolean with_linter = self->priv->tweaks & MTX_CMM_TWEAK_RESERVED4;
-    struct
-    {
-        MtxCmm *self;
-        MtxCmm *render;
-        GString *prologue;
-        const guint toc_level;
-        GPtrArray *toc;
-        const gboolean with_linter;
-    }
-    POD = {
+    struct heading_link_pod POD = {
         self, render, g_string_new (""), self->priv->toc_level, self->priv->toc,
         with_linter,
     };
