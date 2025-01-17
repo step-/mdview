@@ -2061,7 +2061,7 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
     g_autofree gchar *k = NULL; /* kebab-case slug */
     g_autofree gchar *anchors = NULL;
     guint lvl = 0, n = 0;
-    const gchar *hash = NULL;
+    gchar *hash = NULL;
 
     if G_UNLIKELY(!*U && !*T)
     {
@@ -2206,7 +2206,7 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
         te->text = g_strdup (t); /* link's */
         te->rendered = NULL;
         te->level = lvl;
-        te->hash = g_strdup (hash);
+        te->hash = hash;
         g_ptr_array_add (POD->toc, te);
     }
 
