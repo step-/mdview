@@ -2014,6 +2014,61 @@ mtx_cmm_log_progress (MtxCmm *self,
 }
 
 /**
+Assess whether the input string will encounter issues
+http://github.com/mity/md4c/issues/276,
+http://github.com/mity/md4c/issues/277.
+*/
+static gboolean
+hits_issue_md4c_276_277 (const gchar *t)
+{
+    guint ca, cu, ct;
+    ca = cu = ct = 0;
+    for (const gchar *p = t; *p; p++)
+    {
+        switch (*p)
+        {
+            case '*': ca++; break;
+            case '_': cu++; break;
+            case '~': ct++; break;
+        }
+    }
+    return ca % 2 || cu % 2 || ct % 2;
+}
+
+/**
+Assess whether the input string will encounter issue
+http://github.com/mity/md4c/issues/278.
+*/
+static gboolean
+hits_issue_md4c_278 (const gchar *t)
+{
+    g_assert (*t);
+    gboolean found = FALSE;
+    gchar *c, *z;
+
+    /* match  ^_\{bp}|\{bp}_(\{bp}|$)  \{bp} = blank/punctuation*/
+    if ((c = strchr (t, '_')) != NULL)
+    {
+        found = c == t && (isblank (c[1]) || ispunct (c[1])); /* ^_\{bp} */
+        for (z = (t - c) ? c - 1 : " "; !found && *c; c++)
+        {
+            if (*c == '_' && (isblank (*z) || ispunct (*z)))
+            {
+                if (c[1] == '\0' || isblank (c[1]) || ispunct (c[1]))
+                {
+                    found = TRUE; /* \{bp}(\{bp}|$) */
+                }
+            }
+            else
+            {
+                z = c;
+            }
+        }
+    }
+    return found;
+}
+
+/**
 mtx_insert_heading_link_cb:
 Append link reference definitions to the markdown prologue;
 add anchor links after the heading; save ToC entry data.
@@ -2083,27 +2138,37 @@ mtx_insert_heading_link_cb (const GMatchInfo *info,
     if (tlen != strcspn (t, "[<\\&>]"))
     {
         /* Feature reduced for unfriendly corner cases. */
+        if (POD->lint != NULL)
+        {
+            const gchar *fmt =
+            _("Heading has stop characters '[', ']', '<', '>', '\\' or '&': %s");
+            g_ptr_array_add (POD->lint, g_strdup_printf (fmt, T));
+        }
         goto reduced;
     }
 
-    if (tlen != strcspn (t, "*_~"))
+    /* Word-around for the component. */
+    if (tlen != strcspn (t, "*_~") && hits_issue_md4c_276_277 (t))
     {
-        /* Feature reduced for http://github.com/mity/md4c/issues/276 , 277 */
-        guint ca, cu, ct;
-        ca = cu = ct = 0;
-        for (const gchar *p = t; *p; p++)
+        if (POD->lint != NULL)
         {
-            switch (*p)
-            {
-                case '*': ca++; break;
-                case '_': cu++; break;
-                case '~': ct++; break;
-            }
+            const gchar *fmt =
+            _("Heading has unbalanced '*', '_' or '~': %s");
+            g_ptr_array_add (POD->lint, g_strdup_printf (fmt, T));
         }
-        if (ca % 2 || cu % 2 || ct % 2)
+        goto reduced;
+    }
+
+    /* Word-around for the component. */
+    if (hits_issue_md4c_278 (t))
+    {
+        if (POD->lint != NULL)
         {
-            goto reduced;
+            const gchar *fmt =
+            _("Heading has spaced/punctuated '_': %s");
+            g_ptr_array_add (POD->lint, g_strdup_printf (fmt, T));
         }
+        goto reduced;
     }
 
     /* URI-encode title (e), that is, the link destination */

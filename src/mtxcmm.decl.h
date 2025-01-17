@@ -285,6 +285,12 @@ mtx_cmm_log_progress (MtxCmm *self,
                       const MtxCmmProgress id);
 
 static gboolean
+hits_issue_md4c_276_277 (const gchar *t);
+
+static gboolean
+hits_issue_md4c_278 (const gchar *t);
+
+static gboolean
 mtx_insert_heading_link_cb (const GMatchInfo *info,
                             GString *res,
                             gpointer data);
