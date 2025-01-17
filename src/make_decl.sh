@@ -24,6 +24,10 @@ fccf --language c --ignore-single-line-results --function '' "$@" |
 /^{/ { body = 1 }
 /^}/ { body = 0; next }
 
+# Ignore struct and typedef
+# (why does fccf output some structs and typedefs?)
+/^[ \t]*(struct|typedef)[ \t]/ { next }
+
 !body {
 
 	# Skip single line comments including fccf`s function line number.
