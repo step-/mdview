@@ -44,6 +44,7 @@ mtxversion.h: mtxversion.h.in ../Makefile
 		-e 's|@PACKAGE_URL@|$(PACKAGE_URL)|' \
 		-e 's|@GETTEXT_PACKAGE@|$(GETTEXT_PACKAGE)|' \
 		-e 's|@LOCALEDIR@|$(LOCALEDIR)|' \
+		-e 's|@GIT_VERSION@|$(GIT_VERSION)|' \
 	$< > $@
 
 clean:

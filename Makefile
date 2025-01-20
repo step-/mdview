@@ -16,7 +16,7 @@ export GETTEXT_PACKAGE = $(PACKAGE_NAME)
 export LOCALEDIR       = /usr/local/share/locale
 
 ifeq ($(wildcard .git),.git)
-	PACKAGE_VERSION += $(shell git describe --all --match master --match main --dirty)
+	export GIT_VERSION ?= $(shell git describe --all --match master --match main --dirty)
 endif
 
 GTK?=3
