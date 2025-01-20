@@ -257,11 +257,13 @@ html_doc_end (const gint fd,
 usage:
 */
 static void
-usage ()
+usage (MtxCmmOutput output)
 {
-    (void) fd_output (STDOUT_FILENO, "", USAGE_PAGE, MTX_CMM_OUTPUT_ANSI,
-                      0, NULL, 0, 0, 0);
-    return;
+    if (output != MTX_CMM_OUTPUT_BARE)
+    {
+        output = MTX_CMM_OUTPUT_ANSI;
+    }
+    (void) fd_output (STDOUT_FILENO, "", USAGE_PAGE, output, 0, NULL, 0, 0, 0);
 }
 
 /**
@@ -348,7 +350,7 @@ main (int argc, char **argv)
 
         if (strcmp (arg, "-h") == 0 || strcmp (arg, "--help") == 0)
         {
-            usage ();
+            usage (output_type);
             exit (0);
         }
         else if (strcmp (arg, "-V") == 0 ||
@@ -371,7 +373,7 @@ main (int argc, char **argv)
             if (fd < 0)
             {
                 gint n = errno;
-                usage ();
+                usage (output_type);
                 g_printerr ("%s: %s: %s\n", PROGNAME, outf, g_strerror (n));
                 exit (1);
             }
@@ -579,7 +581,7 @@ main (int argc, char **argv)
         }
         else if (arg[0] == '-')
         {
-            usage ();
+            usage (output_type);
             fprintf (stderr, "%s: %s %s\n", PROGNAME, _("invalid option:"),
                      arg);
             exit (1);
@@ -637,7 +639,7 @@ main (int argc, char **argv)
             }
             else
             {
-                usage ();
+                usage (output_type);
                 fprintf (stderr, "%s: '%s': unsupported scheme\n", PROGNAME,
                          scheme);
                 exit (1);
@@ -658,7 +660,7 @@ main (int argc, char **argv)
                 }
                 else
                 {
-                    usage ();
+                    usage (output_type);
                     fprintf (stderr, "%s: '%s': unsupported scheme\n", PROGNAME,
                              scheme);
                     exit (1);
@@ -675,7 +677,7 @@ main (int argc, char **argv)
     {
         if (console_output)
         {
-            usage ();
+            usage (output_type);
             exit (1);
         }
     }
