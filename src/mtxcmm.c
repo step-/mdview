@@ -1260,7 +1260,7 @@ mtx_cmm_imagebuilder_text (MtxCmm *self __attribute__((unused)),
     {
         p = g_strdup_printf ("%s%s%s%s%s", text ? text : "", text ? " " :
                              "",
-                             dest ? "<" : "", dest ? dest : "", dest ? ">"
+                             dest ? "{" : "", dest ? dest : "", dest ? "}"
                              : "");
     }
     return p;
