@@ -64,7 +64,7 @@ Link references are typically defined at the end of the document, but they can b
 This option is enabled by default. Disable with --no-permlink.
 -Images-
 Local image files can be displayed inline using image syntax. A relative image path is resolved first with the base directory set to the home page directory[¹], then, if that fails, with the base directory set to the current file's directory. Note that symbolic links are never followed.
-Inline image support: You should be seeing a picture of Tux instead of this text. The image path is “linux3.png”. Either the validity of the image path depends on symbolic links, which are never followed, or mdview is at fault. <linux3.png>
+Inline image support: You should be seeing a picture of Tux instead of this text. The image path is “linux3.png”. Either the validity of the image path depends on symbolic links, which are never followed, or mdview is at fault. {linux3.png}
 A link can embed an image. Learn more <link_embed_image.md>
 [¹] the home page directory can be specified on the command line. It defaults to the directory of the first file.
 -Paragraphs and line breaks-

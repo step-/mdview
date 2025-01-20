@@ -23,10 +23,10 @@ text in codeblock
 
 (http://1.com) http://2.com <http://2.com>
 user@example.com <mailto:user@example.com>
-[w <x> y <z> code span]
--w <x> y <z> code span-
-  * w <x> y <z> code span
-w <x> y <z> code span
+[w <x> y {z} code span]
+-w <x> y {z} code span-
+  * w <x> y {z} code span
+w <x> y {z} code span
 `not code span in code block`
 
 `not code span in code block`

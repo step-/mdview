@@ -8,21 +8,21 @@ bullet follows
 end bullet
 in paragraph < "less < then" < "less < then" < "less < then" < "less < then" < "less < then" < "less < then" BR
 end paragraph
-links < <https://x.com> link "less < then" <https://x.com> (title "less < then") < <linux3.png> image "less < then" {linux3.png} (title "less < then") end links
+links < <https://x.com> link "less < then" <https://x.com> (title "less < then") < {linux3.png} image "less < then" {linux3.png} (title "less < then") end links
 extension strikethrough < "less < then"
 [(extension, legacy mdview only) multiline atx heading]
 < "less < then"
 end extensions
 links and code and tags in atx headings
 [atx t <link>]
-[atx i <image>]
+[atx i {image}]
 [atx code]
 [atx ]
 [atx < <>]
-[atx < <>]
+[atx < {}]
 links and code and tags in setext headings
 [t <link>]
-[i <image>]
+[i {image}]
 [code]
 In a setext heading that contains just a tag, the tag and the empty heading disappear altogether.
 In a settext heading that contains a tag mixed with other text, the tag disappears but the heading remains:
@@ -30,7 +30,7 @@ In a settext heading that contains a tag mixed with other text, the tag disappea
 An empty link:
 [< <>]
 An empty image:
-[< <>]
+[< {}]
 [(extension, legacy mdview only) multiline atx]
-t <link> i <image> code  < <> < <>
+t <link> i {image} code  < <> < {}
 end links and code and tags in headings
