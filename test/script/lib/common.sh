@@ -169,7 +169,7 @@ return $ret
 # $* ansi|html|text|tty ...
 # The test script initializes TEST_ARGS, TEST_FORMATS
 run_test () { # => REFERENCE_STEM
-	: "?? activate the helper that simply starts the viewer ??"
+	: "?? Should just the Viewer be activated ??"
 		if [ "${TEST_FORMATS%*gui}" != "$TEST_FORMATS" ] || [ -n "$_opt_viewer" ]; then
 			echo "RUN> $MDVIEW $TEST_ARGS $mdview_opts" >&2
 			$MDVIEW $TEST_ARGS $mdview_opts
@@ -504,7 +504,7 @@ get_mdview_project_id () { # <= $MDVIEW_BIN => 1(mdview3) 2(mdview4)
 	[ -n "$MDVIEW_BIN" ] || return 1
 	set -- $("$MDVIEW_BIN" --version)
 	ifs="$IFS"; IFS=.
-	set -- $2
+	set -- $1
 	IFS="$ifs"
 	[ "$1" -ge 2024 ] && set 2 || set 1
 	echo $1
