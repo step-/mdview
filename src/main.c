@@ -354,7 +354,13 @@ main (int argc, char **argv)
         else if (strcmp (arg, "-V") == 0 ||
                  strcmp (arg, "--version") == 0)
         {
-            g_print (MDVIEW_VERSION_TEXT "\n", _("Version:"), _("License:"));
+            gchar *_ __attribute__((unused)) = _("Version:");
+            g_print ("%s\n", MDVIEW_VERSION);
+            exit (0);
+        }
+        else if (strcmp (arg, "--license") == 0)
+        {
+            g_print (MDVIEW_LICENSE "\n", _("License:"));
             exit (0);
         }
         else if (strncmp (arg, "--output=", sizeof "--output=" - 1) == 0)

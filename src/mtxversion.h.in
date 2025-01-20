@@ -33,8 +33,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #define DEFAULT_WINDOW_TITLE "@PACKAGE_NAME@"
 #define MDVIEW_VERSION "@PACKAGE_VERSION@"
 /* This is a printf format string. */
-#define MDVIEW_VERSION_TEXT "\
-%s " MDVIEW_VERSION "\n\
+#define MDVIEW_LICENSE "\
 %s GNU GPL v2\n\
 MDVIEW MTX (C) 2024-2025 step, @PACKAGE_URL@\n\
 MD4C       (C) 2016-2024 Martin Mitas\n\
