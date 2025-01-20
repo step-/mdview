@@ -1312,8 +1312,7 @@ mtx_cmm_get_render_indent (MtxCmm *self)
 {
     g_return_val_if_fail (MTX_IS_CMM (self), FALSE);
     g_return_val_if_fail (self->priv->output != MTX_CMM_OUTPUT_UNKNOWN, FALSE);
-    return (self->priv->output & (MTX_CMM_OUTPUT_ANSI
-                                  | MTX_CMM_OUTPUT_TEXT | MTX_CMM_OUTPUT_TTY));
+    return (self->priv->output & MTX_CMM_OUTPUT_TEXT_INDENT);
 }
 
 /**
@@ -1769,7 +1768,7 @@ mtx_cmm_set_output (MtxCmm *self,
         self->priv->tags.link_builder = mtx_cmm_linkbuilder_ansi;
         self->priv->tags.image_builder = mtx_cmm_imagebuilder_ansi;
 
-        /* MTX plain text */
+        /* MTX decorated text */
     }
     else if (output == MTX_CMM_OUTPUT_TEXT)
     {
@@ -1819,6 +1818,62 @@ mtx_cmm_set_output (MtxCmm *self,
         self->priv->tags.th_start = "│ ";
         self->priv->tags.th_end = " ";
         self->priv->tags.td_start = "│ ";
+        self->priv->tags.td_end = " ";
+        self->priv->tags.toc_start = "";
+        self->priv->tags.toc_end = "";
+        self->priv->tags.link_builder = mtx_cmm_linkbuilder_text;
+        self->priv->tags.image_builder = mtx_cmm_imagebuilder_text;
+
+        /* MTX bare text */
+    }
+    else if (output == MTX_CMM_OUTPUT_BARE)
+    {
+        self->priv->tags.em_start = "";
+        self->priv->tags.em_end = "";
+        self->priv->tags.strong_start = "";
+        self->priv->tags.strong_end = "";
+        self->priv->tags.code_span_start = "";
+        self->priv->tags.code_span_end = "";
+        self->priv->tags.codeblock_start = "";
+        self->priv->tags.codeblock_end = "\n";
+        self->priv->tags.strikethrough_start = "";
+        self->priv->tags.strikethrough_end = "";
+        self->priv->tags.h1_start = "";
+        self->priv->tags.h1_end = "\n";
+        self->priv->tags.h2_start = "";
+        self->priv->tags.h2_end = "\n";
+        self->priv->tags.h3_start = "";
+        self->priv->tags.h3_end = "\n";
+        self->priv->tags.h4_start = "";
+        self->priv->tags.h4_end = "\n";
+        self->priv->tags.h5_start = "";
+        self->priv->tags.h5_end = "\n";
+        self->priv->tags.h6_start = "";
+        self->priv->tags.h6_end = "\n";
+        self->priv->tags.blockquote_start = "";
+        self->priv->tags.blockquote_end = "";
+        self->priv->tags.olist_start = "";
+        self->priv->tags.olist_end = "";
+        self->priv->tags.ulist_start = "";
+        self->priv->tags.ulist_end = "";
+        self->priv->tags.li_start[0] = " ";     /* render_open_li_block  */
+        self->priv->tags.li_start[1] = " ";     /* render_open_li_block  */
+        self->priv->tags.li_end = "\n";         /* render_close_li_block */
+        self->priv->tags.rule = " -----\n";
+        self->priv->tags.para_start = "";       /* render_open_p_block */
+        self->priv->tags.para_end = "\n";       /* render_close_p_block */
+        self->priv->tags.br = "\n";
+        self->priv->tags.table_start = "";
+        self->priv->tags.table_end = "";
+        self->priv->tags.thead_start = "";
+        self->priv->tags.thead_end = "";
+        self->priv->tags.tbody_start = "";
+        self->priv->tags.tbody_end = "";
+        self->priv->tags.tr_start = "";
+        self->priv->tags.tr_end = "\n";
+        self->priv->tags.th_start = " ";
+        self->priv->tags.th_end = " ";
+        self->priv->tags.td_start = " ";
         self->priv->tags.td_end = " ";
         self->priv->tags.toc_start = "";
         self->priv->tags.toc_end = "";

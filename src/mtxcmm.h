@@ -46,7 +46,15 @@ typedef enum _MtxCmmOutput
     MTX_CMM_OUTPUT_PANGO                = 1 << 3,
     MTX_CMM_OUTPUT_HTML                 = 1 << 4,
     MTX_CMM_OUTPUT_BARE_INLINE          = 1 << 5, /* mtx_insert_heading_link_cb */
+    MTX_CMM_OUTPUT_BARE                 = 1 << 6,
 } MtxCmmOutput;
+
+/* Text modes that indent list items with spaces. */
+#define MTX_CMM_OUTPUT_TEXT_INDENT  ( \
+    MTX_CMM_OUTPUT_ANSI | \
+    MTX_CMM_OUTPUT_TTY  | \
+    MTX_CMM_OUTPUT_TEXT | \
+    MTX_CMM_OUTPUT_BARE )
 
 typedef enum _MtxCmmExtensions
 {

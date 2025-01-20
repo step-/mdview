@@ -21,8 +21,9 @@ If an output format is not specified the file is opened in the GUI viewer. HBRK
 Some formats can be tweaked (see section OUTPUT MODIFIERS).
 ATX1 
  `--ansi             `Text with ANSI escape codes. HBRK
+ `--bare             `Plain text with most Markdown formatting removed. HBRK
  `--html             `HTML fragment. HBRK
- `--text             `Plain text. HBRK
+ `--text             `Decorated text. HBRK
  `--tty              `Text with vt100 codes. HBRK
 #ifdef OPT_PANGO
  `--pango            `Raw Pango markup (debug).

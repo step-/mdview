@@ -390,6 +390,12 @@ main (int argc, char **argv)
             output_type = MTX_CMM_OUTPUT_TTY;
             continue;
         }
+        else if (strcmp (arg, "--bare") == 0)
+        {
+            console_output = TRUE;
+            output_type = MTX_CMM_OUTPUT_BARE;
+            continue;
+        }
         else if (strcmp (arg, "--text") == 0)
         {
             console_output = TRUE;
