@@ -17,4 +17,5 @@ exec 1> "$2"
 	versionh=../src/mtxversion.h               # Makefile
 
 cpp $SUB_CPPFLAGS -include $versionh \
-	-DATX1="#" -DHBRK="\\" -traditional -P "$1" | awk 'NF {p=1} p'
+	-DATX3="###" -DHBRK="\\" -traditional -P "$1" | \
+	awk 'NF {p=1} p'
