@@ -12,7 +12,7 @@ Meson's default installation prefix is `/usr/local`.
 
 	[CC=gcc] meson setup build      # set CC to disable ccache autodetection
 	meson compile -C build
-	meson install
+	meson install -C build
 
 ## Building using the included Makefile
 
@@ -50,3 +50,8 @@ To update the Gettext POT template in directory `./po`:
 To update translations under directory `build/po`:
 
     meson compile -C build      # don't also append target mdview-update-po
+
+## Building and installing documentation
+
+If the help2man(1) command is available, meson will build and install the
+manual page.
