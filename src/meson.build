@@ -15,10 +15,10 @@ dep = []
 if get_option('gtk') == '2'
   dep += dependency('gtk+-2.0', version : '>= 2.24.33')
 else
-  dep += dependency('gtk+-3.0', version : '>= 3.24.42')
+  dep += dependency('gtk+-3.0', version : '>= 3.24.33')
 endif
-dep += dependency('glib-2.0', version : '>= 2.68')
-dep += dependency('pango', version : '>= 1.50')
+dep += dependency('glib-2.0', version : '>= 2.72.4')
+dep += dependency('pango', version : '>= 1.50.6')
 
 configure_file(input: 'mtxversion.h.in',
 	output : 'mtxversion.h',

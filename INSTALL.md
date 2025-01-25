@@ -6,6 +6,39 @@ available translation data.
 For development and testing use the included Makefile, which can build, but
 not install, the project. See § [Building using the included Makefile].
 
+## GTK+-3 runtime dependencies
+
+Mdview depends on the following libraries:
+libgtk-3-0 (>= 3.24.33), libpango-1.0-0 (>= 1.50.6), libglib2.0-0 (>= 2.72.4).
+
+Dependencies satisfy the package versions
+that the following distributions provide:
+
+|                       |             |                |              |
+|-----------------------|-------------|----------------|--------------|
+|───────────────────────|─────────────|────────────────|──────────────|
+| Debian package name   | libgtk-3-0  | libpango-1.0-0 | libglib2.0-0 |
+|───────────────────────|─────────────|────────────────|──────────────|
+| **12 bookworm**       | 3.24.38     | 1.50.12        | 2.74.6       |
+| 13 trixie (testing)   | 3.24.43     | 1.55.0         | 2.82.4       |
+| sid  (unstable)       | 3.24.43     | 1.55.0         | 2.82.4       |
+|───────────────────────|─────────────|────────────────|──────────────|
+| Ubuntu package name   | libgtk-3-0  | libpango-1.0-0 | libglib2.0-0 |
+|───────────────────────|─────────────|────────────────|──────────────|
+| **22.04 (LTS) Jammy** | **3.24.33** | **1.50.6**     | **2.72.4**   |
+| Noble                 | 3.24.41     | 1.52.1         | 2.80.0       |
+| Oracular              | 3.24.43     | 1.54.0         | 2.82.1       |
+| Plucky                | 3.24.43     | 1.55.0         | 2.82.4       |
+|───────────────────────|─────────────|────────────────|──────────────|
+| Fatdog64 package name | gtk3        | pango          | glib         |
+|───────────────────────|─────────────|────────────────|──────────────|
+| **903**               | 3.24.42     | 1.50.12        | 2.74.5       |
+
+### GTK+-2 dependencies
+
+You should use the latest GTK+-2 version available for your distribution.
+On Fatdog64 Linux, I use gtk2 2.24.33.
+
 ## Building and installing using meson
 
 Meson's default installation prefix is `/usr/local`.

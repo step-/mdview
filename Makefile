@@ -1,10 +1,3 @@
-# Depends: Pango >= 1.50, Glib >= 2.68 (g_string_replace)
-
-# | Pango  | GLib | Debian               | Ubuntu                   |
-# |--------|------|----------------------|--------------------------|
-# | 1.50.6 | 2.66 | Debian 11 (Bullseye) | Ubuntu 21.04 (Hirsute)   |
-# | 1.54.0 | 2.68 | Debian 12 (Bookworm) | Ubuntu 22.04 LTS (Jammy) |
-
 # GNU Make
 # Read INSTALL.md for build instructions.
 
