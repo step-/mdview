@@ -42,6 +42,7 @@ mtxversion.h: mtxversion.h.in ../Makefile
 	@$(SED) -e 's|@PACKAGE_NAME@|$(PACKAGE_NAME)|' \
 		-e 's|@PACKAGE_VERSION@|$(PACKAGE_VERSION)|' \
 		-e 's|@PACKAGE_URL@|$(PACKAGE_URL)|' \
+		-e 's|@PACKAGE_DESC@|$(PACKAGE_DESC)|' \
 		-e 's|@GETTEXT_PACKAGE@|$(GETTEXT_PACKAGE)|' \
 		-e 's|@LOCALEDIR@|$(LOCALEDIR)|' \
 		-e 's|@GIT_VERSION@|$(GIT_VERSION)|' \

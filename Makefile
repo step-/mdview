@@ -11,10 +11,9 @@
 export PACKAGE_NAME    = mdview
 export PACKAGE_VERSION = 2025.01.04
 export PACKAGE_URL     = http://github.com/step-/mdview
-
+export PACKAGE_DESC   ?= GTK markdown viewer and CLI converter
 export GETTEXT_PACKAGE = $(PACKAGE_NAME)
 export LOCALEDIR       = /usr/local/share/locale
-
 ifeq ($(wildcard .git),.git)
 	export GIT_VERSION ?= $(shell git describe --all --match master --match main --dirty)
 endif
@@ -114,7 +113,7 @@ LIBS ::= $(GTK_LIBS)
 
 ALL_FLAGS ::= $(GTK_CFLAGS) $(CPPFLAGS) $(DEBUG_CPPFLAGS) $(CFLAGS) $(DEBUG_CFLAGS)
 
-all: sub-config sub-resources sub-src
+all: sub-config sub-resources sub-src sub-doc
 
 sub-config:
 	@$(MAKE) -C src ALL_FLAGS="$(ALL_FLAGS)" LIBS="$(LIBS)" mtxversion.h
@@ -125,8 +124,11 @@ sub-resources:
 sub-src:
 	@$(MAKE) -C src ALL_FLAGS="$(ALL_FLAGS)" LIBS="$(LIBS)"
 
+sub-doc:
+	@$(MAKE) -C doc
+
 clean:
-	@for p in resources src; do $(MAKE) -C $$p $@; done
+	@for p in resources src doc; do $(MAKE) -C $$p $@; done
 
 test: all test-unattended test-validate-pango
 
@@ -154,5 +156,5 @@ install: all
 package: clean
 	@echo "TODO $@"; false
 
-.PHONY: all clean install package sub-config sub-resources sub-src \
+.PHONY: all clean install package sub-config sub-resources sub-doc sub-src \
 	test test-unattended test-validate-pango-markup

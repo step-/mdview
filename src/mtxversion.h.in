@@ -23,21 +23,26 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #ifndef __MTX_VERSION_H__
 
-/* This file is also used in resources/Makefile */
-
+/* This section is configured by src/Makefile and src/meson.build */
+#define PACKAGE_NAME    "@PACKAGE_NAME@"
+#define PACKAGE_VERSION "@PACKAGE_VERSION@"
+#define PACKAGE_URL     "@PACKAGE_URL@"
+#define PACKAGE_DESC    "@PACKAGE_DESC@"
 #define GETTEXT_PACKAGE "@GETTEXT_PACKAGE@"
-#define LOCALEDIR "@LOCALEDIR@"
+#define LOCALEDIR       "@LOCALEDIR@"
+#define GIT_VERSION     "@GIT_VERSION@"
 
-#define PROGNAME "@PACKAGE_NAME@"
+/* This file is also used by resources/Makefile */
+
+#define PROGNAME PACKAGE_NAME
 #define DEFAULT_INDEX "index.md"
-#define DEFAULT_WINDOW_TITLE "@PACKAGE_NAME@"
-#define MDVIEW_VERSION "@PACKAGE_VERSION@"
+#define DEFAULT_WINDOW_TITLE PACKAGE_NAME
+#define MDVIEW_VERSION PACKAGE_VERSION
 /* This is a printf format string. */
 #define MDVIEW_LICENSE "\
 %s GNU GPL v2\n\
-MDVIEW MTX (C) 2024-2025 step, @PACKAGE_URL@\n\
+MDVIEW MTX (C) 2024-2025 step, "PACKAGE_URL"\n\
 MD4C       (C) 2016-2024 Martin Mitas\n\
 mdview3    (C) 2009 Leandro Pereira; (C) 2015,2016 James B; (C) 2016,2023 step"
 
-#define GIT_VERSION "@GIT_VERSION@"
 #endif  /* __MTX_VERSION_H__ */

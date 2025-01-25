@@ -1,0 +1,61 @@
+vim: set filetype=nroff:
+
+
+
+
+[EXIT STATUS]
+Mdview exits 0 on success, and non-zero otherwise.
+
+
+
+
+[EXAMPLES]
+.TP
+Start the graphical Viewer displaying the help page. Press [F1] for more help.
+.B mdview
+.TP
+View help in the console.
+.B mdview \-\-help
+.sp 0
+.B mdview \-\-bare \-h
+.TP
+View the README file located in the current directory.
+.B mdview README.md
+.TP
+View a README file located in another directory.
+.B mdview /path/to/another/directory/README.md
+.TP
+View the existing index.md file in some directory; index.md is the HOMEPAGE.
+.B mdview /path/to/some/directory
+.TP
+View an alternative index and make it the HOMEPAGE.
+.B mdview /path/to/some/directory my_index.md
+.TP
+Search for "the" in the current directory, and view the results.
+.B mdview search://the
+.TP
+Search for "the" in another directory, and view the results.
+.B mdview /path/to/directory search://the
+.TP
+Convert a Markdown file to HTML.
+.B mdview \-\-html README.md
+
+.sp 1
+
+
+
+
+[REPORTING BUGS]
+Known bugs: <\fIhttps://github.com/step-/mdview/wiki/Known-bugs.md\fR>.
+
+To report a new bug please open a ticket at <\fIhttps://github.com/step-/mdview/issues\fR>.
+.LP
+To troubleshoot Markdown syntax issues, try examining the output of the following command
+in a browser:
+.B mdview \-\-lint \-\-toc\-level=6 \-\-html \fBFILE\fR.
+
+
+
+[SEE ALSO]
+.LP
+<\fIhttps://github.com/step-/mdview/wiki\fR>.
