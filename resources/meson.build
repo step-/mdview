@@ -1,9 +1,3 @@
-
-# # Define your executable
-# executable('my_app', 'main.c', 
-#            dependencies: [], 
-#            install: true,
-#            link_with: all_resources)
 awk = find_program('awk')
 cpp = find_program('cpp')
 sh  = find_program('sh')
@@ -34,7 +28,6 @@ mtx2_css = custom_target('mtx2_css',
 gnome = import('gnome')
 all_resources = gnome.compile_resources('mtxresdata',
 	'all.gresource.xml',
-	source_dir : '../resources',
 	dependencies : [usage_md, mtx1_css, mtx2_css],
 	c_name : 'all'
 )
