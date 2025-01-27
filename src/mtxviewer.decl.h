@@ -336,6 +336,17 @@ accel_nav_home (GtkAccelGroup *group,
                 gpointer data);
 
 static void
+file_open_clicked (GtkWidget *button,
+                  gpointer data);
+
+static gboolean
+accel_file_open (GtkAccelGroup *group,
+                GObject *obj,
+                guint keyval,
+                GdkModifierType mod,
+                gpointer data);
+
+static void
 scroll_to_link_and_highlight (MtxViewer *mvr,
                               const MtxTextViewLinkInfo *link_info);
 

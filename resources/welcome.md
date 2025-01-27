@@ -72,7 +72,9 @@ Shortcut   | Description
 `[Enter]`² | Open the link at the current cursor location
  &nbsp;    | &nbsp;
 `[C-e]`    | Open the current page in the default text editor
+`[C-o]`    | Open an existing Markdown file
 `[A-p]`³   | Preview the current page in the default browser
+`[A-x]`    | Cancel the in-progress page load
 
 [¹] If the search field is focused.  
 [²] At the text cursor position if the text view area is focused.  

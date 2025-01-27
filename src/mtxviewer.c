@@ -2460,6 +2460,82 @@ accel_nav_home (GtkAccelGroup *group __attribute__((unused)),
 }
 
 /**
+file_open_clicked:
+File chooser button callback calling
+`mtx_viewer_present_page` to load the file asynchronously.
+*/
+static void
+file_open_clicked (GtkWidget *button __attribute__((unused)),
+                  gpointer data)
+{
+    MtxViewer *mvr = (MtxViewer *) data;
+    gint res, fd;
+    gchar *path;
+    GtkWidget *dialog;
+    GtkFileChooser *chooser;
+    GtkFileFilter *filter;
+
+    /*
+    Kludgy work-around against "GLib-GIO-ERROR: inotify read(): Bad file
+    descriptor". I suspect this is only necessary for Fatdog64-903. The
+    work-around consists in ensuring that gtk_file_chooser_dialog_new()
+    below can't take fd 0 when it initializes the GIO inotify interface.
+    If fd 0 is free and gets assigned to the inotify GSource, then the
+    read error will occur and crash the program. I came to this kludge
+    by trial and error.
+    */
+    fd = open (mvr->backing_file, O_RDONLY); /* no read, just keep fd open */
+
+    dialog = gtk_file_chooser_dialog_new (_("Open File"),
+                                          GTK_WINDOW (mvr->parent),
+                                          GTK_FILE_CHOOSER_ACTION_OPEN,
+                                          _("_Cancel"), GTK_RESPONSE_CANCEL,
+                                          _("_Open"), GTK_RESPONSE_ACCEPT,
+                                          NULL);
+    chooser = GTK_FILE_CHOOSER (dialog);
+    filter = gtk_file_filter_new ();
+    gtk_file_filter_set_name (filter, _("All files"));
+    gtk_file_filter_add_pattern (filter, "*");
+    gtk_file_chooser_add_filter (chooser, filter);
+    gtk_file_chooser_set_filter (chooser, filter);
+    filter = gtk_file_filter_new ();
+    gtk_file_filter_set_name (filter, _("Text files"));
+    gtk_file_filter_add_mime_type (filter, "text/*");
+    gtk_file_chooser_add_filter (chooser, filter);
+    filter = gtk_file_filter_new ();
+    gtk_file_filter_set_name (filter, _("Markdown files"));
+    gtk_file_filter_add_mime_type (filter, "text/markdown");
+    gtk_file_chooser_add_filter (chooser, filter);
+    gtk_file_chooser_set_local_only (chooser, TRUE);
+    res = gtk_dialog_run (GTK_DIALOG (dialog));
+    path = gtk_file_chooser_get_filename (chooser);
+    if (res == GTK_RESPONSE_ACCEPT && path != NULL)
+    {
+        mtx_viewer_present_page (mvr, path, 0);
+    }
+    gtk_widget_destroy (dialog);
+    g_free (path);
+    close (fd);
+}
+
+/**
+*/
+static gboolean
+accel_file_open (GtkAccelGroup *group __attribute__((unused)),
+                GObject *obj __attribute__((unused)),
+                guint keyval __attribute__((unused)),
+                GdkModifierType mod __attribute__((unused)),
+                gpointer data)
+{
+    MtxViewer *mvr = (MtxViewer *) data;
+    if (!mtx_viewer_is_page_in_progress (mvr))
+    {
+        file_open_clicked (NULL, mvr);
+    }
+    return TRUE;
+}
+
+/**
 scroll_to_link_and_highlight:
 Scroll the page to a given %MtxCmmTagInfo and highlight the link text.
 
@@ -2811,7 +2887,8 @@ mtx_viewer_new (const gchar *base_dir,
     MtxTextView *text_view;
     GtkWidget *progress_bar, *progress_box, *btn_cancel_loading;
     GtkWidget *status_bar;
-    GtkWidget *btn_nav_back, *btn_nav_fore, *btn_nav_home, *btn_preview;
+    GtkWidget *btn_nav_back, *btn_nav_fore, *btn_nav_home, *btn_preview,
+              *btn_file_open;
     GtkWidget *combo_toc;
     GtkAccelGroup *accel;
 
@@ -2847,6 +2924,18 @@ mtx_viewer_new (const gchar *base_dir,
     gtk_widget_show (toolbar1);
     gtk_box_pack_start (GTK_BOX (top_bar), toolbar1, TRUE, TRUE, 0);
     gtk_toolbar_set_style (GTK_TOOLBAR (toolbar1), GTK_TOOLBAR_BOTH_HORIZ);
+
+#if !GTK_CHECK_VERSION(3,0,0)
+    btn_file_open = (GtkWidget *) gtk_tool_button_new_from_stock ("gtk-open");
+#else
+    GtkWidget *icon_open =
+    gtk_image_new_from_icon_name ("document-open", GTK_ICON_SIZE_LARGE_TOOLBAR);
+    btn_file_open = (GtkWidget *) gtk_tool_button_new (icon_open, _("Open file..."));
+#endif
+    gtk_widget_set_tooltip_text (btn_file_open,
+                                 _("(Ctrl-O) Open file..."));
+    gtk_widget_show (btn_file_open);
+    gtk_container_add (GTK_CONTAINER (toolbar1), btn_file_open);
 
 #if !GTK_CHECK_VERSION(3,0,0)
     btn_nav_home = (GtkWidget *) gtk_tool_button_new_from_stock ("gtk-home");
@@ -3060,6 +3149,8 @@ mtx_viewer_new (const gchar *base_dir,
     g_signal_connect (text_view, "new-text-buffer",
                       G_CALLBACK (on_new_text_buffer), mvr);
     on_new_text_buffer (text_view, mvr);
+    g_signal_connect (btn_file_open, "clicked", G_CALLBACK (file_open_clicked),
+                      mvr);
     g_signal_connect (btn_nav_back, "clicked", G_CALLBACK (nav_back_clicked),
                       mvr);
     g_signal_connect (btn_nav_fore, "clicked", G_CALLBACK (nav_fore_clicked),
@@ -3126,6 +3217,10 @@ mtx_viewer_new (const gchar *base_dir,
                              GDK_CONTROL_MASK, 0,
                              g_cclosure_new (G_CALLBACK (accel_edit_current),
                                              mvr, NULL));
+    gtk_accel_group_connect (accel, gdk_keyval_from_name ("o"),
+                             GDK_CONTROL_MASK, 0,
+                             g_cclosure_new (G_CALLBACK (accel_file_open), mvr,
+                                             NULL));
     gtk_accel_group_connect (accel, gdk_keyval_from_name ("x"),
                              GDK_MOD1_MASK, 0,
                              g_cclosure_new (G_CALLBACK (accel_cancel_loading),
