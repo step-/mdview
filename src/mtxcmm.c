@@ -4693,7 +4693,7 @@ mtx_cmm_mtx (MtxCmm *self,
     if (with_margin
         && (self->priv->seen_unit_types & MTX_CMM_PARSER_UNIT_BLOCK_QUOTE))
     {
-        MtxCmmParserUnit *above;
+        MtxCmmParserUnit *above = NULL;
         for (i = g_queue_get_length (unitq) - 1; i > 0; i--)
         {
             if (g_cancellable_is_cancelled (cancellable))
@@ -4713,7 +4713,7 @@ mtx_cmm_mtx (MtxCmm *self,
                         break;
                     }
                 }
-                if (above->type == MTX_CMM_PARSER_UNIT_BLOCK_QUOTE &&
+                if (above && above->type == MTX_CMM_PARSER_UNIT_BLOCK_QUOTE &&
                     above->flag & MTX_CMM_PARSER_UNIT_FLAG_OPEN)
                 {
                     mtx_cmm_parser_unit_consume (&unit);
