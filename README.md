@@ -8,9 +8,10 @@ GTK+ 3 toolkit.
 * Wiki: <http://github.com/step-/mdview/wiki>
 * Issue tracker: <http://github.com/step-/mdview/issues>
 
----  ---  ---  ---  ---  ---  ---  ---  ---  ---  ---  ---  ---
-![screenshot](doc/mdview-20241128.png)
----  ---  ---  ---  ---  ---  ---  ---  ---  ---  ---  ---  ---
+###  Screenshot
+
+![screenshot](doc/mdview-20250127.png)  
+_GTK Theme: Adwaita. Openbox theme: macOS._
 
 ### Features
 
@@ -37,14 +38,13 @@ the contributions these excellent software packages make to my project:
 ### Dependencies
 
 - Unix-like OS (development and testing takes place on Linux).
-- GTK-3 or GTK-2 and their dependencies.
-- Pango >= 1.50, Glib >= 2.68.
+- GTK-3 or GTK-2. Refer to the [INSTALL] document for specific supported versions.
 - GNU make or compatible make program, and pkg-config for development.
 - Meson-based build included.
 
 ### Building and installing
 
-Read the [INSTALL] file.
+Refer to the [INSTALL] document for instructions.
 
 ### License
 
