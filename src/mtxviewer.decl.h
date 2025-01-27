@@ -3,8 +3,8 @@ mtx_viewer_present_page (MtxViewer *mvr,
                          const gchar *page,
                          guint offset);
 
-void
-mtx_viewer_destroy (MtxViewer *mvr);
+gboolean
+mtx_viewer_destroy (gpointer data);
 
 MtxViewer *
 mtx_viewer_new (const gchar *base_dir,

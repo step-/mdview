@@ -57,6 +57,7 @@ from the hardinfo "help-viewer" directory.
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <glib-unix.h>
 #include <glib/gi18n.h> /* xgettext --keyword=_ --keyword=Q_:1g */
 #include <locale.h>
 
@@ -2676,9 +2677,11 @@ _nav_unit_clear (MtxViewerNavUnit *unit,
 /**
 mtx_viewer_destroy:
 */
-void
-mtx_viewer_destroy (MtxViewer *mvr)
+gboolean
+mtx_viewer_destroy (gpointer data)
 {
+    MtxViewer *mvr = (MtxViewer *) data;
+
     if (mtx_viewer_is_page_in_progress (mvr))
     {
         accel_cancel_loading (NULL, NULL, 0, 0, mvr);
@@ -2718,6 +2721,7 @@ mtx_viewer_destroy (MtxViewer *mvr)
     {
         gtk_main_quit ();
     }
+    return G_SOURCE_REMOVE;
 }
 
 /**
@@ -3174,6 +3178,9 @@ mtx_viewer_new (const gchar *base_dir,
     {
         mtx_text_view_set_image_directory (text_view, ".");
     }
+
+    (void) g_unix_signal_add (SIGINT, mtx_viewer_destroy, mvr);
+    (void) g_unix_signal_add (SIGTERM, mtx_viewer_destroy, mvr);
 
     gtk_widget_show_all (mvr->window);
     gtk_widget_set_visible (progress_box, FALSE);
