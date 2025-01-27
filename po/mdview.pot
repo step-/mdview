@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mdview 2025.01.04\n"
 "Report-Msgid-Bugs-To: http://github.com/step-/mdview/issues\n"
-"POT-Creation-Date: 2025-01-04 14:28+0100\n"
+"POT-Creation-Date: 2025-01-27 12:07+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,26 +17,41 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/main.c:329
+#: src/main.c:331
 #, c-format
 msgid "MDVIEW_OPTIONS is invalid: %s\n"
 msgstr ""
 
-#: src/main.c:357
+#: src/main.c:359
 msgid "Version:"
 msgstr ""
 
-#: src/main.c:357
+#: src/main.c:365
 msgid "License:"
 msgstr ""
 
-#: src/main.c:570
+#: src/main.c:585
 msgid "invalid option:"
 msgstr ""
 
-#: src/mtxcmm.c:2251
+#: src/mtxcmm.c:2199
 #, c-format
-msgid "% 3d. Same anchors: #%d(%s) and #%d(%s)\n"
+msgid "Heading has stop characters '[', ']', '<', '>', '\\' or '&': %s"
+msgstr ""
+
+#: src/mtxcmm.c:2211
+#, c-format
+msgid "Heading has unbalanced '*', '_' or '~': %s"
+msgstr ""
+
+#: src/mtxcmm.c:2223
+#, c-format
+msgid "Heading has spaced/punctuated '_': %s"
+msgstr ""
+
+#: src/mtxcmm.c:2470
+#, c-format
+msgid "% 3d. Headings have the same anchors: #%d(%s) and #%d(%s)\n"
 msgstr ""
 
 #: src/mtxtextview.c:1826
@@ -47,128 +62,128 @@ msgstr ""
 msgid "Error: Cannot render markdown"
 msgstr ""
 
-#: src/mtxviewer.c:157
+#: src/mtxviewer.c:169
 msgctxt "Home page accel, in status bar before the name"
 msgid "(Alt-H)"
 msgstr ""
 
-#: src/mtxviewer.c:393
+#: src/mtxviewer.c:405
 msgid "Browser not found. Set environment variable BROWSER."
 msgstr ""
 
-#: src/mtxviewer.c:436
+#: src/mtxviewer.c:448
 msgid "Text editor not found. Set environment variable DEFAULTTEXTEDITOR."
 msgstr ""
 
-#: src/mtxviewer.c:499
+#: src/mtxviewer.c:511
 msgid "Working..."
-msgstr ""
-
-#: src/mtxviewer.c:550
-msgctxt "progress"
-msgid "Parsing..."
-msgstr ""
-
-#: src/mtxviewer.c:551
-msgctxt "progress"
-msgid "Shebang."
-msgstr ""
-
-#: src/mtxviewer.c:552
-msgctxt "progress"
-msgid "Legacy support."
-msgstr ""
-
-#: src/mtxviewer.c:553
-msgctxt "progress"
-msgid "Headings."
-msgstr ""
-
-#: src/mtxviewer.c:554
-msgctxt "progress"
-msgid "Parsed."
-msgstr ""
-
-#: src/mtxviewer.c:555
-msgctxt "progress"
-msgid "Units optimized."
-msgstr ""
-
-#: src/mtxviewer.c:556
-msgctxt "progress"
-msgid "Inlines optimized."
-msgstr ""
-
-#: src/mtxviewer.c:557
-msgctxt "progress"
-msgid "Blocks optimized."
-msgstr ""
-
-#: src/mtxviewer.c:558
-msgctxt "progress"
-msgid "Tables loaded."
-msgstr ""
-
-#: src/mtxviewer.c:559
-msgctxt "progress"
-msgid "Tables formatted."
-msgstr ""
-
-#: src/mtxviewer.c:560
-msgctxt "progress"
-msgid "Text filters applied."
-msgstr ""
-
-#: src/mtxviewer.c:561
-msgctxt "progress"
-msgid "Text ready."
 msgstr ""
 
 #: src/mtxviewer.c:562
 msgctxt "progress"
-msgid "Table of Contents."
+msgid "Parsing..."
 msgstr ""
 
 #: src/mtxviewer.c:563
 msgctxt "progress"
-msgid "Markup ready."
+msgid "Shebang."
 msgstr ""
 
 #: src/mtxviewer.c:564
 msgctxt "progress"
-msgid "Rendering page..."
+msgid "Legacy support."
 msgstr ""
 
 #: src/mtxviewer.c:565
 msgctxt "progress"
-msgid "Content loaded."
+msgid "Headings."
 msgstr ""
 
 #: src/mtxviewer.c:566
 msgctxt "progress"
-msgid "Links loaded."
+msgid "Parsed."
 msgstr ""
 
 #: src/mtxviewer.c:567
 msgctxt "progress"
-msgid "Lines indented."
+msgid "Units optimized."
 msgstr ""
 
 #: src/mtxviewer.c:568
 msgctxt "progress"
-msgid "Page rendered."
+msgid "Inlines optimized."
 msgstr ""
 
 #: src/mtxviewer.c:569
 msgctxt "progress"
+msgid "Blocks optimized."
+msgstr ""
+
+#: src/mtxviewer.c:570
+msgctxt "progress"
+msgid "Tables loaded."
+msgstr ""
+
+#: src/mtxviewer.c:571
+msgctxt "progress"
+msgid "Tables formatted."
+msgstr ""
+
+#: src/mtxviewer.c:572
+msgctxt "progress"
+msgid "Text filters applied."
+msgstr ""
+
+#: src/mtxviewer.c:573
+msgctxt "progress"
+msgid "Text ready."
+msgstr ""
+
+#: src/mtxviewer.c:574
+msgctxt "progress"
+msgid "Table of Contents."
+msgstr ""
+
+#: src/mtxviewer.c:575
+msgctxt "progress"
+msgid "Markup ready."
+msgstr ""
+
+#: src/mtxviewer.c:576
+msgctxt "progress"
+msgid "Rendering page..."
+msgstr ""
+
+#: src/mtxviewer.c:577
+msgctxt "progress"
+msgid "Content loaded."
+msgstr ""
+
+#: src/mtxviewer.c:578
+msgctxt "progress"
+msgid "Links loaded."
+msgstr ""
+
+#: src/mtxviewer.c:579
+msgctxt "progress"
+msgid "Lines indented."
+msgstr ""
+
+#: src/mtxviewer.c:580
+msgctxt "progress"
+msgid "Page rendered."
+msgstr ""
+
+#: src/mtxviewer.c:581
+msgctxt "progress"
 msgid "Done."
 msgstr ""
 
-#: src/mtxviewer.c:730
+#: src/mtxviewer.c:738
 msgid "::: Action not allowed while the page is loading :::"
 msgstr ""
 
-#: src/mtxviewer.c:1103
+#: src/mtxviewer.c:1111
 #, c-format
 msgctxt "1=path:2=error"
 msgid ""
@@ -176,79 +191,79 @@ msgid ""
 "%2$s."
 msgstr ""
 
-#: src/mtxviewer.c:1153
+#: src/mtxviewer.c:1161
 msgid "Searching ..."
 msgstr ""
 
-#: src/mtxviewer.c:1163
+#: src/mtxviewer.c:1171
 msgid "Loading ..."
 msgstr ""
 
-#: src/mtxviewer.c:1173
+#: src/mtxviewer.c:1181
 #, c-format
 msgid "Loading %s ..."
 msgstr ""
 
-#: src/mtxviewer.c:1432
+#: src/mtxviewer.c:1440
 msgid "Cancelling..."
 msgstr ""
 
-#: src/mtxviewer.c:1540
+#: src/mtxviewer.c:1548
 #, c-format
 msgid "%s: Error: %s\n"
 msgstr ""
 
-#: src/mtxviewer.c:1661
+#: src/mtxviewer.c:1669
 msgid "Search complete."
 msgstr ""
 
-#: src/mtxviewer.c:1665
+#: src/mtxviewer.c:1673
 msgid "Loaded."
 msgstr ""
 
-#: src/mtxviewer.c:1670
+#: src/mtxviewer.c:1678
 #, c-format
 msgid "%1$s loaded."
 msgstr ""
 
-#: src/mtxviewer.c:1736
+#: src/mtxviewer.c:1744
 #, c-format
 msgid "Link to %s"
 msgstr ""
 
-#: src/mtxviewer.c:2134
+#: src/mtxviewer.c:2124
 #, c-format
 msgid "%d document examined"
 msgstr ""
 
-#: src/mtxviewer.c:2135
+#: src/mtxviewer.c:2125
 #, c-format
 msgid "%d documents examined"
 msgstr ""
 
-#: src/mtxviewer.c:2140
+#: src/mtxviewer.c:2130
 #, c-format
 msgid "%d document found"
 msgstr ""
 
-#: src/mtxviewer.c:2141
+#: src/mtxviewer.c:2131
 #, c-format
 msgid "%d documents found"
 msgstr ""
 
-#: src/mtxviewer.c:2145
+#: src/mtxviewer.c:2135
 #, c-format
 msgctxt "search:1=#terms:2=terms:3=```"
 msgid "%1$d search term %3$s %2$s %3$s"
 msgstr ""
 
-#: src/mtxviewer.c:2146
+#: src/mtxviewer.c:2136
 #, c-format
 msgctxt "search:1=#terms:2=terms:3=```"
 msgid "%1$d search terms %3$s %2$s %3$s"
 msgstr ""
 
-#: src/mtxviewer.c:2149
+#: src/mtxviewer.c:2139
 #, c-format
 msgctxt "search:1=ctr_subjects,2=ctr_results:3=terms"
 msgid ""
@@ -256,68 +271,104 @@ msgid ""
 "# \n"
 msgstr ""
 
-#: src/mtxviewer.c:2621
+#: src/mtxviewer.c:2431
+msgid "::: Home page not set; specify it when launching the program :::"
+msgstr ""
+
+#: src/mtxviewer.c:2497
+msgid "Open File"
+msgstr ""
+
+#: src/mtxviewer.c:2500
+msgid "_Cancel"
+msgstr ""
+
+#: src/mtxviewer.c:2501
+msgid "_Open"
+msgstr ""
+
+#: src/mtxviewer.c:2505
+msgid "All files"
+msgstr ""
+
+#: src/mtxviewer.c:2510
+msgid "Text files"
+msgstr ""
+
+#: src/mtxviewer.c:2514
+msgid "Markdown files"
+msgstr ""
+
+#: src/mtxviewer.c:2699
 msgctxt "error page back-link label"
 msgid "Back"
 msgstr ""
 
-#: src/mtxviewer.c:2859
+#: src/mtxviewer.c:2941
+msgid "Open file..."
+msgstr ""
+
+#: src/mtxviewer.c:2944
+msgid "(Ctrl-O) Open file..."
+msgstr ""
+
+#: src/mtxviewer.c:2953
 msgid "Home"
 msgstr ""
 
-#: src/mtxviewer.c:2862
+#: src/mtxviewer.c:2956
 msgid "(Alt-H) Reload the home page"
 msgstr ""
 
-#: src/mtxviewer.c:2872
+#: src/mtxviewer.c:2966
 msgid "Back"
 msgstr ""
 
-#: src/mtxviewer.c:2875
+#: src/mtxviewer.c:2969
 msgid "(Alt-B) Navigate back to the previous page"
 msgstr ""
 
-#: src/mtxviewer.c:2887
+#: src/mtxviewer.c:2981
 msgid "Forward"
 msgstr ""
 
-#: src/mtxviewer.c:2890
+#: src/mtxviewer.c:2984
 msgid "(Alt-F) Navigate forward to the next page"
 msgstr ""
 
-#: src/mtxviewer.c:2900
+#: src/mtxviewer.c:2994
 msgid "HTML Preview"
 msgstr ""
 
-#: src/mtxviewer.c:2902
+#: src/mtxviewer.c:2996
 msgid "(Alt-P) Preview the page in the browser"
 msgstr ""
 
-#: src/mtxviewer.c:2908
+#: src/mtxviewer.c:3002
 msgid "(Alt-T) Change Table of Contents depth"
 msgstr ""
 
-#: src/mtxviewer.c:2950
+#: src/mtxviewer.c:3044
 msgid ""
 "(Alt-S) Set focus on the search field to enter terms\n"
 "(Enter) Search through all documents"
 msgstr ""
 
-#: src/mtxviewer.c:2955
+#: src/mtxviewer.c:3049
 msgid ""
 "(Ctrl-F) Search forward in this page (also by primary button click)\n"
 "(Ctrl-B) Search backward (also by opposite button click)"
 msgstr ""
 
-#: src/mtxviewer.c:2997
+#: src/mtxviewer.c:3091
 msgid "Cancel page loading"
 msgstr ""
 
-#: src/mtxviewer.c:3000
+#: src/mtxviewer.c:3094
 msgid "(Alt-X) Cancel loading this page"
 msgstr ""
 
-#: src/mtxviewer.c:3206
+#: src/mtxviewer.c:3309
 #, c-format
 msgid "%s: generic error.\n"
 msgstr ""
