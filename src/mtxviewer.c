@@ -721,10 +721,6 @@ mtx_viewer_statusbar_warn_seconds (MtxViewer *mvr,
                                    const gchar *message)
 {
     gtk_statusbar_push (mvr->status_bar, STATUSBAR_CTX_WARN, message);
-#if GTK_CHECK_VERSION(3,0,0)
-    gtk_widget_set_halign (gtk_statusbar_get_message_area
-                           (mvr->status_bar), GTK_ALIGN_END);
-#endif
     g_timeout_add_seconds (seconds, G_SOURCE_FUNC (statusbar_warn_pop), mvr);
 }
 
