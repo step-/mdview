@@ -7,7 +7,7 @@ mdview_bin="${MESON_BUILD_ROOT:?}/src/mdview"
 
 cd "${MESON_SOURCE_ROOT:?}/doc"
 
-config="$(dirname "$0")/../src/mtxversion.h"
+config="${MESON_BUILD_ROOT:?}/src/mtxversion.h"
 if [ -z "$PACKAGE_DESC" ]; then
 	# Extract package description from the configuration file.
 	PACKAGE_DESC="$(awk '
