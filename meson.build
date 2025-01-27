@@ -4,7 +4,7 @@
 #
 
 project('mdview', 'c',
-	version : '2025.01.04',
+	version : '2025.01.27',
 	license : 'GPL-2.0-or-later',
 )
 
