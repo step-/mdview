@@ -737,7 +737,7 @@ mtx_viewer_is_page_in_progress (MtxViewer *mvr)
         mtx_viewer_statusbar_warn_seconds (mvr, 2, _(
             "::: Action not allowed while the page is loading :::"));
         return TRUE;
-    };
+    }
     return FALSE;
 }
 /*************************************************************************}}}

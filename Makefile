@@ -94,7 +94,7 @@ CPPFLAGS+=-DG_SEAL_ENABLE
 # -DDEBUG only serves as a visual clue for make's $(CC) invocation trace.
 ifeq ($(DEBUG),1)
 override DEBUG_CPPFLAGS += -UG_DISABLE_ASSERT
-override DEBUG_CFLAGS   += -DDEBUG -O0 -ggdb3
+override DEBUG_CFLAGS   += -DDEBUG -Og -ggdb3
 endif
 ifeq ($(TEST),1)
 override DEBUG_CPPFLAGS += -DOPT_PANGO -DOPT_MARKUP -DOPT_EXIT_TEST
