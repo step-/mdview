@@ -2425,6 +2425,18 @@ nav_home_clicked (GtkWidget *button __attribute__((unused)),
     MtxViewer *mvr = (MtxViewer *) data;
     gchar *page = mvr->homepage == NULL ? DEFAULT_INDEX : mvr->homepage;
 
+    if (!g_file_test (page, G_FILE_TEST_EXISTS))
+    {
+        g_autofree gchar *path =
+        g_build_filename (mvr->base_directory, page, NULL);
+        if (!g_file_test (path, G_FILE_TEST_EXISTS))
+        {
+            mtx_viewer_statusbar_warn_seconds (mvr, 2, _(
+            "::: Home page not set; specify it when launching the program :::"));
+            return;
+        }
+    }
+
     while (mvr->nav_trail_page_idx > 0)
     {
         _nav_trail_back (mvr);
