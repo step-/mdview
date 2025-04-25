@@ -2123,6 +2123,7 @@ mtx_text_view_load_file (MtxTextView *self,
     g_return_val_if_fail (IS_MTX_TEXT_VIEW (self), FALSE);
     g_return_val_if_fail (file && file[0] && referrer, FALSE);
     g_return_val_if_fail (self->image_directory, FALSE);
+    g_return_val_if_fail (completer != NULL, FALSE);
 
     g_autofree gchar *basedir = NULL;
     g_autofree gchar *abs_img_dir = NULL;

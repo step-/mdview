@@ -3362,7 +3362,8 @@ mtx_viewer_new (const gchar *base_dir,
     if (!mtx_viewer_present_page (mvr, page, 0)) /* can be the USAGE_PAGE */
     {
         /*
-        Examples of generic error: ???
+        Some programming errors lead here, e.g., calling mtx_viewer_route_page
+        with invalid arguments that don't pass g_return_val_if_fail tests.
         */
         g_printerr (_("%s: generic error.\n"), PROGNAME);
         mtx_viewer_destroy (mvr);   /* quits gtk main */
