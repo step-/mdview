@@ -475,6 +475,7 @@ mtx_viewer_save_backing_file (MtxViewer *mvr,
     }
     return retval;
 }
+
 /****************************************************************************
 *                          PROGRESS TRACKER TASKS                        {{{*
 ****************************************************************************/
@@ -744,7 +745,64 @@ mtx_viewer_is_page_in_progress (MtxViewer *mvr)
 ****************************************************************************/
 
 /****************************************************************************
-* COMPLETION CALLBACKS PASSED TO mtx_viewer_route_page TO UPDATE THE GUI {{{*
+*                           CUSTOM MARSHALLERS                           {{{*
+****************************************************************************/
+
+/**
+cclosure_marshal_VOID__BOOLEAN_POINTER:
+Closure for a callback with signature (gboolean, gpointer).
+@closure: #GClosure.
+@return_value: #GValue to store the return value. Nullable
+if the callback of @closure doesn't return a value.
+@n_param_values: @param_values array length.
+@param_values: Array of #GValues holding the arguments
+on which to invoke the callback of @closure.
+@invocation_hint: Invocation hint given as
+the last argument to g_closure_invoke().
+@marshal_data: Additional data specified when registering the
+marshaller, see g_closure_set_marshal() and g_closure_set_meta_marshal().
+ */
+static void
+cclosure_marshal_VOID__BOOLEAN_POINTER (GClosure *closure,
+                                        GValue *return_value
+                                        __attribute__((unused)),
+                                        guint n_param_values,
+                                        const GValue *param_values,
+                                        gpointer invocation_hint
+                                        __attribute__((unused)),
+                                        gpointer marshal_data)
+{
+    typedef void (*GMarshalFunc_VOID__BOOLEAN_POINTER) (gpointer data1,
+                                                        gboolean arg_1,
+                                                        gpointer arg_2,
+                                                        gpointer data2);
+    GMarshalFunc_VOID__BOOLEAN_POINTER callback;
+    GCClosure *cc = (GCClosure *) closure;
+    gpointer data1, data2;
+
+    g_return_if_fail (n_param_values == 3);
+    if (G_CCLOSURE_SWAP_DATA (closure))
+    {
+        data1 = closure->data;
+        data2 = g_value_peek_pointer (param_values + 0);
+    }
+    else
+    {
+        data1 = g_value_peek_pointer (param_values + 0);
+        data2 = closure->data;
+    }
+    callback = (GMarshalFunc_VOID__BOOLEAN_POINTER) (marshal_data ?
+                                                     marshal_data : cc->
+                                                     callback);
+    callback (data1, g_value_get_boolean (param_values + 1),
+              g_value_get_pointer (param_values + 2), data2);
+}
+/*************************************************************************}}}
+****************************************************************************/
+
+/****************************************************************************
+*                           COMPLETION CALLBACKS                         {{{*
+*              PASSED TO mtx_viewer_route_page TO UPDATE THE GUI            *
 ****************************************************************************/
 
 struct _completer_data
@@ -1122,7 +1180,7 @@ mtx_viewer_insert_error_page (MtxViewer *mvr,
         GClosure *do_error_page_complete =
         g_cclosure_new (G_CALLBACK (error_page_cb), cdat, NULL);
         g_closure_set_marshal (do_error_page_complete,
-                               g_cclosure_marshal_VOID__UINT_POINTER);
+                               cclosure_marshal_VOID__BOOLEAN_POINTER);
 
         gchar **pptr = g_malloc (sizeof (gchar *));
         *pptr = mkd;
@@ -1226,7 +1284,7 @@ nav_fore_clicked (GtkWidget *widget __attribute__((unused)),
     GClosure *nav_fore_complete =
     g_cclosure_new (G_CALLBACK (nav_fore_cb), cdat, NULL);
     g_closure_set_marshal (nav_fore_complete,
-                           g_cclosure_marshal_VOID__UINT_POINTER);
+                           cclosure_marshal_VOID__BOOLEAN_POINTER);
 
     (void) mtx_viewer_route_page (mvr, page, nav_fore_complete);
 }
@@ -1275,7 +1333,7 @@ nav_back_clicked (GtkWidget *widget __attribute__((unused)),
     GClosure *nav_back_complete =
     g_cclosure_new (G_CALLBACK (nav_back_cb), cdat, NULL);
     g_closure_set_marshal (nav_back_complete,
-                           g_cclosure_marshal_VOID__UINT_POINTER);
+                           cclosure_marshal_VOID__BOOLEAN_POINTER);
 
     (void) mtx_viewer_route_page (mvr, page, nav_back_complete);
 }
@@ -1420,7 +1478,7 @@ on_link_clicked (MtxTextView *text_view,
         GClosure *on_link_clicked_complete =
         g_cclosure_new (G_CALLBACK (on_link_clicked_cb), cdat, NULL);
         g_closure_set_marshal (on_link_clicked_complete,
-                               g_cclosure_marshal_VOID__UINT_POINTER);
+                               cclosure_marshal_VOID__BOOLEAN_POINTER);
 
         (void) mtx_viewer_route_page (mvr, page, on_link_clicked_complete);
     }
@@ -1619,7 +1677,7 @@ on_toc_changed (GtkWidget *widget,
         GClosure *do_insert_page_complete =
         g_cclosure_new (G_CALLBACK (do_insert_page_cb), cdat, NULL);
         g_closure_set_marshal (do_insert_page_complete,
-                               g_cclosure_marshal_VOID__UINT_POINTER);
+                               cclosure_marshal_VOID__BOOLEAN_POINTER);
 
         (void) mtx_viewer_route_page (mvr, cdat->args.do_insert_page_cb.page,
                                       do_insert_page_complete);
@@ -2266,7 +2324,7 @@ do_open_welcome_page (MtxViewer *mvr)
     GClosure *do_insert_page_complete =
     g_cclosure_new (G_CALLBACK (do_insert_page_cb), cdat, NULL);
     g_closure_set_marshal (do_insert_page_complete,
-                           g_cclosure_marshal_VOID__UINT_POINTER);
+                           cclosure_marshal_VOID__BOOLEAN_POINTER);
 
     (void) mtx_viewer_route_page (mvr, page, do_insert_page_complete);
 }
@@ -2311,7 +2369,7 @@ search_entry_activate (GtkEntry *entry, gpointer data)
         GClosure *search_entry_activate_complete =
         g_cclosure_new (G_CALLBACK (search_entry_activate_cb), cdat, NULL);
         g_closure_set_marshal (search_entry_activate_complete,
-                               g_cclosure_marshal_VOID__UINT_POINTER);
+                               cclosure_marshal_VOID__BOOLEAN_POINTER);
 
         (void) mtx_viewer_route_page (mvr, uri, search_entry_activate_complete);
     }
@@ -2445,7 +2503,7 @@ nav_home_clicked (GtkWidget *button __attribute__((unused)),
     GClosure *nav_home_clicked_complete =
     g_cclosure_new (G_CALLBACK (nav_home_clicked_cb), cdat, NULL);
     g_closure_set_marshal (nav_home_clicked_complete,
-                           g_cclosure_marshal_VOID__UINT_POINTER);
+                           cclosure_marshal_VOID__BOOLEAN_POINTER);
 
     (void) mtx_viewer_route_page (mvr, page, nav_home_clicked_complete);
 }
@@ -2744,7 +2802,7 @@ mtx_viewer_present_page (MtxViewer *mvr,
     GClosure *present_page_complete =
     g_cclosure_new (G_CALLBACK (present_page_cb), cdat, NULL);
     g_closure_set_marshal (present_page_complete,
-                           g_cclosure_marshal_VOID__UINT_POINTER);
+                           cclosure_marshal_VOID__BOOLEAN_POINTER);
     return mtx_viewer_route_page (mvr, page, present_page_complete);
 }
 

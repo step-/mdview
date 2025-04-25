@@ -99,6 +99,16 @@ static gboolean
 mtx_viewer_is_page_in_progress (MtxViewer *mvr);
 
 static void
+cclosure_marshal_VOID__BOOLEAN_POINTER (GClosure *closure,
+                                        GValue *return_value
+,
+                                        guint n_param_values,
+                                        const GValue *param_values,
+                                        gpointer invocation_hint
+,
+                                        gpointer marshal_data);
+
+static void
 nav_fore_cb (gpointer *instance,
              gboolean cond,
              GError *error,    /*owned */
