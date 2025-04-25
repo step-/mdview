@@ -55,9 +55,8 @@ Meson's default installation prefix is `/usr/local`.
 	run tests in a debug build          : make TEST=1 [TEST_GROUP]
 	custom build                        : make [VARS] [DEBUG=1] [TEST=1]
 
-The top Makefile sets LOCALEDIR equals to `/usr/local/share/locale`.
-You can change it by passing, e.g., `LOCALEDIR=/usr/share/locale` to the
-make command.
+The top Makefile sets LOCALEDIR to `/usr/local/share/locale`. Change the path
+on the make invocation as needed, e.g., `make LOCALEDIR=/usr/share/locale`.
 
 The standard build runs `$(CC)` passing default release options.
 If the make invocation includes `DEBUG=1` the Makefile appends default
