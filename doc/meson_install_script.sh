@@ -21,5 +21,6 @@ match($0, /^#define PACKAGE_DESC[ \t]+/) {
 	PACKAGE_DESC="${PACKAGE_DESC%\"}"
 fi
 export PACKAGE_DESC
+mkdir -p "$(dirname "$install_target")"
 ./make_mdview_1.sh ./mdview.1.h2m "$install_target" "$mdview_bin"
 
