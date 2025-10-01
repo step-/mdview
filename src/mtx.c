@@ -266,7 +266,7 @@ out:
 }
 
 /**
-mtx_cmm_str_slugify:
+mtx_str_slugify:
 
 @str: pure text string (markdown removed)
 @sep: separator character that will replace spaces

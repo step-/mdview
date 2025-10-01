@@ -2506,7 +2506,7 @@ Two entries are considered equal if their heading texts are equal. This
 may result in false positives for documents with repeated headings.
 */
 /*
-This function is only used to compare erroreous entries that
+This function is only used to compare bogus entries that
 arise from matching heading-like text within code blocks.
 */
 static gboolean
