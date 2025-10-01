@@ -1356,13 +1356,29 @@ accel_nav_back (GtkAccelGroup *group __attribute__((unused)),
 }
 
 /**
+link_info_dest_equal:
+
+Compare link destinations.
+
+NOTE: If both links are internal anchors, compare only the part after the
+last '#', to handle hierarchical TOC links like those from wiki.vim. This is
+just a workaround and does not fully support hierarchical TOC links because
+the preceding anchor parts are ignored (https://github.com/lervag/wiki.vim).
 */
 static gboolean
 link_info_dest_equal (gconstpointer *a,
                       gconstpointer *b)
 {
-    return g_strcmp0 (((MtxTextViewLinkInfo *) a)->dest,
-                      ((MtxTextViewLinkInfo *) b)->dest) == 0;
+    gchar *ad = (gchar *) ((MtxTextViewLinkInfo *) a)->dest;
+    gchar *bd = (gchar *) ((MtxTextViewLinkInfo *) b)->dest;
+    if (ad && bd) {
+        if (*ad == '#' && *bd == '#') {
+            ad = strrchr (ad, '#');
+            bd = strrchr (bd, '#');
+        }
+        return strcmp (ad, bd) == 0;
+    }
+    return FALSE;
 }
 
 /**
