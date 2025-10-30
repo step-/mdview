@@ -105,6 +105,7 @@ typedef enum _MtxCmmTagInfo
     MTX_TAG_LI_LEVEL,
     MTX_TAG_LI_ORDINAL,
     MTX_TAG_LI_BULLET_LEN,
+    MTX_TAG_LI_BULLET_MAX_LEN,
     MTX_TAG_LI_ID,
 
     /* keep last */
@@ -199,6 +200,11 @@ typedef enum _MtxCmmProgress
 
 MtxCmm *
 mtx_cmm_new (MtxCmmOutput output);
+
+gchar *
+mtx_cmm_get_tag_ptr (MtxCmm *self,
+                     const gchar *tag,
+                     const MtxCmmTagInfo subject);
 
 gint
 mtx_cmm_get_tag_val (MtxCmm *self,

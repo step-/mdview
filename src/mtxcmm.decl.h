@@ -14,6 +14,11 @@ mtx_cmm_parser_unit_new (MtxCmm *self,
 MtxCmm *
 mtx_cmm_new (MtxCmmOutput output);
 
+gchar *
+mtx_cmm_get_tag_ptr (MtxCmm *self,
+                     const gchar *tag,
+                     const MtxCmmTagInfo subject);
+
 gint
 mtx_cmm_get_tag_val (MtxCmm *self,
                      const gchar *tag,

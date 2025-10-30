@@ -130,6 +130,7 @@ struct _MtxTextView {
     MtxTextViewPrivateRendered *blockquote_start;
     MtxTextViewPrivateRendered *blockquote_end;
     guint indent_quantum;
+    guint indent_chwidth;
     GtkTextMark *jumpoff_mark;
     GCancellable *load_markup_cancellable;
     MtxCmmPageMeta *page_meta;

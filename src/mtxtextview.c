@@ -1532,33 +1532,64 @@ mtx_text_view_buffer_indent_li (MtxTextView *self,
                 Calculate and apply indentation depth and hanging indent width.
                 GtkTextBuffer sets margin and indent relative to x-coordinate
                 zero.  We round the starting position of the left-hanging
-                indent to the nearest multiple of ASCII space width in pixels
+                indent to the nearest indent width quantum multiple in pixels
                 (indent_quantum).
                 */
 
                 /* Once: cache ASCII space width. */
+                /* Once: cache the largest character width of an ordered bullet
+                (assuming ordered bullets are wider than unordered bullets). */
                 if (self->indent_quantum <= 0)
                 {
                     _get_string_pixel_size (self, " ", NULL,
                                               &(self->indent_quantum), &height);
-                    g_assert (self->indent_quantum > 0);
+                    guint p;
+                    gchar b[] = "0123456789.";
+                    self->indent_chwidth = 0;
+                    for (gint i = (gint) sizeof b - 2; i >= 0; i--)
+                    {
+                        _get_string_pixel_size (self, b + i, NULL, &p, &height);
+                        if (p > self->indent_chwidth)
+                        {
+                            self->indent_chwidth = p;
+                        }
+                        b[i] = '\0';
+                    }
+                    g_assert (self->indent_chwidth > 0);
                 }
 
-#if 0
+                static gint margin_by_lvl[64];
                 gint ordinal =
                 mtx_cmm_get_tag_val (self->markdown, font, MTX_TAG_LI_ORDINAL);
-#endif
+                if (ordinal < 0) {
+                    margin_by_lvl[(li_lvl - 1) % 64] = 24;
+                }
+                else
+                {
+                    gint bullet_mlen =
+                    mtx_cmm_get_tag_val (self->markdown, font,
+                                         MTX_TAG_LI_BULLET_MAX_LEN);
+                    margin_by_lvl[(li_lvl - 1) % 64] =
+                    bullet_mlen * self->indent_chwidth;
+                }
+
                 bullet_len = mtx_cmm_get_tag_val (self->markdown, font,
                                                   MTX_TAG_LI_BULLET_LEN);
 
-                /* width = 60 + 20 * li_lvl; */
                 gtk_text_iter_forward_chars (&end, bullet_len);
                 bullet =
                 gtk_text_buffer_get_slice (buffer, &iter, &end, TRUE);
                 _get_string_pixel_size (self, bullet, NULL, &hang, &height);
                 g_free (bullet);
 
-                margin = 20 + li_lvl * 20;
+                for (gint i = margin = 0; i < li_lvl; i++) {
+                    margin += margin_by_lvl[i % 64];
+                }
+
+                /* Cosmetic: align the left text margin of unordered and
+                ordered lists (up to 9 items) for consistent appearance. */
+                margin += ordinal < 0 ? 44 : 20;
+
                 g_assert (hang <= margin);
                 if (hang < margin)
                 {

@@ -461,9 +461,34 @@ static const struct _str__len _tag_info[] =
     [MTX_TAG_LI_LEVEL]           = STR__LEN ("liLvl="),
     [MTX_TAG_LI_ORDINAL]         = STR__LEN ("liOrd="),
     [MTX_TAG_LI_BULLET_LEN]      = STR__LEN ("liBLen="),
+    [MTX_TAG_LI_BULLET_MAX_LEN]  = STR__LEN ("liBMLen="),
     [MTX_TAG_LI_ID]              = STR__LEN ("liId="),
 };
 #define _tag_info_str(I)         _tag_info[(I)].str
+
+/**
+mtx_cmm_get_tag_ptr:
+
+@tag: pango "font" tag
+@subject: MtxCmmTagInfo
+Return: pointer to @subject's value string if @tag's text matched otherwise NULL
+*/
+gchar *
+mtx_cmm_get_tag_ptr (MtxCmm *self __attribute__((unused)),
+                     const gchar *tag,
+                     const MtxCmmTagInfo subject)
+{
+    g_assert (tag != NULL);
+    g_assert (subject < MTX_TAG_INFO_LEN);
+    gchar *ret = NULL;
+    gchar *p = strstr (tag, _tag_info[subject].str);
+
+    if (p)
+    {
+        ret = p + _tag_info[subject].len;
+    }
+    return ret;
+}
 
 /**
 mtx_cmm_get_tag_val:
@@ -5018,6 +5043,8 @@ mtx_cmm_mtx (MtxCmm *self,
 
     guint blockquote_level = 0, ol_ul_level = 0;
     gchar *copy_of_blockquote_open_str = NULL;
+    gchar *li_last_ord = NULL;
+    GPtrArray *pending_li_units = g_ptr_array_new ();
     for (i = g_queue_get_length (unitq) - 1; i >= 0; i--)
     {
         if (g_cancellable_is_cancelled (cancellable))
@@ -5148,20 +5175,33 @@ mtx_cmm_mtx (MtxCmm *self,
                     */
                     temp =
                         g_strdup_printf
-                        ("<span font=\"@%s%s%s%s%s%ld%s%d\">%s</span>",
+                        ("<span font=\"@%s%s%s%s%s%ld%s%s%s%d\">%s</span>",
                          _tag_info_str (MTX_TAG_LI_LEVEL),
                          (gchar *) g_ptr_array_index (unit->args, 2),
                          _tag_info_str (MTX_TAG_LI_ORDINAL),
+                         li_last_ord =
                          (gchar *) g_ptr_array_index (unit->args, 3),
                          _tag_info_str (MTX_TAG_LI_BULLET_LEN),
-                         g_utf8_strlen (temp, -1), _tag_info_str(MTX_TAG_LI_ID),
-                         i, temp);
+                         g_utf8_strlen (temp, -1),
+                         /* The OL/UL closer will fill the FILLME space. */
+#define                  FILLME        "0         " /* 10 chars */
+#define                  FILLMESZ      9            /* strlen (FILLME) [sic] */
+#define                  FILLMESZSTR   "9"
+                         _tag_info_str (MTX_TAG_LI_BULLET_MAX_LEN), FILLME,
+                         _tag_info_str (MTX_TAG_LI_ID), i, temp);
                     g_string_prepend (unit->text, temp);
                     g_free (temp);
                     g_string_append_printf (unit->text,
                                             "<span font=\"@%s%d\">%s</span>",
                                             _tag_info_str (MTX_TAG_LI_ID), i,
                                             sUNIPUA_PANGO_EMPTY_SPAN);
+
+                    /* Grow the list the OL/UL closer will process. */
+                    GSList **aptr = (GSList **)
+                    &g_ptr_array_index (pending_li_units,
+                                        pending_li_units->len - 1);
+                    *aptr = g_slist_prepend (*aptr, unit);
+
                 }
             }
             else                /* Closing unit. */
@@ -5313,6 +5353,8 @@ mtx_cmm_mtx (MtxCmm *self,
         ->priv->tag->(ol/ul)_start/end as usual and also prepend/append a
         _tag_info element conveying list level. This is all quite similar to
         blockquote except that we do not collapse endings.
+        In addition, the block closer adds the maximum, observed field width
+        in characters to the opener's _tag_info.
         */
 
         case MTX_CMM_PARSER_UNIT_BLOCK_OL:
@@ -5342,11 +5384,38 @@ mtx_cmm_mtx (MtxCmm *self,
                 {
                     g_string_prepend (unit->text, gap);
                     g_string_append (unit->text, "</span>");
+
+                    g_ptr_array_add (pending_li_units, NULL);
                 }
-                else if (ol_ul_level == 0)   /* no need to tag higher levels */
+                else    /* block closer */
                 {
-                    g_string_append (unit->text, "</span>");
-                    g_string_prepend (unit->text, gap);
+                    if (ol_ul_level == 0)
+                    {
+                        g_string_append (unit->text, "</span>");
+                        g_string_prepend (unit->text, gap);
+                    }
+
+                    /* Backfill this level's pending_li_units. */
+                    gchar buf[FILLMESZ + 1];
+                    snprintf (buf, sizeof buf, "%-" FILLMESZSTR "u",
+                              (guint) strlen (li_last_ord) + 2/*". "*/);
+                    GSList **aptr = (GSList **)
+                    &g_ptr_array_index (pending_li_units,
+                                        pending_li_units->len - 1);
+                    GSList *lptr = *aptr;
+                    g_assert (lptr);
+                    while (lptr) {
+                        MtxCmmParserUnit *u = lptr->data;
+                        gchar *p =
+                        mtx_cmm_get_tag_ptr (NULL, u->text->str,
+                                             MTX_TAG_LI_BULLET_MAX_LEN);
+                        memcpy (p, buf, FILLMESZ);
+                        lptr = lptr->next;
+                    }
+                    g_slist_free (*aptr);
+                    *aptr = NULL;
+                    g_ptr_array_set_size (pending_li_units,
+                                          pending_li_units-> len - 1);
                 }
             }
             break;
@@ -5355,6 +5424,7 @@ mtx_cmm_mtx (MtxCmm *self,
         }
     }
     g_free (copy_of_blockquote_open_str);
+    g_ptr_array_free (pending_li_units, TRUE);
 #if MTX_DEBUG > 2
     if (self->priv->caller == NULL)
     {
