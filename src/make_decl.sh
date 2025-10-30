@@ -1,11 +1,21 @@
 #!/bin/sh
 
-# make_decl.sh - extract function declarations from a .c file.
+case "$1" in -h|--help)
+cat << EOF
+${0##*/} - extract function declarations from .c files.
+This program needs fccf - https://github.com/p-ranav/fccf.
 
-# usage:   make_decl.sh [FILE.c...]
-# example: make_decl.sh src/*.c src/main.c > all.decl.c
+Usage: [env FCCF_OPTIONS=...] $0 [FILE.c...]
 
-# This program needs fccf - https://github.com/p-ranav/fccf.
+Example: $0 src/*.c > all.decl.c
+
+If the output syntax is invalid, likely it is due to ${0##*/} reading
+a right curly bracket '}' in column 1 within a function body. Indenting
+the bracket in the source code will fix the output syntax. Column-1
+brackets are reserved for definitions and declarations.
+EOF
+	exit
+esac
 
 ### Work around fccf's quirk; source pathnames must include a '/'
 n=$#
@@ -15,7 +25,8 @@ done
 shift $n
 
 ### Extract
-fccf --language c --ignore-single-line-results --function '' "$@" |
+fccf --language c --ignore-single-line-results --function '' \
+	$FCCF_OPTIONS "$@" |
 
 	### Clean up
 	 awk '###awk
@@ -24,9 +35,10 @@ fccf --language c --ignore-single-line-results --function '' "$@" |
 /^{/ { body = 1 }
 /^}/ { body = 0; next }
 
-# Ignore struct and typedef
-# (why does fccf output some structs and typedefs?)
-/^[ \t]*(struct|typedef)[ \t]/ { next }
+# Possibly was the struct/typedef brace in column 1 ???? XXX
+# # Ignore struct and typedef
+# # (why does fccf output some structs and typedefs?)
+# /^[ \t]*(struct|typedef)[ \t]/ { next }
 
 !body {
 
