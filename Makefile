@@ -2,7 +2,7 @@
 # Read INSTALL.md for build instructions.
 
 export PACKAGE_NAME    = mdview
-export PACKAGE_VERSION = 2025.01.27
+export PACKAGE_VERSION = 2025.10.30
 export PACKAGE_URL     = http://github.com/step-/mdview
 export PACKAGE_DESC   ?= GTK markdown viewer and CLI converter
 export GETTEXT_PACKAGE = $(PACKAGE_NAME)
