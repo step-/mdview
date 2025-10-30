@@ -15,7 +15,7 @@ Therefore the linked heading can be reached equivalently as follows:
 │<span bgcolor="#FBFBFB" fgcolor="#000"> <span font="monospace @dest=Lu32dest=Tl14" fgcolor="#048" underline="single">To the-HEADing</span> ¹ </span>│<span bgcolor="#FBFBFB" fgcolor="#000"> <tt><span fgcolor="#B56">[To the-HEADing](&lt;#the-HeAdinG&gt;)</span></tt> </span>│
 </span></tt>
 Try each of the links above, they should jump to <b>The heading</b> below. Then click “back to section top” to clear the highlight and try another link.
-<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=1liBLen=3liId=199">1. </span><i>Note that the last two links in the table use mixed case. Technically, they should not work because slugs are required to be in lowercase. But mdview is forgiving!</i><span font="@liId=199"></span>
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=1liBLen=3liBMLen=3         liId=199">1. </span><i>Note that the last two links in the table use mixed case. Technically, they should not work because slugs are required to be in lowercase. But mdview is forgiving!</i><span font="@liId=199"></span>
 <span font="@olUlLvl=0"></span><b><span fgcolor="#444" size="117%">The heading​<span font="@dest=Lu13dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu24dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu20dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
 <span font="@dest=Lu3dest=Tl19" fgcolor="#048" underline="single">back to section top</span>
 <b><span fgcolor="#444" size="150%">Slug compatibility​<span font="@dest=Lu41dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu43dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu45dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
@@ -24,15 +24,15 @@ Mdview implements kebab-case slugs according to <span font="@dest=Lu47dest=Tl6" 
     copy the headings here
 EOF</span></tt>
 Clicking on the heading links below should jump to their respective headings. However, items #2, #8, and #9 cannot be accessed this way. The slug creation rules for items 2 and 8 result in empty slugs, making them unreachable, while item 9 is affected by the mitigations described <span font="@dest=Lu57dest=Tl4" fgcolor="#048" underline="single">here</span>.
-<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=155">• </span><span font="@dest=Lu60dest=Tl19" fgcolor="#048" underline="single">1 Maître d'hôtel. !</span><span font="@liId=155"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=150">• </span><span font="@dest=Lu63dest=Tl9" fgcolor="#048" underline="single">2 中文标题. !</span><span font="@liId=150"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=145">• </span><span font="@dest=Lu66dest=Tl46" fgcolor="#048" underline="single">3 é è ê ë ç á à â ä í ì î ï ó ò ô ö ú ù û ü. !</span><span font="@liId=145"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=140">• </span><span font="@dest=Lu69dest=Tl12" fgcolor="#048" underline="single">4 ALLCAPS. !</span><span font="@liId=140"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=135">• </span><span font="@dest=Lu72dest=Tl16" fgcolor="#048" underline="single">5 ‘I ♥ Dogs’.; !</span><span font="@liId=135"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=130">• </span><span font="@dest=Lu75dest=Tl18" fgcolor="#048" underline="single">6 ‘ Déjà Vu! ’.; !</span><span font="@liId=130"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=125">• </span><span font="@dest=Lu78dest=Tl22" fgcolor="#048" underline="single">7 ‘fooBar 123 $#%’.; !</span><span font="@liId=125"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=120">• </span><span font="@dest=Lu81dest=Tl26" fgcolor="#048" underline="single">8 ‘я люблю единорогов’.; !</span><span font="@liId=120"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=115">• </span><span font="@dest=Lu84dest=Tl22" fgcolor="#048" underline="single">9 ‘a-b_c D--E__F’... !</span><span font="@liId=115"></span>
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=155">• </span><span font="@dest=Lu60dest=Tl19" fgcolor="#048" underline="single">1 Maître d'hôtel. !</span><span font="@liId=155"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=150">• </span><span font="@dest=Lu63dest=Tl9" fgcolor="#048" underline="single">2 中文标题. !</span><span font="@liId=150"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=145">• </span><span font="@dest=Lu66dest=Tl46" fgcolor="#048" underline="single">3 é è ê ë ç á à â ä í ì î ï ó ò ô ö ú ù û ü. !</span><span font="@liId=145"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=140">• </span><span font="@dest=Lu69dest=Tl12" fgcolor="#048" underline="single">4 ALLCAPS. !</span><span font="@liId=140"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=135">• </span><span font="@dest=Lu72dest=Tl16" fgcolor="#048" underline="single">5 ‘I ♥ Dogs’.; !</span><span font="@liId=135"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=130">• </span><span font="@dest=Lu75dest=Tl18" fgcolor="#048" underline="single">6 ‘ Déjà Vu! ’.; !</span><span font="@liId=130"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=125">• </span><span font="@dest=Lu78dest=Tl22" fgcolor="#048" underline="single">7 ‘fooBar 123 $#%’.; !</span><span font="@liId=125"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=120">• </span><span font="@dest=Lu81dest=Tl26" fgcolor="#048" underline="single">8 ‘я люблю единорогов’.; !</span><span font="@liId=120"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=115">• </span><span font="@dest=Lu84dest=Tl22" fgcolor="#048" underline="single">9 ‘a-b_c D--E__F’... !</span><span font="@liId=115"></span>
 <span font="@olUlLvl=0"></span><b><span fgcolor="#444" size="117%">1 Maître d'hôtel. !​<span font="@dest=Lu87dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu60dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu90dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
 <i>slug <tt><span fgcolor="#B56">maitre-dhotel.</span></tt></i>
 <b><span fgcolor="#444" size="117%">2 中文标题. !​<span font="@dest=Lu93dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>

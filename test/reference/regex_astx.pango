@@ -18,9 +18,9 @@ setext 2
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 <span font="@blckqtLvl=1blckqtOpn=1"><span fgcolor="silver">┌   </span></span>quote ====================
 <span font="@blckqtLvl=1blckqtOpn=0"><span fgcolor="silver">└</span></span>
-<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=37">• </span>UL list item ====================<span font="@liId=37"></span>
-<span font="@olUlLvl=0"></span><span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=32">• </span>UL list item ====================<span font="@liId=32"></span>
-<span font="@olUlLvl=0"></span><span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=1liBLen=3liId=27">1. </span>OL list item ====================<span font="@liId=27"></span>
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=37">• </span>UL list item ====================<span font="@liId=37"></span>
+<span font="@olUlLvl=0"></span><span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=32">• </span>UL list item ====================<span font="@liId=32"></span>
+<span font="@olUlLvl=0"></span><span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=1liBLen=3liBMLen=3         liId=27">1. </span>OL list item ====================<span font="@liId=27"></span>
 <span font="@olUlLvl=0"></span><b><span fgcolor="#444" size="200%">SETEXT Z +SETEXT Z​<span font="@dest=Lu31dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu33dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu35dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>
 <b><span fgcolor="#444" size="200%"> </span></b>
 <b><span fgcolor="#444" size="200%">Fatdog64-903 FAQ title format​<span font="@dest=Lu37dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu39dest=Tl1dest=Hu1" fgcolor="#FFF">​</span>​<span font="@dest=Lu41dest=Tl1dest=Hu1" fgcolor="#FFF">​</span></span></b>

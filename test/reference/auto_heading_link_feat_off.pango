@@ -12,17 +12,17 @@ The reference link destination must exactly match the heading text, omitting any
 <b>Important:</b> Heading text collisions are not managed. If two headings share the same display text, all reference links to that text will direct to the first matching heading in the document.
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 <b><span fgcolor="#444" size="150%">Auto-heading link tests</span></b>
-<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=206">• </span><span font="@dest=Lu6dest=Tl28" fgcolor="#048" underline="single">Jump to “Auto-heading links”</span><span font="@liId=206"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=201">• </span>[Jump to “TITLE”][TITLE]<span font="@liId=201"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=198">• </span>[Jump to “ATX 1”][ATX 1]<span font="@liId=198"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=195">• </span><span font="@dest=Lu9dest=Tl17" fgcolor="#048" underline="single">Jump to “ATX 2 🙂”</span><span font="@liId=195"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=190">• </span>[Jump to “ATX 2 🙂 🙂”][ATX 2 🙂 🙂]<span font="@liId=190"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=187">• </span><span font="@dest=Lu12dest=Tl20" fgcolor="#048" underline="single">Jump to “SETEXT 1 !”</span><span font="@liId=187"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=182">• </span>[Jump to “SETEXT 2”][SETEXT 2]<span font="@liId=182"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=179">• </span>[Jump to “<i><b>Strong Emphasis</b></i>”][Strong Emphasis]<span font="@liId=179"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=176">• </span><span font="@dest=Lu15dest=Tl45" fgcolor="#048" underline="single">Jump to “# this title starts and ends with #”</span><span font="@liId=176"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=171">• </span>[Jump to “SETEXT Z +SETEXT Z 🙂”][SETEXT Z +SETEXT Z 🙂] (multiline title)<span font="@liId=171"></span>
-<span font="@liLvl=1liOrd=-1liBLen=2liId=168">• </span>[Jump to “SETEXT BR+SETEXT”][SETEXT BR+SETEXT] (multiline title with a hard line break)<span font="@liId=168"></span>
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=206">• </span><span font="@dest=Lu6dest=Tl28" fgcolor="#048" underline="single">Jump to “Auto-heading links”</span><span font="@liId=206"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=201">• </span>[Jump to “TITLE”][TITLE]<span font="@liId=201"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=198">• </span>[Jump to “ATX 1”][ATX 1]<span font="@liId=198"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=195">• </span><span font="@dest=Lu9dest=Tl17" fgcolor="#048" underline="single">Jump to “ATX 2 🙂”</span><span font="@liId=195"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=190">• </span>[Jump to “ATX 2 🙂 🙂”][ATX 2 🙂 🙂]<span font="@liId=190"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=187">• </span><span font="@dest=Lu12dest=Tl20" fgcolor="#048" underline="single">Jump to “SETEXT 1 !”</span><span font="@liId=187"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=182">• </span>[Jump to “SETEXT 2”][SETEXT 2]<span font="@liId=182"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=179">• </span>[Jump to “<i><b>Strong Emphasis</b></i>”][Strong Emphasis]<span font="@liId=179"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=176">• </span><span font="@dest=Lu15dest=Tl45" fgcolor="#048" underline="single">Jump to “# this title starts and ends with #”</span><span font="@liId=176"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=171">• </span>[Jump to “SETEXT Z +SETEXT Z 🙂”][SETEXT Z +SETEXT Z 🙂] (multiline title)<span font="@liId=171"></span>
+<span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=168">• </span>[Jump to “SETEXT BR+SETEXT”][SETEXT BR+SETEXT] (multiline title with a hard line break)<span font="@liId=168"></span>
 <span font="@olUlLvl=0"></span>⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 <b><span fgcolor="#444" size="200%">TITLE</span></b>
 atx 1 title above.
@@ -65,9 +65,9 @@ Titles that include, <tt><span fgcolor="#B56">[</span></tt>, <tt><span fgcolor="
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 <span font="@blckqtLvl=1blckqtOpn=1"><span fgcolor="silver">┌   </span></span>quote isn't a title ===========
 <span font="@blckqtLvl=1blckqtOpn=0"><span fgcolor="silver">└</span></span>
-<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=38">• </span>list item isn't a title ===========<span font="@liId=38"></span>
-<span font="@olUlLvl=0"></span><span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=33">• </span>list item isn't a title ===========<span font="@liId=33"></span>
-<span font="@olUlLvl=0"></span><span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=1liBLen=3liId=28">1. </span>ordered list item isn't a title ====================<span font="@liId=28"></span>
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=38">• </span>list item isn't a title ===========<span font="@liId=38"></span>
+<span font="@olUlLvl=0"></span><span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=33">• </span>list item isn't a title ===========<span font="@liId=33"></span>
+<span font="@olUlLvl=0"></span><span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=1liBLen=3liBMLen=3         liId=28">1. </span>ordered list item isn't a title ====================<span font="@liId=28"></span>
 <span font="@olUlLvl=0"></span><tt><span bgcolor="#FFF" fgcolor="#B56"># code block isn't a title</span></tt>
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 <b><span fgcolor="#444" size="150%">Even links to multiline SETEXT headings are supported!</span></b>

@@ -1,17 +1,17 @@
 <b><span fgcolor="#444" size="117%">Tight lists</span></b>
 <b><span fgcolor="#000" size="83%">A</span></b>
-<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=34">• </span>LI
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=34">• </span>LI
 <tt><span bgcolor="#FFF" fgcolor="#B56">PRE CODE in LI</span></tt>
 INLINE in LI<span font="@liId=34"></span>
 <span font="@olUlLvl=0"></span><b><span fgcolor="#000" size="83%">B</span></b>
-<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=24">• </span>LI
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=24">• </span>LI
 <tt><span bgcolor="#FFF" fgcolor="#B56">PRE CODE 1 in LI</span></tt>
 <tt><span bgcolor="#FFF" fgcolor="#B56">PRE CODE 2 in LI</span></tt>
 <span font="@liId=24"></span>
 <span font="@olUlLvl=0"></span><b><span fgcolor="#000" size="83%">C</span></b>
-<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liId=12">• </span>LI
+<span font="@olUlLvl=1"></span><span font="@liLvl=1liOrd=-1liBLen=2liBMLen=4         liId=12">• </span>LI
 <tt><span bgcolor="#FFF" fgcolor="#B56">PRE CODE in LI</span></tt>
-<span font="@liId=12"></span><span font="@olUlLvl=2"></span><span font="@liLvl=2liOrd=-1liBLen=2liId=7">◦ </span>L11 in LI
+<span font="@liId=12"></span><span font="@olUlLvl=2"></span><span font="@liLvl=2liOrd=-1liBLen=2liBMLen=4         liId=7">◦ </span>L11 in LI
 <tt><span bgcolor="#FFF" fgcolor="#B56">PRE CODE in LI11</span></tt>
 <span font="@liId=7"></span>
 <span font="@olUlLvl=0"></span>
